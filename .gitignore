@@ -19,3 +19,6 @@ desktop.ini
 # Editor
 .vscode/
 *.tmp
+
+# Kapak icin kullanilan ham kare (kapak.png'den uretiliyor)
+yayin/kapak-fon.png
