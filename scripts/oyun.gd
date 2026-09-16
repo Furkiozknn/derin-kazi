@@ -52,6 +52,8 @@ var _harita_doku: ImageTexture
 var _harita_zaman := 0.0
 var _ipucu_sabit := ""
 var _ipucu_sure := 0.0
+var _derine_indi := false     ## sefer sayacı: dibe inip üsse dönünce bir sefer biter
+var _deprem_uyari := 0.0      ## >0 iken deprem uyarısı sürüyor
 var _karo_doku: Texture2D
 var _cekiliyor := false
 
@@ -61,7 +63,8 @@ func _ready() -> void:
 	durum = Durum.new(int(kayitli.get("tohum", randi())))
 	durum.sozlukten(kayitli)
 
-	dunya.kur(durum.tohum, Dunya.diziden_kazilan(kayitli.get("kazilan", null)))
+	dunya.kur(durum.tohum, Dunya.diziden_kazilan(kayitli.get("kazilan", null)),
+		Dunya.diziden_eklenen(kayitli.get("eklenen", null)))
 	arac.durum = durum
 	arac.dunya = dunya
 	arac.usse_don()
@@ -98,6 +101,8 @@ func _process(delta: float) -> void:
 	dunya.hazirla(arac.global_position)
 	_arkaplan_yenile()
 	_sarsinti_isle(delta)
+	_sefer_isle()
+	_deprem_isle(delta)
 	_tehlike_isle(delta)
 	_sandik_kontrol()
 	_kacis_kontrol()
@@ -179,14 +184,23 @@ func _hud_yenile() -> void:
 	_lbl_para.text = "%d ₺" % durum.para
 	var k := Ayarlar.katman(d)
 	var ilerleme := clampf(float(d) / float(Ayarlar.CEKIRDEK_DERINLIK), 0.0, 1.0)
-	_lbl_katman.text = "%s  •  Çekirdek %d m  [%s]" % [
-		Ayarlar.KATMANLAR[k]["ad"], Ayarlar.CEKIRDEK_DERINLIK, _cubuk(ilerleme)]
+	_lbl_katman.text = "%s  •  Çekirdek %d m  [%s]%s" % [
+		Ayarlar.KATMANLAR[k]["ad"], Ayarlar.CEKIRDEK_DERINLIK, _cubuk(ilerleme), _mod_etiketi()]
 	if durum.zincir_adet >= int(Ayarlar.ZINCIR_ESIK[0]):
 		_lbl_zincir.text = "ZİNCİR x%d  ×%.2f" % [durum.zincir_adet, durum.zincir_carpani()]
 	else:
 		_lbl_zincir.text = ""
 	_lbl_radar.text = _radar_metni()
 	_lbl_ipucu.text = _ipucu(d)
+
+## Ana oyun dışındaki modun HUD etiketi (günlük dünya / Derin Mod).
+func _mod_etiketi() -> String:
+	var e := ""
+	if Kayit.aktif == Kayit.GUNLUK:
+		e += "  •  GÜNLÜK"
+	if durum.derin_seviye > 0:
+		e += "  •  DERİN MOD x%d" % durum.derin_seviye
+	return e
 
 static func _cubuk(oran: float) -> String:
 	var dolu := int(round(oran * 12.0))
@@ -415,8 +429,8 @@ func _eser_bul(konum: Vector2) -> void:
 	_toz(konum, Color("feae34"), 26, 140.0)
 	Ses.cal("sat")
 	sars(3.0)
-	_uyari_goster("ESER BULUNDU\n\n%s\n%s\n\nMüzeye eklendi (üs menüsünden bakabilirsin)."
-		% [e["ad"], e["metin"]])
+	_uyari_goster("ESER BULUNDU  (%d/%d)\n\n%s — %s\n\n%s\n\nMüzeye eklendi (üs menüsünden okuyabilirsin)."
+		% [durum.eserler.size(), Ayarlar.ESERLER.size(), e["ad"], e["metin"], e["hikaye"]])
 
 func _cekirdege_ulasildi() -> void:
 	if durum.kacis or durum.kazandi:
@@ -464,13 +478,70 @@ func _kazandi() -> void:
 	_kaydet()
 	Ses.cal("sat")
 	Ses.muzik_cal("bitis")
-	$HUD/Bitis/M/V/Metin.text = "ÇEKİRDEK ÇIKARILDI!\n\nSüre: %s\nEn derin: %d m\nPara: %d ₺\nEser: %d/%d\nTohum: %d" % [
+	var son := "Bütün eserleri topladın — çekirdeğin hikâyesi müzede tamam."
+	if durum.eserler.size() < Ayarlar.ESERLER.size():
+		son = "Eksik eserler çekirdeğin hikâyesinin kalan parçalarını taşıyor."
+	$HUD/Bitis/M/V/Metin.text = "ÇEKİRDEK ÇIKARILDI!\n\nSüre: %s\nEn derin: %d m\nPara: %d ₺\nEser: %d/%d\nTohum kodu: %s\n\n%s\n\nMenüde DERİN MOD açıldı: yeni tohum, daha sert kaya, eser bonusların kalır." % [
 		_sure_metni(durum.sure), durum.en_derin, durum.para,
-		durum.eserler.size(), Ayarlar.ESERLER.size(), durum.tohum]
+		durum.eserler.size(), Ayarlar.ESERLER.size(), TohumKodu.kodla(durum.tohum), son]
 	_bitis.visible = true
 
 static func _sure_metni(s: float) -> String:
 	return "%d:%02d" % [int(s) / 60, int(s) % 60]
+
+# --- sefer sayacı ve deprem (canlı yeraltı) -------------------------------
+
+## Bir "sefer" = dibe inip üsse dönmek. Deprem sayacı bunu kullanıyor.
+func _sefer_isle() -> void:
+	if durum.kazandi:
+		return
+	if arac.derinlik() > 12:
+		_derine_indi = true
+	elif _derine_indi and arac.usste_mi():
+		_derine_indi = false
+		durum.sefer += 1
+		if durum.sefer % Deprem.ARALIK == 0:
+			durum.deprem_bekliyor = true
+
+## Deprem, üste dönüldüğünde kurulur ama YERALTINDA patlar: uyarı yeraltında
+## anlamlı, üste dönmüş oyuncuya sarsıntı göstermenin gerilimi yok.
+func _deprem_isle(delta: float) -> void:
+	if durum.kazandi:
+		return
+	if _deprem_uyari > 0.0:
+		_deprem_uyari -= delta
+		sars(2.0)
+		if _deprem_uyari <= 0.0:
+			_deprem_uygula()
+		return
+	if durum.deprem_bekliyor and not _panel_acik() and arac.derinlik() >= 15:
+		durum.deprem_bekliyor = false
+		_deprem_uyari = Deprem.UYARI_SURE
+		Ses.cal("uyari", 0.45)
+		_ipucu_goster("DEPREM YAKLAŞIYOR — kabuk kımıldıyor, yüzeye yakın dur!",
+			Deprem.UYARI_SURE)
+
+func _deprem_uygula() -> void:
+	durum.deprem += 1
+	var korunan := Deprem.korunan_hucreler(durum.istasyonlar, arac.hucre())
+	var sonuc := Deprem.hesapla(dunya.kazilan, dunya.karo_tur, korunan,
+		durum.tohum, durum.deprem)
+	var kapanan: Array = sonuc["kapanan"]
+	var yeni: Dictionary = sonuc["yeni"]
+	dunya.degistir(kapanan, yeni)
+	dunya.hazirla(arac.global_position)
+	# Titreyen kayalar artık geçersiz olabilir: sahneden temizle.
+	for t in _titreyen:
+		t["s"].queue_free()
+	_titreyen.clear()
+	_harita_guncelle(kapanan)
+	_harita_guncelle(yeni.keys())
+	sars(12.0)
+	Ses.cal("patlama")
+	_toz(arac.global_position, _karo_renk(Ayarlar.TOPRAK), 30, 160.0)
+	_kaydet()
+	_ipucu_goster("DEPREM! %d karo tünel kapandı, %d yeni damar/gaz çıktı."
+		% [kapanan.size(), yeni.size() - kapanan.size()], 4.0)
 
 # --- tehlikeler -----------------------------------------------------------
 
@@ -644,22 +715,28 @@ func _muze_ac() -> void:
 	_magaza.visible = false
 	_muze.visible = true
 	arac.kilitli = true
-	var satirlar := PackedStringArray()
-	if durum.eserler.is_empty():
-		satirlar.append("Henüz eser yok. Yeraltındaki gizli odalarda bulunur.")
-	else:
-		satirlar.append("Bulunan eserler kalıcı bonus verir:")
-	$HUD/Muze/M/V/Bilgi.text = "\n".join(satirlar)
+	$HUD/Muze/M/V/Bilgi.text = "Her eser hem kalıcı bir bonus verir hem de çekirdeğin\nsırrından bir parça anlatır — %d/%d parça toplandı." % [
+		durum.eserler.size(), Ayarlar.ESERLER.size()]
 	var liste: VBoxContainer = $HUD/Muze/M/V/Kaydir/Liste
 	_temizle(liste)
 	for i in Ayarlar.ESERLER.size():
 		var e: Dictionary = Ayarlar.ESERLER[i]
 		var bulundu := durum.eserler.has(i)
 		var l := Label.new()
-		l.text = ("✔ %s — %s" % [e["ad"], e["metin"]]) if bulundu else "…  ??? (bulunmadı)"
+		l.text = ("✔ %d. %s — %s" % [i + 1, e["ad"], e["metin"]]) if bulundu \
+			else "%d. %s" % [i + 1, Ayarlar.ESER_KILITLI]
 		l.add_theme_font_size_override("font_size", 13)
 		l.add_theme_color_override("font_color", Color("fee761") if bulundu else Color("5a6988"))
 		liste.add_child(l)
+		if not bulundu:
+			continue
+		var hk := Label.new()
+		hk.text = String(e["hikaye"])
+		hk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hk.custom_minimum_size = Vector2(380, 0)
+		hk.add_theme_font_size_override("font_size", 11)
+		hk.add_theme_color_override("font_color", Color("c0cbdc"))
+		liste.add_child(hk)
 	_dugme(liste, "Geri", false, _muze_geri)
 
 # --- ışınlanma ve istasyon ------------------------------------------------
@@ -748,22 +825,33 @@ func _harita_ac(merkez: Vector2i) -> void:
 		return
 	for dy in range(-HARITA_SIS, HARITA_SIS + 1):
 		for dx in range(-HARITA_SIS, HARITA_SIS + 1):
-			var h := merkez + Vector2i(dx, dy)
-			if h.x < 0 or h.y < 0 or h.x >= Ayarlar.GENISLIK or h.y >= Ayarlar.DERINLIK:
-				continue
 			if dx * dx + dy * dy > HARITA_SIS * HARITA_SIS:
 				continue
-			var t := dunya.karo_tur(h)
-			var renk := Color(0.10, 0.09, 0.13, 1.0)
-			if t != Ayarlar.BOS:
-				renk = _karo_renk(t).darkened(0.35)
-			if Ayarlar.MADEN_DEGER.has(t):
-				renk = _karo_renk(t)
-			elif t == Ayarlar.SANDIK or t == Ayarlar.ESER:
-				renk = Color("fee761")
-			elif t == Ayarlar.LAV:
-				renk = Color("f77622")
-			_harita_img.set_pixelv(h, renk)
+			_harita_boya(merkez + Vector2i(dx, dy))
+
+## Depremden sonra değişen hücreleri haritada tazeler (zaten keşfedilmiş yerler).
+func _harita_guncelle(hucreler: Array) -> void:
+	for h in hucreler:
+		_harita_boya(Vector2i(h))
+
+func _harita_boya(h: Vector2i) -> void:
+	if _harita_img == null:
+		return
+	if h.x < 0 or h.y < 0 or h.x >= Ayarlar.GENISLIK or h.y >= Ayarlar.DERINLIK:
+		return
+	var t := dunya.karo_tur(h)
+	var renk := Color(0.10, 0.09, 0.13, 1.0)
+	if t != Ayarlar.BOS:
+		renk = _karo_renk(t).darkened(0.35)
+	if Ayarlar.MADEN_DEGER.has(t):
+		renk = _karo_renk(t)
+	elif t == Ayarlar.SANDIK or t == Ayarlar.ESER:
+		renk = Color("fee761")
+	elif t == Ayarlar.LAV:
+		renk = Color("f77622")
+	elif t == Ayarlar.GAZ:
+		renk = Color("63c74d")
+	_harita_img.set_pixelv(h, renk)
 
 func _harita_ciz() -> void:
 	var im := _harita_img.duplicate()
@@ -803,6 +891,18 @@ func _ayar_ac() -> void:
 func _dokunmatik_izler() -> void:
 	# Dokunmatik bölgelerin görünür ipuçları (yalnız dokunmatik cihazda).
 	var izler: Control = $Dokunmatik/Izler
+	# Dokunmatikte klavye yok: E / M / Esc yerine gerçek düğmeler.
+	var kutu := HBoxContainer.new()
+	kutu.position = Vector2(452, 4)
+	kutu.add_theme_constant_override("separation", 4)
+	izler.add_child(kutu)
+	for veri in [["Üs", _dokun_us], ["Harita", _dokun_harita], ["■", _dokun_duraklat]]:
+		var b := Button.new()
+		b.text = String(veri[0])
+		b.add_theme_font_size_override("font_size", 11)
+		b.custom_minimum_size = Vector2(0, 22)
+		b.pressed.connect(veri[1])
+		kutu.add_child(b)
 	for veri in [[Vector2(0, 250), Vector2(150, 110), "◀"], [Vector2(490, 250), Vector2(150, 110), "▶"],
 			[Vector2(150, 250), Vector2(150, 110), "▼ KAZ"], [Vector2(150, 120), Vector2(150, 110), "▲ UÇ"]]:
 		var p := Panel.new()
@@ -818,6 +918,28 @@ func _dokunmatik_izler() -> void:
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		izler.add_child(l)
 
+func _dokun_us() -> void:
+	Ses.cal("menu")
+	if _panel_acik():
+		_panelleri_kapat()
+	elif arac.usste_mi():
+		_magaza_ac()
+	else:
+		_isinlanma_ac()
+
+func _dokun_harita() -> void:
+	Ses.cal("menu")
+	_harita.visible = not _harita.visible
+	_harita_zaman = 0.0
+
+func _dokun_duraklat() -> void:
+	if _panel_acik():
+		_panelleri_kapat()
+		return
+	Ses.cal("menu")
+	_duraklat.visible = true
+	arac.kilitli = true
+
 func _karart(kapali: bool, sure := 0.45) -> void:
 	create_tween().tween_property(_karartma, "color:a", 1.0 if kapali else 0.0, sure)
 
@@ -830,4 +952,5 @@ func _menuye() -> void:
 func _kaydet() -> void:
 	var d := durum.sozluge()
 	d["kazilan"] = dunya.kazilan_dizi()
+	d["eklenen"] = dunya.eklenen_dizi()
 	Kayit.kaydet(d)

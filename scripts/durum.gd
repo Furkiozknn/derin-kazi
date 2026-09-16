@@ -30,6 +30,11 @@ var zincir_tur := Ayarlar.BOS
 var zincir_adet := 0
 var zincir_zaman := 0.0
 
+var sefer := 0              ## tamamlanan sefer sayısı (in-çık); deprem sayacı bunu kullanır
+var deprem := 0             ## uygulanan deprem sayısı
+var deprem_bekliyor := false ## bu seferde deprem olacak (üste dönünce kuruldu)
+var derin_seviye := 0       ## Derin Mod turu: 0 = ilk oyun
+
 var bitti := false          ## koşu başarısız (yakıt/can)
 var cekirdek_bulundu := false
 var kacis := false          ## çekirdeğe dokunuldu, yüzeye kaçış sürüyor
@@ -51,6 +56,22 @@ func eser_bonus(tur: String) -> float:
 			t += float(e["deger"])
 	return t
 
+# --- Derin Mod zorluğu ----------------------------------------------------
+## Derin Mod her turda kazmayı ve yakıt tüketimini zorlaştırır, madeni değerlendirir.
+## Eser bonusları korunduğu için ilerleme eğrisi aynı bantta kalır.
+const DERIN_KAZMA := 0.15
+const DERIN_YAKIT := 0.12
+const DERIN_DEGER := 0.25
+
+func zorluk_kazma() -> float:
+	return 1.0 + DERIN_KAZMA * float(derin_seviye)
+
+func zorluk_yakit() -> float:
+	return 1.0 + DERIN_YAKIT * float(derin_seviye)
+
+func zorluk_deger() -> float:
+	return 1.0 + DERIN_DEGER * float(derin_seviye)
+
 # --- geliştirmeden türeyen değerler ---------------------------------------
 
 func yakit_kapasitesi() -> float:
@@ -60,13 +81,14 @@ func yuk_kapasitesi() -> int:
 	return int(Ayarlar.YUK_SEVIYE[kasa]) + int(eser_bonus("yuk"))
 
 func matkap_hizi() -> float:
-	return float(Ayarlar.MATKAP_SEVIYE[matkap]) * (1.0 + eser_bonus("matkap"))
+	return float(Ayarlar.MATKAP_SEVIYE[matkap]) * (1.0 + eser_bonus("matkap")) / zorluk_kazma()
 
 func can_kapasitesi() -> int:
 	return int(Ayarlar.GOVDE_SEVIYE[govde])
 
-func maden_degeri(tur: int) -> int:
-	return int(round(float(Ayarlar.MADEN_DEGER.get(tur, 0)) * (1.0 + eser_bonus("deger"))))
+func maden_degeri(maden: int) -> int:
+	return int(round(float(Ayarlar.MADEN_DEGER.get(maden, 0))
+		* (1.0 + eser_bonus("deger")) * zorluk_deger()))
 
 func seviye(alan: String) -> int:
 	match alan:
@@ -253,7 +275,7 @@ func yakit_doldur() -> int:
 	return maliyet
 
 func yakit_harca(miktar: float) -> void:
-	yakit = maxf(0.0, yakit - miktar)
+	yakit = maxf(0.0, yakit - miktar * zorluk_yakit())
 	if yakit <= 0.0:
 		bitti = true
 
@@ -328,6 +350,8 @@ func sozluge() -> Dictionary:
 		sand.append(d)
 	return {
 		"tohum": tohum, "para": para, "en_derin": en_derin, "sure": sure,
+		"sefer": sefer, "deprem": deprem, "deprem_bekliyor": deprem_bekliyor,
+		"derin_seviye": derin_seviye,
 		"matkap": matkap, "depo": depo, "kasa": kasa, "govde": govde,
 		"radar": bool(aletler["radar"]), "kalkan": bool(aletler["kalkan"]),
 		"dinamit": dinamit, "istasyon_kiti": istasyon_kiti,
@@ -340,6 +364,10 @@ func sozlukten(d: Dictionary) -> void:
 	para = int(d.get("para", 0))
 	en_derin = int(d.get("en_derin", 0))
 	sure = float(d.get("sure", 0.0))
+	sefer = int(d.get("sefer", 0))
+	deprem = int(d.get("deprem", 0))
+	deprem_bekliyor = bool(d.get("deprem_bekliyor", false))
+	derin_seviye = int(d.get("derin_seviye", 0))
 	matkap = clampi(int(d.get("matkap", 0)), 0, Ayarlar.EN_YUKSEK_SEVIYE)
 	depo = clampi(int(d.get("depo", 0)), 0, Ayarlar.EN_YUKSEK_SEVIYE)
 	kasa = clampi(int(d.get("kasa", 0)), 0, Ayarlar.EN_YUKSEK_SEVIYE)
