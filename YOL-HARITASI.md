@@ -90,17 +90,63 @@
       7 tohumda ölçüldü, tablo raporda
 - [x] 172 birim + 45 oynanış sınaması + iki bot ölçümü + fay etkisi ölçümü
 
+## Geliştirme turu 3 — v0.4 "Derin Kazı'nın kararı" (2026-09-16)
+
+### Deprem artık bir bahis
+- [x] **Uyarı derinliğe göre uzuyor**: 4 sn + derinlik × 0,06 (100 m'de 10 sn,
+      250 m'de 19 sn, tavan 20 sn). HUD'ın alt satırında **geri sayım** var ve
+      kararın iki ucunu birden yazıyor
+- [x] **Yüzeye çıkan kazanır**: kabuk nöbeti ikramiyesi = 25 ₺ + uyarı anındaki
+      derinlik (100 m'den dönene +125 ₺). **Derinde kalan öder**: 1 can, 100 m'den
+      derinde 2. Hasarın tavanı 2 — deprem **tek başına öldürmez**, koşuyu
+      bitiren şey hâlâ oyuncunun yakıt/can yönetimi
+- [x] Hesap `Deprem.karar/odul/hasar/uyari_suresi` içinde **saf**: derinlik girer,
+      sözlük çıkar. v0.3'ün üç sıkışma güvencesi aynen duruyor
+- [x] Üçüncü seçenek istasyon: bir durakta ışınlanıp ikramiyeyi bedavaya almak.
+      İstasyonun v0.3'te olmayan ikinci gerekçesi
+
+### Botun yol bulması
+- [x] **BFS rotası** (`Bot._rota`): tıkanınca körlemesine yana gitmek yerine mini
+      harita bilgisiyle çekirdeğe (ya da penceredeki en derin noktaya) rota çıkarıp
+      izliyor. Pencere 80 karo aşağı / 12 karo yukarı; önce gaz cebine girmeyen
+      yol aranıyor
+- [x] **Dinamit ve radar**: sert kayada (sertlik ≥ 1,2) 3×3 patlatma, para artınca
+      radar alıp yandaki madeni 5 karo uzaktan görme
+- [x] **Bot artık depremi yaşıyor**: uyarı süresi tırmanışa yetiyorsa (ya da
+      istasyon duraktaysa) yüzeye çıkıp ikramiyeyi alıyor, yetmiyorsa hasar yiyor
+- [x] **12/12 tohumda çekirdeğe varılıyor** (v0.3: 11/12; tohum 3 tıkanıyordu).
+      `tests/test_fay_olcum.gd` artık ölçmekle kalmıyor, sınıyor (çıkış kodu)
+- [x] İnsan benzeri ölçüm deprem kararlı hâliyle yeniden çalıştırıldı:
+      tur 106 sn, çekirdeğe 24 dk, 7/7 tohum (tablo raporda)
+
+### Sunum ve dokunmatik
+- [x] **Dokunmatik ipuçları düğmelere göre**: `scripts/ipucu.gd` saf sınıfı iki
+      metni de tek yerden veriyor; masaüstü metni harfi harfine aynı kaldı.
+      Test bütün ipucu durumlarını gezip dokunmatik metinlerde klavye tuşu
+      aramıyor mu diye tarıyor
+- [x] **Maden damarının zemini artık katmanın kayası**: atlas 5 satır, satır =
+      katman (`Ayarlar.varyant` madende `katman(y)` döndürüyor). Toprakta bakır
+      kahverengi zeminde, bazaltta gece mavisi zeminde çıkıyor —
+      v0.3'teki "yapıştırılmış mavi-gri kare" gitti (`yayin/ekran-2.png`)
+- [x] **Tanıtım GIF'i** `yayin/tanitim.gif` (480×270, 12 fps, 4 sn): kazı → maden
+      → deprem uyarısı → deprem. Kareler gerçek oyundan (`tools/tanitim_al.gd`),
+      GIF ffmpeg ile
+
+### Doğrulama
+- [x] 191 birim + 50 oynanış sınaması, denge ve insan ölçümleri, fay/bot sınaması
+- [x] Windows + Web dışa aktarımı, 5 ekran görüntüsü + kapak yenilendi
+
 ## Sonraki tur
 
 ### Oynanış
 - [ ] **Gerçek insan denemesi.** Ölçüm hâlâ bot; insan benzeri bot da bir varsayım.
       Bir oturum gerçekten oynanıp tur süresi ve çekirdeğe varış kaydedilmeli
-- [ ] **Botun yol bulması.** Tohum 3'te tıkanıyor: yan tarama sınırı 120 deneme
-      ve galeri taraması kör. Bot aracın gerçek imkânlarını (dinamit, radar,
-      mini harita) kullanmadığı için ölçüm kötümser tarafta kalıyor
-- [ ] **Depremin oynanışa bağlanması.** Şu an saf bir olay: uyarı + değişim.
-      "Depremden önce yüzeye çık, yoksa çekme ücreti iki katı" gibi bir bahis
-      eklenirse gerilim oluşur
+- [ ] **Dokunmatikte dinamit ve radar.** İpuçları artık düğmeleri anlatıyor ama
+      telefonda dinamit atmanın ve radarı açmanın hiçbir yolu yok (F ve Q tuşları
+      orada yok). Sağ üstteki düğme şeridi 640 px'e sığmadığı için bu tura
+      alınmadı — düzen değişikliği gerekiyor
+- [ ] **Deprem kararının insanda karşılığı.** Ölçümde bahsi bot veriyor; gerçek
+      oyuncu uyarıyı görüp ne yapıyor, ikramiye "geri dön" demeye yetiyor mu
 - [ ] **Derin Mod'da yeni içerik**, yalnız çarpan değil: 6. katman, yeni tehlike
       ya da eser seti
 - [ ] Işınlama işareti (istasyon dışı, tek kullanımlık dönüş noktası)
@@ -108,14 +154,13 @@
 
 ### Sunum
 - [ ] Yüzey karosu için ayrı "üst" görünümü (şu an toprak her yerde aynı)
-- [ ] Maden damarlarının zemini toprakta hâlâ mavi-gri bir kare gibi duruyor;
-      katmana göre yumuşak bir geçiş denenmeli
 - [ ] Araç animasyonuna pervane alevi ve palet dönüşü için ara kareler
 - [ ] Ses: matkap döngü sesi, depreme özel gürültü (şu an patlama sesi kullanılıyor)
 - [ ] Bitiş ekranına istatistik dökümü (kazılan karo, deprem sayısı, ölüm sayısı)
 
 ### Dağıtım
-- [ ] Web çıktısını v0.3 ile tarayıcıda yeniden doğrula (simgeler ve menü arka planı)
+- [ ] Web çıktısını v0.4 ile tarayıcıda doğrula (dokunmatik ipuçları, deprem
+      geri sayımı, maden zemini)
 - [ ] itch.io sayfası ve yükleme — **Furki'nin onayı gerekiyor**
 - [ ] GitHub deposu ve push — **Furki'nin onayı gerekiyor**
 
@@ -128,12 +173,13 @@
   Bu bilerek verilmiş bir karar, README "Verilen kararlar" başlığında gerekçesi var.
 - **Deprem yalnız yeraltındayken tetikleniyor** (15 m'den derinde). Üste dönüp
   hiç inmeyen bir oyuncu depremi hiç görmez — bilerek: uyarının anlamı yeraltında.
-- **Bot depremi simüle etmiyor**, yani denge ölçümleri depremin getirdiği ek
-  kazma süresini saymıyor. Gerçek tur bir miktar daha uzun.
-- **Bot 12 tohumun 1'inde (tohum 3) fay hattına rağmen çekirdeğe varamıyor.**
-  BFS o tohumda da yol olduğunu söylüyor, yani dünya değil botun yol bulması
-  yetersiz — bot mini haritayı okumuyor, dinamit kullanmıyor, radar takip
-  etmiyor. Ölçüm tohumlarında (test_denge 3, test_insan 7) böyle bir tohum yok.
+- **Bot artık depremi yaşıyor ama mükemmel karar veriyor**: tırmanış süresini
+  tam biliyor, uyarıyı kaçırmıyor. Gerçek oyuncu bazen geç fark eder.
+- **Botun BFS'i oyuncunun bilgisinden fazlasını görüyor**: mini haritada
+  keşfedilmemiş alan oyuncuya kapalı, bota değil. Ölçtüğü şey "oyun
+  bitirilebilir mi", "oyuncu yolu bulabilir mi" değil.
 - Düşen kaya yere çarpınca yok oluyor, yeni karo bırakmıyor (bilerek).
-- Web çıktısı v0.3 ile tarayıcıda denenmedi (bu oturumda sunucu kurulmadı);
-  simge ve menü düzeltmeleri headless test + ekran görüntüsüyle doğrulandı.
+- Web çıktısı v0.4 ile tarayıcıda denenmedi (bu oturumda sunucu kurulmadı);
+  dokunmatik ipuçları headless test + sahne sınamasıyla doğrulandı.
+- **Deprem yalnız ilk 15 m'nin altında tetikleniyor**, yani hiç derine inmeyen
+  bir oyuncu ikramiyeyi de riski de görmez (bilerek).

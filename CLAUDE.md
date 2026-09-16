@@ -28,7 +28,8 @@ Arayüz, kod ve belgeler **Türkçe**. Değişken/fonksiyon adları da Türkçe.
 scripts/ayarlar.gd        TÜM denge sabitleri — sayı değiştireceksen burası
 scripts/dunya_uretici.gd  tohumdan karo üreten saf sınıf (Node değil) + fay hattı
 scripts/dunya.gd          TileMapLayer, 16x16 chunk yönetimi, kazı + deprem farkı
-scripts/deprem.gd         deprem hesabı (saf sınıf; uygulamak Dunya.degistir işi)
+scripts/deprem.gd         deprem hesabı + oyuncunun kararı (saf sınıf; uygulamak Dunya.degistir işi)
+scripts/ipucu.gd          oyun içi ipucu metni (saf sınıf; dokunmatik/masaüstü ayrımı)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları (saf sınıf)
@@ -43,6 +44,16 @@ tests/                    headless testler (çıkış kodu 0 = geçti)
 yayin/                    itch sayfası, ekran görüntüleri, kapak, butler komutları
 _eski/                    kullanımdan kalkmış dosyalar (silme yok, buraya taşı)
 ```
+
+## Deprem bir karardır
+
+`scripts/deprem.gd` yalnız dünyayı değiştirmiyor, oyuncunun bahsini de tutuyor:
+uyarı süresi derinlikle uzar (`uyari_suresi`), yüzeye çıkan ikramiye alır
+(`odul`), derinde kalan hasar yer (`hasar`, tavanı 2 — **deprem tek başına
+öldürmez**), `karar()` ikisini birleştirir. Hepsi saf ve testli; sayıları
+değiştirirsen `tests/test_calistir.gd` → `_deprem_testleri` ve
+`tests/test_insan.gd` birlikte çalıştır. Üç sıkışma güvencesi (araç/üs/istasyon
+çevresi, kapanan hücre hep kazılabilir, ilk 10 m sabit) dokunulmaz.
 
 ## Denge
 
@@ -59,7 +70,11 @@ Bilinmesi gereken bağlar:
   Koridorun içinde KAYA ve LAV üretilmez. Dokunursan `test_calistir.gd`
   BFS testi 12 tohumda da kırılır.
 - **Oturum uzunluğu** `tests/test_insan.gd` ile ölçülür (insana benzetilmiş bot:
-  tepki gecikmesi, duraksama, yanlış rota). Ölçülen: tur 108 sn, çekirdeğe 23 dk.
+  tepki gecikmesi, duraksama, yanlış rota). Ölçülen (v0.4): tur 106 sn,
+  çekirdeğe 24 dk.
+- **Bot yol bulma** `Bot._rota` (BFS, 80 karoluk pencere) tur başına **bir kez**
+  hesaplanır; sınırı kaldırırsan ölçüm dakikalar sürer. `Bot._uretim` üreticinin
+  önbelleği — üretici saf olduğu için güvenli, kaldırma.
   Testteki bantlar hedef değil **gerileme bekçisi** — denge sabitlerini
   değiştirince ikisini birlikte çalıştır.
 
@@ -72,7 +87,8 @@ godot --headless --path . --script res://tests/test_calistir.gd   # birim testle
 godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış testi
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
-godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay hattı ne kadar işe yarıyor (ölçüm)
+godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması
+godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
 godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri + menü denetimi (render gerekir)
@@ -106,9 +122,14 @@ GUI aracı kullanılamıyor. Tüm pixel art `tools/sprite_uret.gd` içinde Godot
 Elle PNG düzenleme yok — görseli değiştireceksen betiği değiştir ve yeniden üret,
 sonra `tools/onizleme.gd` ile çıktıyı gözle denetle.
 
-`karolar.png` artık **3 satır**: 0. satır ana doku, 1. ve 2. satır yalnız taban
-kayalarının varyantı (kalan sütunlar kopya). Satır sayısı `Ayarlar.VARYANT_SAYISI`
-ve `Dunya._tileset_kur()` ile bağlı — birini değiştirirsen üçünü birden değiştir.
+`karolar.png` **5 satır** ve satırın iki işi var:
+- **taban kayaları** için satır bir doku varyantı (seçim hücrenin konumundan),
+- **maden karoları** için satır bir KATMAN: damarın zemini o derinliğin kayası
+  (`Ayarlar.varyant` madende `katman(y)` döndürüyor). Toprakta bakır kahverengi
+  zeminde çıkıyor; v0.3'te her zemin aynı mavi-gri taştı ve sığda yamalı duruyordu.
+
+`Ayarlar.VARYANT_SAYISI` = `Ayarlar.KATMANLAR.size()` = 5 ve `Dunya._tileset_kur()`
+ile `tools/sprite_uret.gd` buna bağlı — birini değiştirirsen dördünü birden değiştir.
 
 Ses efektleri rFXGen ön ayarlarından (`D:\Araclar\rFXGen\...\rfxgen.exe`).
 `--generate` aynı ön ayar için **hep aynı** dalgayı veriyor (denendi), bu yüzden

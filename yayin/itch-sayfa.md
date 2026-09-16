@@ -2,6 +2,10 @@
 
 > itch.io sayfası için hazır metin. Önce İngilizce, altında Türkçe.
 > **Yüklenmedi** — yükleme kararı Furki'nin.
+>
+> Görseller: `yayin/tanitim.gif` (480×270, 4 sn — kazı, maden, deprem uyarısı;
+> sayfanın en üstüne, kapak görselinin hemen altına), `yayin/kapak.png`
+> (630×500, kapak), `yayin/ekran-1..5-*.png` (1280×720, ekran görüntüleri).
 
 ---
 
@@ -36,11 +40,15 @@ half your hold stays down there in a crate with your name on it. Go get it.
   museum and give a small permanent bonus, forever.
 - **Dig chains.** Three of the same ore in a row and the payout multiplier climbs,
   and so does the pitch of the pickup sound.
-- **The ground is alive.** Every five runs the crust shifts. You get a warning
-  underground — the screen shakes, the text lands — and then part of your old
-  tunnel network caves in while fresh gas pockets and ore veins open in the walls
-  of what is left. It never seals you in: a collapsed tile is always diggable rock,
-  and the ground around you, your stations and the base is never touched.
+- **The ground is alive, and it asks you a question.** Every five runs the crust
+  shifts. You get a countdown underground — longer the deeper you are, 10 seconds
+  at 100 m — and it spells out the bet: climb out and collect the crust-watch
+  bonus (25 + your depth), or keep digging and eat the damage. A station you
+  planted turns that into a free ride up. When it hits, part of your old tunnel
+  network caves in while fresh gas pockets and ore veins open in the walls of what
+  is left. It never seals you in: a collapsed tile is always diggable rock, the
+  ground around you, your stations and the base is never touched, and the quake
+  alone can never end a run.
 - **Six relics, one story.** Each relic is a permanent bonus and a piece of what
   is actually down there. Read them in order in your museum.
 - **Share a world.** Every world has a seven-letter seed code. Hand it to someone
@@ -72,7 +80,8 @@ way back is something you dig on the way down.
 
 On touch devices: tap the bottom-left, bottom-right or bottom-centre of the screen
 to dig that way; the upper-centre area is the thruster. Three buttons top right:
-base, map, pause. The menu switches its help text to touch controls on its own.
+base, map, pause. Every hint in the game — menu and in-game — describes the
+buttons and touch zones instead of keys when you play on a touch screen.
 
 Turkish interface. Made in Godot 4.7, GL Compatibility — runs on integrated
 graphics. All art and audio generated from code in this repository.
@@ -109,11 +118,15 @@ aşağıda bir sandıkta kalıyor. Git al.
   ve kalıcı küçük bir bonus verir.
 - **Kazı zinciri.** Art arda üç aynı maden → çarpan yükselir, toplama sesinin
   perdesi de.
-- **Yeraltı canlı.** Her beş seferde bir kabuk kımıldıyor. Yeraltındayken önce
-  uyarı geliyor — ekran sarsılıyor, yazı düşüyor — sonra eski tünellerinin bir
-  kısmı kapanıyor ve kalanların duvarlarında yeni gaz cepleri ve damarlar
-  açılıyor. Seni asla içeride bırakmıyor: kapanan karo her zaman kazılabilir
-  kaya, aracının / istasyonlarının / üssün çevresine hiç dokunulmuyor.
+- **Yeraltı canlı ve sana bir soru soruyor.** Her beş seferde bir kabuk
+  kımıldıyor. Yeraltındayken geri sayım başlıyor — ne kadar derinsen o kadar
+  uzun, 100 m'de 10 saniye — ve bahsi açıkça yazıyor: yukarı çık, kabuk nöbeti
+  ikramiyesini al (25 ₺ + derinliğin); ya da kazmaya devam et, hasarı göze al.
+  Kurduğun bir istasyon bu tırmanışı bedava yolculuğa çeviriyor. Patladığında
+  eski tünellerinin bir kısmı kapanıyor, kalanların duvarlarında yeni gaz cepleri
+  ve damarlar açılıyor. Seni asla içeride bırakmıyor: kapanan karo her zaman
+  kazılabilir kaya, aracının / istasyonlarının / üssün çevresine dokunulmuyor ve
+  deprem tek başına bir koşuyu bitiremiyor.
 - **Altı eser, tek hikâye.** Her eser hem kalıcı bir bonus hem de aşağıda gerçekte
   ne olduğunun bir parçası. Müzede sırayla okunuyor.
 - **Dünyanı paylaş.** Her dünyanın 7 harflik bir tohum kodu var. Kodu verdiğin
@@ -144,8 +157,9 @@ aşağıda bir sandıkta kalıyor. Git al.
 inerken kazdığın şeydir.
 
 Dokunmatik: ekranın alt sol / alt sağ / alt orta bölgesine dokununca o yöne kazar,
-üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Menüdeki
-yardım metni dokunmatik cihazda kendiliğinden bu anlatıma geçiyor.
+üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Oyundaki
+bütün ipuçları — menüde de oyun içinde de — dokunmatik cihazda tuşları değil
+düğmeleri ve dokunma alanlarını anlatıyor.
 
 Godot 4.7, GL Compatibility — tümleşik ekran kartıyla çalışır. Tüm görseller ve
 sesler bu depoda kodla üretildi.
@@ -164,4 +178,6 @@ sesler bu depoda kodla üretildi.
 - **Kapak:** `kapak.png` (630 × 500)
 - **Ekran görüntüleri:** `ekran-1.png` … `ekran-4.png` + `ekran-5-menu.png`
   (1280 × 720)
-- **Sürüm:** v0.3
+- **Tanıtım GIF'i:** `tanitim.gif` (480 × 270, 4 sn) — sayfa metninin en üstüne,
+  ilk ekran görüntüsünün yerine. itch GIF'i olduğu gibi oynatır.
+- **Sürüm:** v0.4

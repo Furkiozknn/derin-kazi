@@ -63,13 +63,29 @@ geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
   Altı eserin her biri çekirdeğin sırrından bir parça anlatır; 1'den 6'ya doğru
   okununca tek bir hikâye çıkar.
 
-### Canlı yeraltı (v0.3)
+### Canlı yeraltı (v0.3) ve depremin kararı (v0.4)
 
-Her **5 seferde** (in-çık) bir deprem olur. Yeraltındayken önce uyarı gelir —
-ekran sarsılır ve "DEPREM YAKLAŞIYOR" yazar — sonra:
+Her **5 seferde** (in-çık) bir deprem olur. Yeraltındayken önce **geri sayım**
+başlar — ekran sarsılır, HUD'ın alt satırı kalan süreyi ve kararın iki ucunu
+birden yazar — sonra:
 
 - eski tünellerin ~%20'si kapanır,
 - kalan tünellerin duvarlarında **yeni gaz cepleri ve maden damarları** belirir.
+
+**Uyarı bir bahis (v0.4).** Süre derinlikle uzar (4 sn + derinlik × 0,06;
+100 m'de 10 sn, 250 m'de 19 sn, tavan 20 sn) — ki karar verilebilsin. Sonra:
+
+- **yüzeye çıkarsan** (12 m'den sığ) **kabuk nöbeti ikramiyesi** alırsın:
+  25 ₺ + uyarı anındaki derinliğin. 100 m'den dönene +125 ₺.
+- **derinde kalırsan** hasar yersin: 1 can, 100 m'den derinde 2. Tavan 2 —
+  deprem **tek başına** bir koşuyu bitiremez.
+- **kurduğun bir istasyondaysan** ışınlanıp ikramiyeyi bedavaya alırsın.
+  İstasyonun ikinci gerekçesi bu.
+
+Gerekçe rakip analizinden: Dome Keeper'ı tutan şey dalga sayacının kurduğu
+"bir blok daha kazayım mı?" gerilimi. v0.3'te deprem saf bir olaydı — oyuncunun
+verecek bir kararı yoktu. Hesap `Deprem.karar/odul/hasar/uyari_suresi` içinde
+saf tutuldu: derinlik girer, sözlük çıkar; sahne gerekmez, test doğrudan sınar.
 
 Üç kural kodda garanti altında (`scripts/deprem.gd`, testleri var):
 aracın / üssün / istasyonların çevresine dokunulmaz · kapanan hücre **her zaman**
@@ -96,8 +112,9 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   analizindeki "çekirdeğe 60-90 dk" hedefi v0.3'te bilerek bırakıldı. Aynı
   analizde Motherload'ın şikâyeti "çok uzun, aynı şey farklı derinlik", A Game
   About Digging A Hole'ün şikâyeti "1-2 saat ve geliştirmeler erken bitiyor".
-  İnsana benzetilmiş bot 7 tohumda çekirdeğe **23 dakikada** varıyor
-  (`tests/test_insan.gd`); tur süresi 108 sn. Bir oturumda bitirilebilen bir
+  İnsana benzetilmiş bot 7 tohumda çekirdeğe **24 dakikada** varıyor
+  (`tests/test_insan.gd`); tur süresi 106 sn (v0.4 ölçümü: deprem kararı ve
+  botun BFS rotası dahil). Bir oturumda bitirilebilen bir
   oyun + tekrar oynanabilir Derin Mod, 90 dakikalık bir tırmanıştan daha iyi bir
   bahis. Sayı kaymasın diye test bant bekçisi olarak duruyor.
 - **Garantili fay hattı — yolu var etmek için değil, bulunabilir kılmak için.**
@@ -111,9 +128,10 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   Dome Keeper şikâyeti ("kötü dünya üretimi oyunu bitirilemez yapıyor") bu
   oyunda dünyanın bitirilemez olmasıyla değil, geçilemeyecek kadar dolambaçlı
   olmasıyla ortaya çıkardı.
-- **Karo varyantları doku, dünya değil.** Her taban kayasının 3 dokusu var;
-  hangisinin çizileceği hücrenin konumundan türer, tohumdan değil. Maden ve
-  tehlike karolarının varyantı yok — gazın deseni bir bakışta tanınmalı.
+- **Karo varyantları doku, dünya değil.** Atlasın 5 satırı var. Taban kayaları
+  için satır hücrenin konumundan türer (tohumdan değil), **maden karoları için
+  satır = KATMAN**: damarın zemini bulunduğu derinliğin kayasıdır. Tehlike
+  karolarının varyantı yok — gazın deseni bir bakışta tanınmalı.
   Asıl kusur dokunun tekrarı değil, her karonun üstte açık altta koyu olmasıydı:
   duvar 16 px'de bir çizgileniyordu. Degradenin karşıtlığı düşürüldü ve varyantlar
   arasında **yön değiştiriyor**.
@@ -143,9 +161,22 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 - **Lav mağara boşluğunun yerine konuyor**, kayanın değil. Böylece kazılamaz
   olmasına rağmen hiçbir yolu tıkamıyor; test yüzeyden çekirdeğe kazılabilir bir
   yol olduğunu her tohumda doğruluyor.
-- **Maden damarlarının zemini her katmanda aynı nötr koyu taş.** Bakır bazaltın
-  içinde de çıkabiliyor; kendi katmanının kayasıyla çizilince oraya yanlışlıkla
-  yapıştırılmış gibi duruyordu.
+- **Maden damarının zemini bulunduğu katmanın kayası (v0.4).** v0.3'te zemin her
+  katmanda aynı nötr koyu taştı — gerekçe "bakır bazaltın içinde de çıkabiliyor"
+  idi, ama sonuç toprak katmanında duvara yapıştırılmış **mavi-gri bir kare**
+  oldu. Çözüm tek bir zemin seçmek değil, zemini derinliğe bağlamak: atlasın
+  satırı artık katman. Bakır toprakta kahverengi, bazaltta gece mavisi bir
+  zeminde çıkıyor; damarın rengi değişmiyor, madeni damar tanıtıyor.
+- **İpucu metni tek yerde, saf bir sınıfta (v0.4).** `scripts/ipucu.gd` aynı
+  durumu masaüstünde tuşlarla ("E — Üs"), dokunmatikte düğmelerle ("Üs düğmesi")
+  anlatıyor. v0.3'te telefonda oyun içi ipucu hâlâ klavye anlatıyordu; metin
+  sahnenin içine gömülü olduğu için hiçbir test göremiyordu. Şimdi test bütün
+  ipucu durumlarını gezip dokunmatik metinlerde tuş adı arıyor.
+- **Bot mini harita/BFS ile oynuyor (v0.4).** Tıkanınca körlemesine yana gitmek
+  yerine rota çıkarıyor, sert kayada dinamit atıyor, radar alıyor ve depremi
+  yaşıyor; 12/12 tohumda çekirdeğe varıyor (v0.3: 11/12). Bunun ölçtüğü şey
+  "oyun bitirilebilir mi"; botun gördüğü bilgi oyuncununkinden fazla olduğu için
+  "oyuncu yolu bulabilir mi" sorusunun cevabı hâlâ gerçek bir denemede.
 - **Web çıktısı `thread_support` kapalı derlendi.** Prototip turunda itch'te
   "SharedArrayBuffer" kutusu gerekiyordu; artık düz bir statik sunucuda açılıyor.
 
@@ -158,9 +189,18 @@ godot --headless --path . --script res://tests/test_calistir.gd   # birim testle
 godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış testi
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
-godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay hattı ölçümü (sınama değil)
+godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri
+godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim)
+```
+
+Tanıtım GIF'i (kareler alındıktan sonra):
+
+```powershell
+ffmpeg -y -framerate 12 -i build/tanitim/kare-%02d.png ^
+  -vf "fps=12,scale=480:-1:flags=neighbor,split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=none" ^
+  -loop 0 yayin/tanitim.gif
 ```
 
 Dışa aktarma:
@@ -181,7 +221,8 @@ scripts/dunya.gd          TileMapLayer, 16x16 chunk, kazı farkı
 scripts/durum.gd          koşu durumu + tüm ekonomi kuralları (saf, test edilebilir)
 scripts/arac.gd           hareket, kazma, hasar, aletler
 scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
-scripts/deprem.gd         deprem hesabı (saf sınıf, sahne gerektirmez)
+scripts/deprem.gd         deprem hesabı ve oyuncunun kararı (saf sınıf)
+scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı (saf sınıf)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk]) ve ayarlar
@@ -189,7 +230,7 @@ scripts/ses.gd            autoload: efekt/müzik/ayar
 tools/                    varlık üretimi (pixel art, müzik, ekran görüntüsü)
 tests/bot.gd              bot simülasyonu (kusursuz + insan benzeri ayar)
 tests/                    headless testler (çıkış kodu 0 = geçti)
-yayin/                    itch sayfası, 5 ekran görüntüsü, kapak, butler komutları
+yayin/                    itch sayfası, 5 ekran görüntüsü, kapak, tanıtım GIF'i, butler komutları
 ```
 
 Kayıt dosyası: `user://kayit.cfg`
