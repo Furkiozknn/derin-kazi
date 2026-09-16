@@ -1,29 +1,73 @@
-## Tohumdan dünya üreten saf sınıf. Node değil: testler doğrudan kullanabilir.
-## Aynı tohum + aynı (x, y) => hep aynı karo. Hiç durum tutmaz, chunk üretimi buna dayanır.
+## Tohumdan dünya üreten saf sınıf. Node değil: testler ve chunk üretimi doğrudan kullanır.
+## Aynı tohum + aynı (x, y) => hep aynı karo. Hiç durum tutmaz.
+## Odalar chunk düzeyinde karar verilir: hash(tohum, cx, cy).
 class_name DunyaUretici
 extends RefCounted
+
+const ODA_G := 7
+const ODA_Y := 5
 
 var tohum: int
 var cekirdek_x: int
 var _magara: FastNoiseLite
 var _kaya: FastNoiseLite
+var _lav: FastNoiseLite
+var _maden_tablo: Array = []   ## [tür, en_sığ, tepe, yoğunluk]
 
 func _init(p_tohum: int) -> void:
 	tohum = p_tohum
-	_magara = FastNoiseLite.new()
-	_magara.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_magara.seed = p_tohum
-	_magara.frequency = 0.075
-	_kaya = FastNoiseLite.new()
-	_kaya.noise_type = FastNoiseLite.TYPE_SIMPLEX
-	_kaya.seed = p_tohum + 7919
-	_kaya.frequency = 0.13
+	_magara = _gurultu(p_tohum, 0.075)
+	_kaya = _gurultu(p_tohum + 7919, 0.13)
+	_lav = _gurultu(p_tohum + 104729, 0.11)
+	for i in Ayarlar.KATMANLAR.size():
+		var k: Dictionary = Ayarlar.KATMANLAR[i]
+		var son: int = int(Ayarlar.KATMANLAR[i + 1]["y0"]) if i + 1 < Ayarlar.KATMANLAR.size() else Ayarlar.CEKIRDEK_DERINLIK
+		_maden_tablo.append([int(k["maden"]), int(k["y0"]), (int(k["y0"]) + son) / 2, float(k["yogunluk"])])
 	# Çekirdek kenarlardan uzakta, tohuma göre sabit bir sütunda.
 	cekirdek_x = 6 + absi(hash(p_tohum)) % (Ayarlar.GENISLIK - 12)
 
+static func _gurultu(t: int, f: float) -> FastNoiseLite:
+	var n := FastNoiseLite.new()
+	n.noise_type = FastNoiseLite.TYPE_SIMPLEX
+	n.seed = t
+	n.frequency = f
+	return n
+
 ## Deterministik 0..1 arası sayı. RNG nesnesi kurmadan, sadece hash ile.
-func _gurultu_sayi(x: int, y: int, tuz: int) -> float:
+func _sayi(x: int, y: int, tuz: int) -> float:
 	return float(absi(hash(Vector4i(x, y, tohum, tuz))) % 1000000) / 1000000.0
+
+# --- odalar ---------------------------------------------------------------
+
+## Chunk'ta hazır oda varsa {"x0","y0","tur"} döner, yoksa boş sözlük.
+## tur: SANDIK ya da ESER. Görev: "chunk başına olasılıkla hazır oda şablonu".
+func oda(cx: int, cy: int) -> Dictionary:
+	if cy < 2 or cx < 0 or cx >= _chunk_genislik():
+		return {}
+	var r := _sayi(cx, cy, 555)
+	if r >= Ayarlar.ODA_SANS:
+		return {}
+	var ox := 2 + int(_sayi(cx, cy, 556) * float(Ayarlar.PARCA - ODA_G - 3))
+	var oy := 2 + int(_sayi(cx, cy, 557) * float(Ayarlar.PARCA - ODA_Y - 3))
+	var tur := Ayarlar.ESER if _sayi(cx, cy, 558) < 0.30 else Ayarlar.SANDIK
+	return {"x0": cx * Ayarlar.PARCA + ox, "y0": cy * Ayarlar.PARCA + oy, "tur": tur}
+
+func _chunk_genislik() -> int:
+	return ceili(float(Ayarlar.GENISLIK) / float(Ayarlar.PARCA))
+
+func _oda_karosu(x: int, y: int) -> int:
+	var o := oda(x / Ayarlar.PARCA, y / Ayarlar.PARCA)
+	if o.is_empty():
+		return -2   ## "oda yok" (BOS ile karışmasın)
+	var lx: int = x - int(o["x0"])
+	var ly: int = y - int(o["y0"])
+	if lx < 0 or ly < 0 or lx >= ODA_G or ly >= ODA_Y:
+		return -2
+	if lx == ODA_G / 2 and ly == ODA_Y - 1:
+		return int(o["tur"])
+	return Ayarlar.BOS
+
+# --- karo -----------------------------------------------------------------
 
 func karo(x: int, y: int) -> int:
 	if y < 0:
@@ -32,44 +76,73 @@ func karo(x: int, y: int) -> int:
 		return Ayarlar.KAYA
 	if x == 0 or x == Ayarlar.GENISLIK - 1:
 		return Ayarlar.KAYA
-	if y == Ayarlar.CEKIRDEK_DERINLIK and x == cekirdek_x:
-		return Ayarlar.CEKIRDEK
 	if y >= Ayarlar.DERINLIK - 1:
 		return Ayarlar.KAYA   ## taban: dünyanın altından düşülmesin
+	if y == Ayarlar.CEKIRDEK_DERINLIK and x == cekirdek_x:
+		return Ayarlar.CEKIRDEK
 
-	var cekirdege_yakin := absi(y - Ayarlar.CEKIRDEK_DERINLIK) <= 2 and absi(x - cekirdek_x) <= 2
-	if y >= Ayarlar.KAPALI_UST:
-		if _magara.get_noise_2d(float(x), float(y)) > Ayarlar.MAGARA_ESIK:
-			return Ayarlar.BOS
-		# Kazılamaz kaya kümeleri. Çekirdeğin çevresine konmaz, yolu tıkamasın.
-		if y >= 30 and not cekirdege_yakin:
-			if _kaya.get_noise_2d(float(x), float(y)) > Ayarlar.KAYA_ESIK:
-				return Ayarlar.KAYA
+	# Üsün altındaki garantili bakır damarı: ilk 10 m'de "+$" öğretilir.
+	var basi := _baslangic_damari(x, y)
+	if basi != -2:
+		return basi
+
+	if y < Ayarlar.KAPALI_UST:
+		return Ayarlar.TOPRAK
+
+	var k := Ayarlar.katman(y)
+	var kat: Dictionary = Ayarlar.KATMANLAR[k]
+	var cekirdege_yakin := absi(y - Ayarlar.CEKIRDEK_DERINLIK) <= 3 and absi(x - cekirdek_x) <= 3
+
+	var od := _oda_karosu(x, y)
+	if od != -2:
+		return od
+
+	# Mağara. Derin katmanlarda mağara tabanına lav dolar (kazılmaz ama yolu kapatmaz:
+	# lav hep boşluğun yerine gelir, kayanın değil).
+	if _magara.get_noise_2d(float(x), float(y)) > Ayarlar.MAGARA_ESIK:
+		if int(kat["tehlike"]) == Ayarlar.LAV and _lav.get_noise_2d(float(x), float(y) * 1.6) > 0.30:
+			return Ayarlar.LAV
+		return Ayarlar.BOS
+
+	if y >= 30 and not cekirdege_yakin:
+		if _kaya.get_noise_2d(float(x), float(y)) > Ayarlar.KAYA_ESIK:
+			return Ayarlar.KAYA
 
 	var maden := _maden(x, y)
 	if maden != Ayarlar.BOS:
 		return maden
-	if y >= 170:
-		return Ayarlar.SERT
-	if y >= 70:
-		return Ayarlar.TAS
-	return Ayarlar.TOPRAK
 
-## Derinliğe göre maden. Her tür kendi penceresinde çıkar, ortasında en bol.
+	# Katmanın tehlikesi (lav dışında; lav yukarıda mağaraya kondu).
+	var teh := int(kat["tehlike"])
+	if teh != Ayarlar.LAV and not cekirdege_yakin:
+		if _sayi(x, y, 202) < float(kat["tehlike_sans"]):
+			return teh
+
+	return int(kat["taban"])
+
+## Üsün altında elle yerleştirilmiş bakır damarı (rakip analizi: 0:30'da ilk "+$").
+func _baslangic_damari(x: int, y: int) -> int:
+	if y < Ayarlar.BASLANGIC_DAMAR or y > Ayarlar.BASLANGIC_DAMAR + 3:
+		return -2
+	var d := absi(x - Ayarlar.US_KARO_X)
+	if d > 2:
+		return -2
+	if d + (y - Ayarlar.BASLANGIC_DAMAR) <= 3:
+		return Ayarlar.BAKIR
+	return -2
+
+## Derinliğe göre maden. Her katmanın madeni kendi ortasında en bol, derinde seyrelir.
 func _maden(x: int, y: int) -> int:
-	var r := _gurultu_sayi(x, y, 101)
+	var r := _sayi(x, y, 101)
 	var toplam := 0.0
-	for satir in Ayarlar.MADEN_TABLO:
+	for satir in _maden_tablo:
 		var tur: int = satir[0]
 		var en_sig: int = satir[1]
 		var tepe: int = satir[2]
-		var en_derin: int = satir[3]
-		var sans: float = satir[4]
-		if y < en_sig or y > en_derin:
+		var sans: float = satir[3]
+		if y < en_sig:
 			continue
-		var yayilma := float(maxi(tepe - en_sig, en_derin - tepe))
-		var uzaklik := absf(float(y - tepe)) / maxf(yayilma, 1.0)
-		var agirlik := clampf(1.0 - uzaklik, 0.12, 1.0)
+		var agirlik := clampf(1.0 - absf(float(y - tepe)) / 90.0, 0.10, 1.0)
 		toplam += sans * agirlik
 		if r < toplam:
 			return tur
