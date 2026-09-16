@@ -5,9 +5,10 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-> Durum: **v0.3 — canlı yeraltı.** v0.2'nin üstüne: her 5 seferde bir deprem,
-> çekirdeğin hikâyesini anlatan eserler, paylaşılabilir tohum kodu, Derin Mod,
-> günlük dünya, karo varyantları ve web'de kutu çıkan simgelerin düzeltmesi.
+> Durum: **v0.5 — keşif sisi.** v0.4'ün üstüne: keşfedilmemiş yeraltı karanlık
+> (aracın ışığı kalıcı açar, radar geçici, mini harita yalnız gezileni gösterir,
+> kayda yazılır), telefonda **tam alet seti** (DİNAMİT · RADAR düğmeleri),
+> deprem kararı ekranın ortasında üç satırlık pano + kırmızı işaret.
 > Windows + Web çıktısı alınıyor; yayın paketi `yayin/` altında hazır
 > (**yüklenmedi**).
 
@@ -27,8 +28,10 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 Dokunmatik cihazda ekranın alt sol / alt sağ / alt orta bölgesine dokunmak o yöne
 kazar, üst ortadaki alan pervanedir. Klavye olmadığı için sağ üstte üç düğme var:
-**Üs** · **Harita** · **■** (duraklat). Menüdeki yardım metni dokunmatik cihazda
-kendiliğinden bu anlatıma geçer.
+**Üs** · **Harita** · **■** (duraklat); sol ortada, ◀ alanının üstünde dikey iki
+alet düğmesi: **DİNAMİT n** (sayaçlı, dinamit yokken sönük) · **RADAR AÇ/KAPA**
+(radar alınmamışsa sönük). Menüdeki yardım, oyun içi ipuçları ve mağaza satırları
+dokunmatik cihazda kendiliğinden düğmeleri anlatır (`docs/oyun-telefon.png`).
 
 **Yukarı kazma yok.** Yükselmek için pervaneyle kendi açtığın tünelden çıkarsın —
 geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
@@ -54,7 +57,8 @@ geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
 
 - **Matkap / Yakıt deposu / Yük kasası / Gövde zırhı** — 5 seviye,
   fiyat `taban × 1,35^seviye`.
-- **Maden radarı** (`Q`) — en yakın madenin yönünü ve uzaklığını HUD'a yazar.
+- **Maden radarı** (`Q`) — en yakın madenin yönünü ve uzaklığını HUD'a yazar;
+  açıkken keşif sisini 9 karo yarıçapta **geçici** seyreltir (keşif saymaz).
 - **Isı kalkanı** — lav yakınında hasar almazsın.
 - **Dinamit** (`F`) — 3×3 patlatır, sarf malzemesi.
 - **İstasyon kiti** (`T`) — 50 m aralıkla kurulur; istasyon ile yüzey arasında
@@ -63,11 +67,23 @@ geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
   Altı eserin her biri çekirdeğin sırrından bir parça anlatır; 1'den 6'ya doğru
   okununca tek bir hikâye çıkar.
 
-### Canlı yeraltı (v0.3) ve depremin kararı (v0.4)
+### Keşif sisi (v0.5)
+
+Yeraltında yalnız gördüğün yer aydınlık. Aracın ışığı 5 karo yarıçapı **kalıcı**
+açar (kenarı yumuşak), gezilmiş ama ışık dışında kalan yer loş bir "hatıra",
+hiç gezilmemiş yer kapkaranlık; ilk 8 m'de gün ışığı sisi eritir. Işık **yakıt
+harcamaz** — sis bir kaynak yönetimi değil, bir bilgi kısıtı. Radar açıkken 9
+karo yarıçap geçici seyrelir. Mini harita yalnız keşfedileni boyar; keşif kayda
+sıkıştırılmış yazılır, v0.4 kaydı açılınca kazılmış tünellerin çevresi
+keşfedilmiş sayılır (kapkaranlık başlamaz). Madenler ve gaz cebi deseni ışığın
+içinde olduğu gibi görünür: örtü ışığın içinde sıfır.
+
+### Canlı yeraltı (v0.3) ve depremin kararı (v0.4, pano v0.5)
 
 Her **5 seferde** (in-çık) bir deprem olur. Yeraltındayken önce **geri sayım**
-başlar — ekran sarsılır, HUD'ın alt satırı kalan süreyi ve kararın iki ucunu
-birden yazar — sonra:
+başlar — kırmızı ekran işareti + ses, sarsıntı, ekranın üst-ortasında üç satırlık
+pano: `DEPREM 7.4 sn` / `W ile YÜZEYE ÇIK → +… ₺ ikramiye` / `DERİNDE KAL → …
+hasar` (son 3 saniyede sayaç yanıp söner; dokunmatikte `▲ UÇ ile`) — sonra:
 
 - eski tünellerin ~%20'si kapanır,
 - kalan tünellerin duvarlarında **yeni gaz cepleri ve maden damarları** belirir.
@@ -175,8 +191,29 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 - **Bot mini harita/BFS ile oynuyor (v0.4).** Tıkanınca körlemesine yana gitmek
   yerine rota çıkarıyor, sert kayada dinamit atıyor, radar alıyor ve depremi
   yaşıyor; 12/12 tohumda çekirdeğe varıyor (v0.3: 11/12). Bunun ölçtüğü şey
-  "oyun bitirilebilir mi"; botun gördüğü bilgi oyuncununkinden fazla olduğu için
-  "oyuncu yolu bulabilir mi" sorusunun cevabı hâlâ gerçek bir denemede.
+  "oyun bitirilebilir mi".
+- **Sisli bot: ölçümün "fazla bilgi" sorunu kapandı, bedeli 0 çıktı (v0.5).**
+  `Bot.INSAN_SISLI` yol bulurken yalnız keşfedileni biliyor, karanlığı "o
+  katmanın sade kayası" sanıyor ve yanılınca rotayı yeniden kuruyor (tur başına
+  en çok 3). Ölçüm: 7 tohumun **hiçbirinde** BFS rotası kurulmadı, 12 fay
+  tohumunda fay açıkken toplam **1** rota, **0** yanılma — fay koridoru botu
+  tıkamadığı için sissiz ve sisli bot aynı sayıları veriyor (tur 106 sn,
+  çekirdek 25 dk). Yani sis botun değil oyuncunun problemi: bot çekirdeğin
+  sütununu biliyor ve dümdüz iniyor, oyuncu koridoru yumuşak kayayı izleyerek
+  bulmak zorunda. "Oyuncu yolu bulabilir mi" sorusunun cevabı hâlâ gerçek bir
+  denemede; sis o denemeyi daha anlamlı yaptı.
+- **Işık bedava, sis bilgi kısıtı (v0.5).** Rakip analizindeki SteamWorld Dig
+  şikâyeti "lamba yakıtı angarya". Işık yakıt harcamıyor, büyütülmüyor,
+  satın alınmıyor; sisin tek işi "orada ne var?" sorusunu geri getirmek —
+  mini harita v0.2'den beri keşfedilmemiş alanı kapalı gösteriyordu ama oyun
+  ekranı göstermiyordu, iki görünüm çelişiyordu. Çizim Light2D değil karo
+  başına `draw_rect` (`scripts/sis.gd`): tümleşik GPU + GL Compatibility'de
+  ekrandaki ~700 karo için bedava, occluder poligonu istemiyor.
+- **Dokunmatik alet şeridi dikey ve solda (v0.5).** Sağ üstteki yatay şeride
+  iki düğme daha 640 px'e sığmıyordu; büyütmek yerine ◀ alanının üstüne dikey
+  ikinci şerit açıldı (`docs/oyun-telefon.png`). Sağ kenar mini haritanın yeri.
+  Test sahnedeki gerçek dikdörtgenleri okuyup çakışma ve taşma arıyor — düzen
+  veri olarak iki yere yazılmıyor.
 - **Web çıktısı `thread_support` kapalı derlendi.** Prototip turunda itch'te
   "SharedArrayBuffer" kutusu gerekiyordu; artık düz bir statik sunucuda açılıyor.
 
@@ -217,7 +254,8 @@ Ayrıntı ve proje kuralları: **`CLAUDE.md`**.
 ```
 scripts/ayarlar.gd        tüm denge sabitleri — sayı değiştireceksen burası
 scripts/dunya_uretici.gd  tohumdan karo üreten saf sınıf
-scripts/dunya.gd          TileMapLayer, 16x16 chunk, kazı farkı
+scripts/dunya.gd          TileMapLayer, 16x16 chunk, kazı farkı, keşif haritası
+scripts/sis.gd            keşif sisi örtüsü (karo başına draw_rect; Sis.ortu saf)
 scripts/durum.gd          koşu durumu + tüm ekonomi kuralları (saf, test edilebilir)
 scripts/arac.gd           hareket, kazma, hasar, aletler
 scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
@@ -228,15 +266,16 @@ scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk]) ve ayarlar
 scripts/ses.gd            autoload: efekt/müzik/ayar
 tools/                    varlık üretimi (pixel art, müzik, ekran görüntüsü)
-tests/bot.gd              bot simülasyonu (kusursuz + insan benzeri ayar)
+tests/bot.gd              bot simülasyonu (kusursuz · insan benzeri · sisli insan)
 tests/                    headless testler (çıkış kodu 0 = geçti)
 yayin/                    itch sayfası, 5 ekran görüntüsü, kapak, tanıtım GIF'i, butler komutları
 ```
 
 Kayıt dosyası: `user://kayit.cfg`
 (`%APPDATA%\Godot\app_userdata\Derin Kazı\kayit.cfg`) — `[oyun]` ana ilerleme,
-kazılan ve depremle değişen hücreler · `[gunluk]` günlük dünyanın ayrı yuvası ·
-`[ayar]` ses/tam ekran/sarsıntı tercihleri.
+kazılan ve depremle değişen hücreler, keşif haritası (`kesif`: 17.408 bayt,
+deflate + base64) · `[gunluk]` günlük dünyanın ayrı yuvası · `[ayar]`
+ses/tam ekran/sarsıntı tercihleri.
 
 ## Varlıklar
 

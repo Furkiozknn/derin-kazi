@@ -36,14 +36,21 @@ half your hold stays down there in a crate with your name on it. Go get it.
   into an instant ride. A heat shield lets you work next to lava.
 - **Hazards you can see coming.** Gas pockets glow green before you hit them.
   Cracked rock shakes for half a second before it drops on you.
+- **You only know what you have seen.** The underground is dark. Your rig's lamp
+  lights a few metres around you and what it has lit stays on your map, dim, as
+  a memory; everything else is black. The lamp burns no fuel and never needs an
+  upgrade — the fog is not a chore, it is the question "what is down there?".
+  The ore radar thins it for a moment; the minimap only draws what you have
+  explored.
 - **Hidden rooms.** Sealed chambers with crates — or relics. Relics go to your
   museum and give a small permanent bonus, forever.
 - **Dig chains.** Three of the same ore in a row and the payout multiplier climbs,
   and so does the pitch of the pickup sound.
 - **The ground is alive, and it asks you a question.** Every five runs the crust
-  shifts. You get a countdown underground — longer the deeper you are, 10 seconds
-  at 100 m — and it spells out the bet: climb out and collect the crust-watch
-  bonus (25 + your depth), or keep digging and eat the damage. A station you
+  shifts. The screen flashes, then a countdown board sits in the middle of the
+  view — longer the deeper you are, 10 seconds at 100 m — and it spells out the
+  bet on two lines: climb out and collect the crust-watch bonus (25 + your
+  depth), or keep digging and eat the damage. A station you
   planted turns that into a free ride up. When it hits, part of your old tunnel
   network caves in while fresh gas pockets and ore veins open in the walls of what
   is left. It never seals you in: a collapsed tile is always diggable rock, the
@@ -80,8 +87,10 @@ way back is something you dig on the way down.
 
 On touch devices: tap the bottom-left, bottom-right or bottom-centre of the screen
 to dig that way; the upper-centre area is the thruster. Three buttons top right:
-base, map, pause. Every hint in the game — menu and in-game — describes the
-buttons and touch zones instead of keys when you play on a touch screen.
+base, map, pause. Two more on the left: **DYNAMITE** (with a counter) and
+**RADAR** — the full tool set works on a phone. Every hint in the game — menu,
+in-game and the shop — describes the buttons and touch zones instead of keys
+when you play on a touch screen.
 
 Turkish interface. Made in Godot 4.7, GL Compatibility — runs on integrated
 graphics. All art and audio generated from code in this repository.
@@ -114,14 +123,20 @@ aşağıda bir sandıkta kalıyor. Git al.
   yolculuğa çevirir. Isı kalkanı lavın yanında çalışmanı sağlar.
 - **Önceden görünen tehlikeler.** Gaz cepleri çarpmadan önce yeşil parlar.
   Çatlamış kaya düşmeden önce yarım saniye titrer.
+- **Yalnız gördüğünü bilirsin.** Yeraltı karanlık. Aracının ışığı çevrendeki
+  birkaç metreyi aydınlatır, aydınlattığı yer haritanda loş bir hatıra olarak
+  kalır; gerisi kapkara. Işık yakıt yakmaz, geliştirme istemez — sis bir angarya
+  değil, "aşağıda ne var?" sorusunun kendisi. Maden radarı sisi bir anlığına
+  seyreltir; mini harita yalnız keşfettiğin yeri çizer.
 - **Gizli odalar.** Kapalı hücrelerde sandık — ya da eser. Eserler müzeye gider
   ve kalıcı küçük bir bonus verir.
 - **Kazı zinciri.** Art arda üç aynı maden → çarpan yükselir, toplama sesinin
   perdesi de.
 - **Yeraltı canlı ve sana bir soru soruyor.** Her beş seferde bir kabuk
-  kımıldıyor. Yeraltındayken geri sayım başlıyor — ne kadar derinsen o kadar
-  uzun, 100 m'de 10 saniye — ve bahsi açıkça yazıyor: yukarı çık, kabuk nöbeti
-  ikramiyesini al (25 ₺ + derinliğin); ya da kazmaya devam et, hasarı göze al.
+  kımıldıyor. Ekran kırmızı yanıp sönüyor, sonra ekranın ortasına bir geri sayım
+  panosu oturuyor — ne kadar derinsen o kadar uzun, 100 m'de 10 saniye — ve
+  bahsi iki satırda açıkça yazıyor: yukarı çık, kabuk nöbeti ikramiyesini al
+  (25 ₺ + derinliğin); ya da kazmaya devam et, hasarı göze al.
   Kurduğun bir istasyon bu tırmanışı bedava yolculuğa çeviriyor. Patladığında
   eski tünellerinin bir kısmı kapanıyor, kalanların duvarlarında yeni gaz cepleri
   ve damarlar açılıyor. Seni asla içeride bırakmıyor: kapanan karo her zaman
@@ -157,9 +172,10 @@ aşağıda bir sandıkta kalıyor. Git al.
 inerken kazdığın şeydir.
 
 Dokunmatik: ekranın alt sol / alt sağ / alt orta bölgesine dokununca o yöne kazar,
-üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Oyundaki
-bütün ipuçları — menüde de oyun içinde de — dokunmatik cihazda tuşları değil
-düğmeleri ve dokunma alanlarını anlatıyor.
+üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Solda iki
+düğme daha: **DİNAMİT** (sayaçlı) ve **RADAR** — bütün aletler telefonda da
+çalışıyor. Oyundaki bütün ipuçları — menüde, oyun içinde ve mağazada — dokunmatik
+cihazda tuşları değil düğmeleri ve dokunma alanlarını anlatıyor.
 
 Godot 4.7, GL Compatibility — tümleşik ekran kartıyla çalışır. Tüm görseller ve
 sesler bu depoda kodla üretildi.
@@ -180,4 +196,4 @@ sesler bu depoda kodla üretildi.
   (1280 × 720)
 - **Tanıtım GIF'i:** `tanitim.gif` (480 × 270, 4 sn) — sayfa metninin en üstüne,
   ilk ekran görüntüsünün yerine. itch GIF'i olduğu gibi oynatır.
-- **Sürüm:** v0.4
+- **Sürüm:** v0.5 (butler `--userversion 0.5.0`)

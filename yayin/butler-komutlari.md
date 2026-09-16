@@ -8,7 +8,7 @@
 - butler kurulu ve `butler login` yapılmış (anahtar `butler_creds` içinde).
 - itch.io'da `derin-kazi` adıyla bir proje sayfası **önceden açılmış** olmalı —
   butler yeni sayfa oluşturamaz, yalnız var olana dosya yükler.
-- Sürüm etiketi bu turda `v0.4`.
+- Sürüm etiketi bu turda `v0.5` (butler'a `0.5.0`).
 
 Kullanıcı adını doğrula:
 
@@ -22,10 +22,10 @@ Proje kökünde (`D:\Repolar\derin-kazi`):
 
 ```powershell
 # Web (tarayıcıda oynanan sürüm)
-butler push build\web furkiozknn/derin-kazi:web --userversion 0.4
+butler push build\web furkiozknn/derin-kazi:web --userversion 0.5.0
 
 # Windows masaüstü
-butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.4
+butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.5.0
 ```
 
 Yükleme sonrası durum:
@@ -65,15 +65,21 @@ python -m http.server 8080
 # tarayıcıda http://localhost:8080/
 ```
 
-v0.4'te tarayıcıda **özellikle şuna bak** (tarayıcının geliştirici araçlarında
-telefon emülasyonunu aç, dokunmatiği işaretle):
+v0.5'te tarayıcıda **özellikle şuna bak** (tarayıcının geliştirici araçlarında
+telefon emülasyonunu aç, dokunmatiği işaretle, 915×412):
 
-1. **Alt ipucu tuş anlatmamalı.** Telefonda "E — Üs • T — ışınlanma • M — harita"
-   yerine "Üs düğmesi — sat, geliştir, yakıt • Harita düğmesi" yazmalı.
-   v0.3 web yapısında kalan tek açık kusur buydu.
-2. **Deprem geri sayımı.** 15 m'den derine in, 5 sefer tamamla: alt satırda
-   "DEPREM x.x sn — … (+… ₺) ya da derinde kal (… hasar)" belirmeli.
-3. **Maden zemini.** Toprak katmanındaki bakır damarı kahverengi zeminde
-   durmalı, mavi-gri kare gibi değil.
-4. v0.3'ten gelenler hâlâ sağlam mı: `₺ ← → ↓ ✔` kutu değil simge; menü arka
-   planı ekranın altını dolduruyor.
+1. **Alet düğmeleri.** Sol ortada dikey iki düğme: `DİNAMİT n` ve `RADAR AÇ`.
+   Dinamit yokken / radar alınmamışken sönük. Basınca dinamit sayacı düşmeli,
+   radar sisi geçici açmalı. Düğmeler ◀ alanının üstünde, ona binmiyor.
+2. **Keşif sisi.** Yeraltında aracın çevresi aydınlık, gezilmiş tünel loş,
+   gezilmemiş yer kapkaranlık. Yüzeyde sis yok. Mini haritada yalnız gezilen
+   yer boyalı. Oyunu kapatıp açınca keşif yerinde kalmalı.
+3. **Deprem panosu.** 15 m'den derine in, 5 sefer tamamla: uyarı başlarken
+   kırmızı ekran parlaması + ses; ekranın üst-ortasında üç satır:
+   `DEPREM x.x sn` / `▲ UÇ ile YÜZEYE ÇIK → +… ₺ ikramiye` / `DERİNDE KAL → … hasar`.
+   Son 3 saniyede sayaç yanıp söner.
+4. **Mağaza metinleri.** Telefonda "F ile", "Q —", "T ile" yerine "DİNAMİT
+   düğmesi ile", "RADAR düğmesi —", "Üs düğmesi ile" yazmalı.
+5. v0.3–v0.4'ten gelenler hâlâ sağlam mı: `₺ ← → ↓ ✔` kutu değil simge; menü
+   arka planı ekranın altını dolduruyor; alt ipucu tuş anlatmıyor; maden
+   damarının zemini katmanın kayası.

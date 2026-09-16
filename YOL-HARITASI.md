@@ -136,17 +136,62 @@
 - [x] 191 birim + 50 oynanış sınaması, denge ve insan ölçümleri, fay/bot sınaması
 - [x] Windows + Web dışa aktarımı, 5 ekran görüntüsü + kapak yenilendi
 
+## Geliştirme turu 4 — v0.5 "Keşif sisi" (2026-09-16)
+
+### Dokunmatikte tam alet seti
+- [x] **DİNAMİT · RADAR düğmeleri**: sol ortada, ◀ alanının üstünde dikey şerit;
+      dinamit sayaçlı ve yokken sönük, radar AÇ/KAPA ve alınmamışsa sönük.
+      Sağ üstteki Üs · Harita · ■ şeridi yerinde. Tuş ve düğme aynı iki
+      fonksiyona bağlı (`_dinamit_kullan`, `_radar_degistir`)
+- [x] **Mağaza satırları dokunmatikte düğmeyi anlatıyor** (`Ipucu.MAGAZA`):
+      "F ile" → "DİNAMİT düğmesi ile", "Q —" → "RADAR düğmesi —", "T ile" →
+      "Üs düğmesi ile"; test tuş adı arıyor
+- [x] **Çakışma testi**: oynanış testi sahnedeki 4 kazı alanı + 5 düğmenin
+      dikdörtgenlerini okuyup 640×360'a sığdıklarını ve birbirine binmediklerini
+      sınıyor; düğmelere basınca dinamit atıldığı / radar açıldığı da sınanıyor.
+      `docs/oyun-telefon.png` (telefon oranı) ile gözle doğrulandı
+
+### Keşif sisi
+- [x] **Keşfedilmemiş karo karanlık**, aracın 5 karo ışığı kalıcı açar (kenarı
+      yumuşak), gezilmiş yer loş hatıra, ilk 8 m gün ışığı. Işık yakıt harcamaz
+- [x] **Radar sisi geçici açar** (9 karo, keşif saymaz); mini harita yalnız
+      keşfedileni boyar; istasyon/sandık işaretleri de keşfedilmemişse gizli
+- [x] **Kayıtla uyumlu**: keşif haritası deflate+base64 (`kesif`, ~100-4000
+      karakter); v0.4 kaydı açılınca kazılmış tünellerin çevresi keşfedilmiş sayılır
+- [x] **Çizim karo başına `draw_rect`** (`scripts/sis.gd`), Light2D yok;
+      `Sis.ortu` saf ve 13 sınamayla testli. Madenler ve gaz deseni ışığın
+      içinde olduğu gibi (`yayin/ekran-2.png`, `ekran-4.png`)
+- [x] **Bot varyantı `Bot.INSAN_SISLI`**: yol bulma yalnız keşfedileni biliyor,
+      karanlığı sade kaya sanıyor, yanılınca rotayı yeniden kuruyor (≤ 3/tur).
+      Ölçüm 7 tohumda yenilendi: **sisli = sissiz** (tur 106 sn, çekirdek 25 dk),
+      çünkü 7 tohumun hiçbirinde BFS rotası kurulmuyor; 12 fay tohumunda fay
+      açıkken toplam 1 rota, 0 yanılma, 12/12 varış. `test_fay_olcum.gd` artık
+      sisli insan botunun da 12/12 varmasını sınıyor
+
+### Deprem okunurluğu
+- [x] **Üç satırlık pano** ekranın üst-ortasında: `DEPREM 7.3 sn` /
+      `W ile YÜZEYE ÇIK → +196 ₺ ikramiye` / `DERİNDE KAL → 2 hasar`
+      (dokunmatikte `▲ UÇ ile`); son 3 sn'de sayaç yanıp sönüyor
+- [x] **Uyarı başlarken kırmızı ekran işareti** (0,5 sn sönen örtü) + iki katmanlı
+      ses + sarsıntı. `yayin/ekran-4.png` ve `docs/deprem-telefon.png` ile doğrulandı
+
+### Doğrulama ve paket
+- [x] 220 birim + 68 oynanış sınaması, denge/insan/fay ölçümleri yeşil
+- [x] Windows + Web dışa aktarımı, 5 ekran görüntüsü + kapak + GIF yenilendi
+      (GIF sisle 1,6 MB → 0,9 MB), `yayin/` sürüm 0.5.0
+
 ## Sonraki tur
 
 ### Oynanış
 - [ ] **Gerçek insan denemesi.** Ölçüm hâlâ bot; insan benzeri bot da bir varsayım.
-      Bir oturum gerçekten oynanıp tur süresi ve çekirdeğe varış kaydedilmeli
-- [ ] **Dokunmatikte dinamit ve radar.** İpuçları artık düğmeleri anlatıyor ama
-      telefonda dinamit atmanın ve radarı açmanın hiçbir yolu yok (F ve Q tuşları
-      orada yok). Sağ üstteki düğme şeridi 640 px'e sığmadığı için bu tura
-      alınmadı — düzen değişikliği gerekiyor
-- [ ] **Deprem kararının insanda karşılığı.** Ölçümde bahsi bot veriyor; gerçek
-      oyuncu uyarıyı görüp ne yapıyor, ikramiye "geri dön" demeye yetiyor mu
+      Sisle birlikte bu deneme daha da anlamlı: bot çekirdeğin sütununu biliyor,
+      oyuncu koridoru karanlıkta bulmak zorunda. Bir oturum gerçekten oynanıp tur
+      süresi ve çekirdeğe varış kaydedilmeli
+- [ ] **Deprem kararının insanda karşılığı.** Pano artık okunuyor; gerçek oyuncu
+      uyarıyı görüp ne yapıyor, ikramiye "geri dön" demeye yetiyor mu
+- [ ] **Sisin oyuncuya bedeli.** Bot ölçümünde 0 çıktı (rota kurulmuyor); insan
+      denemesinde "yolu bulamadım" olup olmadığı asıl soru. Gerekirse radar
+      menzili ya da hatıra örtüsü (`SIS_HATIRA`) ayarlanır
 - [ ] **Derin Mod'da yeni içerik**, yalnız çarpan değil: 6. katman, yeni tehlike
       ya da eser seti
 - [ ] Işınlama işareti (istasyon dışı, tek kullanımlık dönüş noktası)
@@ -159,8 +204,11 @@
 - [ ] Bitiş ekranına istatistik dökümü (kazılan karo, deprem sayısı, ölüm sayısı)
 
 ### Dağıtım
-- [ ] Web çıktısını v0.4 ile tarayıcıda doğrula (dokunmatik ipuçları, deprem
-      geri sayımı, maden zemini)
+- [x] Web çıktısı v0.4 ile tarayıcıda doğrulandı (yönetici: menü, kazı, dokunmatik
+      ipucu, konsolda hata yok)
+- [ ] Web çıktısını v0.5 ile tarayıcıda doğrula: alet düğmeleri, keşif sisi
+      (özellikle `draw_rect` örtüsünün web'de hızı), deprem panosu —
+      `yayin/butler-komutlari.md` beş maddeyi yazıyor
 - [ ] itch.io sayfası ve yükleme — **Furki'nin onayı gerekiyor**
 - [ ] GitHub deposu ve push — **Furki'nin onayı gerekiyor**
 
@@ -175,11 +223,16 @@
   hiç inmeyen bir oyuncu depremi hiç görmez — bilerek: uyarının anlamı yeraltında.
 - **Bot artık depremi yaşıyor ama mükemmel karar veriyor**: tırmanış süresini
   tam biliyor, uyarıyı kaçırmıyor. Gerçek oyuncu bazen geç fark eder.
-- **Botun BFS'i oyuncunun bilgisinden fazlasını görüyor**: mini haritada
-  keşfedilmemiş alan oyuncuya kapalı, bota değil. Ölçtüğü şey "oyun
-  bitirilebilir mi", "oyuncu yolu bulabilir mi" değil.
+- **Sisli bot yol bulurken yalnız keşfedileni biliyor ama çekirdeğin sütununu
+  (`cekirdek_x`) hâlâ biliyor** ve 238 m'den sonra ona yanaşıyor. Oyuncu bunu
+  koridorun yumuşak kayasını izleyerek bulur; bot için bu bilgi olmasa ölçüm
+  "koridoru bulma" becerisini de ölçerdi — bir sonraki turun sorusu.
+- **Sisin bot ölçümüne bedeli 0**: 7 tohumda BFS rotası hiç kurulmuyor. Yani sis
+  botun oynayışını değiştirmiyor; oyuncununkini değiştirip değiştirmediği insan
+  denemesine kaldı.
 - Düşen kaya yere çarpınca yok oluyor, yeni karo bırakmıyor (bilerek).
-- Web çıktısı v0.4 ile tarayıcıda denenmedi (bu oturumda sunucu kurulmadı);
-  dokunmatik ipuçları headless test + sahne sınamasıyla doğrulandı.
+- Web çıktısı v0.5 ile tarayıcıda denenmedi (bu oturumda sunucu kurulmadı);
+  sis, alet düğmeleri ve pano headless test + sahne sınaması + motor içi ekran
+  görüntüsüyle doğrulandı.
 - **Deprem yalnız ilk 15 m'nin altında tetikleniyor**, yani hiç derine inmeyen
   bir oyuncu ikramiyeyi de riski de görmez (bilerek).

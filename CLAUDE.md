@@ -27,9 +27,10 @@ Arayüz, kod ve belgeler **Türkçe**. Değişken/fonksiyon adları da Türkçe.
 ```
 scripts/ayarlar.gd        TÜM denge sabitleri — sayı değiştireceksen burası
 scripts/dunya_uretici.gd  tohumdan karo üreten saf sınıf (Node değil) + fay hattı
-scripts/dunya.gd          TileMapLayer, 16x16 chunk yönetimi, kazı + deprem farkı
+scripts/dunya.gd          TileMapLayer, 16x16 chunk yönetimi, kazı + deprem farkı, keşif haritası
+scripts/sis.gd            keşif sisi örtüsü (karo başına draw_rect; Sis.ortu saf ve testli)
 scripts/deprem.gd         deprem hesabı + oyuncunun kararı (saf sınıf; uygulamak Dunya.degistir işi)
-scripts/ipucu.gd          oyun içi ipucu metni (saf sınıf; dokunmatik/masaüstü ayrımı)
+scripts/ipucu.gd          ipucu, deprem panosu ve mağaza satırları (saf sınıf; dokunmatik/masaüstü ayrımı)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları (saf sınıf)
@@ -39,7 +40,7 @@ scripts/ses.gd            autoload: efekt/müzik/ayar
 scripts/ayar_panel.gd     ayarlar ekranının içeriği (menü + duraklatma ortak)
 scenes/                   menu · oyun · kapak
 tools/                    varlık üretimi ve ekran görüntüsü betikleri
-tests/bot.gd              bot simülasyonu (Bot.MUKEMMEL / Bot.INSAN ayarı)
+tests/bot.gd              bot simülasyonu (Bot.MUKEMMEL / Bot.INSAN / Bot.INSAN_SISLI)
 tests/                    headless testler (çıkış kodu 0 = geçti)
 yayin/                    itch sayfası, ekran görüntüleri, kapak, butler komutları
 _eski/                    kullanımdan kalkmış dosyalar (silme yok, buraya taşı)
@@ -54,6 +55,30 @@ uyarı süresi derinlikle uzar (`uyari_suresi`), yüzeye çıkan ikramiye alır
 değiştirirsen `tests/test_calistir.gd` → `_deprem_testleri` ve
 `tests/test_insan.gd` birlikte çalıştır. Üç sıkışma güvencesi (araç/üs/istasyon
 çevresi, kapanan hücre hep kazılabilir, ilk 10 m sabit) dokunulmaz.
+
+## Keşif sisi (v0.5)
+
+Keşif `Dunya.kesfedilen` (PackedByteArray, hücre başına 1 bayt) içinde; kayda
+`kesif` anahtarıyla deflate+base64 yazılır (`kesif_dizi` / `diziden_kesif`).
+Kayıtta `kesif` yoksa (v0.4 kaydı) `Dunya.kur` kazılmış hücrelerin çevresini
+açar — bunu kaldırırsan eski kayıt kapkaranlık açılır. Örtü `scripts/sis.gd`
+karo başına `draw_rect` çizer; Light2D/occluder **kullanma** (tümleşik GPU).
+Işık **yakıt harcamaz**, geliştirilmez — sis bilgi kısıtı, kaynak değil
+(rakip analizi: "lamba yakıtı angarya"). Sayılar `Ayarlar` → keşif sisi bloğu;
+`ISIK_YARICAP`'ı değiştirirsen botun `_kesfet`'i de aynı sabiti kullanıyor.
+Mini harita (`oyun.gd → _harita_boya`) keşfedilmemiş hücreyi boyamaz; radar
+sisi **geçici** seyreltir, keşif saymaz.
+
+## Dokunmatik düzen
+
+Tüm dokunma alanları 640x360 içinde ve **birbirine binmez**: kazı alanları
+`scenes/oyun.tscn` (`$Dokunmatik/*` TouchScreenButton), düğmeler
+`oyun.gd → dokunmatik_kur` (sağ üst Üs·Harita·■, sol orta dikey DİNAMİT·RADAR).
+`tests/test_oynanis.gd` dikdörtgenleri **sahneden okuyup** çakışma/taşma arıyor;
+düğme ekleyeceksen önce onu çalıştır. Dinamit/radar mantığı
+`_dinamit_kullan` / `_radar_degistir` içinde — tuş da düğme de oraya bağlı,
+ikisine ayrı kod yazma. Mağaza/ipucu metinleri dokunmatikte tuş anlatmaz
+(`Ipucu.MAGAZA`, testi var). Telefon oranı görseli: `docs/oyun-telefon.png`.
 
 ## Denge
 
@@ -70,8 +95,10 @@ Bilinmesi gereken bağlar:
   Koridorun içinde KAYA ve LAV üretilmez. Dokunursan `test_calistir.gd`
   BFS testi 12 tohumda da kırılır.
 - **Oturum uzunluğu** `tests/test_insan.gd` ile ölçülür (insana benzetilmiş bot:
-  tepki gecikmesi, duraksama, yanlış rota). Ölçülen (v0.4): tur 106 sn,
-  çekirdeğe 25 dk.
+  tepki gecikmesi, duraksama, yanlış rota; v0.5'ten beri ana sayı **sisli**
+  bot, yol bulması yalnız keşfedileni biliyor). Ölçülen (v0.5): tur 106 sn,
+  çekirdeğe 25 dk — sisli ve sissiz aynı, çünkü fay koridoru botu tıkamıyor ve
+  7 tohumda hiç BFS rotası kurulmuyor (`BFS rotası kurulan` satırı bunu yazar).
 - **Bot yol bulma** `Bot._rota` (BFS, 80 karoluk pencere) tur başına **bir kez**
   hesaplanır; sınırı kaldırırsan ölçüm dakikalar sürer. `Bot._uretim` üreticinin
   önbelleği — üretici saf olduğu için güvenli, kaldırma.
@@ -87,11 +114,11 @@ godot --headless --path . --script res://tests/test_calistir.gd   # birim testle
 godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış testi
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
-godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması
+godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması (sisli insan botu dahil)
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
 godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası
-godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri + menü denetimi (render gerekir)
+godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri + telefon/deprem denetimi (render gerekir)
 godot --headless --path . --export-release "Windows Masaustu"
 godot --headless --path . --export-release "Web (HTML5)"
 ```
