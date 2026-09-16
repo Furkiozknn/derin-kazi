@@ -112,7 +112,7 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   analizindeki "çekirdeğe 60-90 dk" hedefi v0.3'te bilerek bırakıldı. Aynı
   analizde Motherload'ın şikâyeti "çok uzun, aynı şey farklı derinlik", A Game
   About Digging A Hole'ün şikâyeti "1-2 saat ve geliştirmeler erken bitiyor".
-  İnsana benzetilmiş bot 7 tohumda çekirdeğe **24 dakikada** varıyor
+  İnsana benzetilmiş bot 7 tohumda çekirdeğe **25 dakikada** varıyor
   (`tests/test_insan.gd`); tur süresi 106 sn (v0.4 ölçümü: deprem kararı ve
   botun BFS rotası dahil). Bir oturumda bitirilebilen bir
   oyun + tekrar oynanabilir Derin Mod, 90 dakikalık bir tırmanıştan daha iyi bir

@@ -71,7 +71,7 @@ Bilinmesi gereken bağlar:
   BFS testi 12 tohumda da kırılır.
 - **Oturum uzunluğu** `tests/test_insan.gd` ile ölçülür (insana benzetilmiş bot:
   tepki gecikmesi, duraksama, yanlış rota). Ölçülen (v0.4): tur 106 sn,
-  çekirdeğe 24 dk.
+  çekirdeğe 25 dk.
 - **Bot yol bulma** `Bot._rota` (BFS, 80 karoluk pencere) tur başına **bir kez**
   hesaplanır; sınırı kaldırırsan ölçüm dakikalar sürer. `Bot._uretim` üreticinin
   önbelleği — üretici saf olduğu için güvenli, kaldırma.

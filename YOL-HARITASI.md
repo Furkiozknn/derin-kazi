@@ -117,7 +117,7 @@
 - [x] **12/12 tohumda çekirdeğe varılıyor** (v0.3: 11/12; tohum 3 tıkanıyordu).
       `tests/test_fay_olcum.gd` artık ölçmekle kalmıyor, sınıyor (çıkış kodu)
 - [x] İnsan benzeri ölçüm deprem kararlı hâliyle yeniden çalıştırıldı:
-      tur 106 sn, çekirdeğe 24 dk, 7/7 tohum (tablo raporda)
+      tur 106 sn, çekirdeğe 25 dk, 7/7 tohum (tablo raporda)
 
 ### Sunum ve dokunmatik
 - [x] **Dokunmatik ipuçları düğmelere göre**: `scripts/ipucu.gd` saf sınıfı iki
