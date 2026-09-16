@@ -6,11 +6,15 @@
 ##   2. Bot: "aşağı kaz, tıkanınca yana git" davranışıyla çekirdeğe varılıyor mu?
 ## v0.2'deki "bir tohumda 400 turda ulaşılamıyor" sorusunun cevabı bu ikisinin
 ## farkında: yol VAR ama bot (ve oyuncu) onu bulamıyor.
+## v0.4: bu betik artık yalnız ölçmüyor, SINIYOR — fay açıkken botun 12 tohumun
+## hepsinde çekirdeğe varması bekleniyor (çıkış kodu 1 = kaldı). v0.3'te tohum 3'te
+## kalıyordu; kalan sorun dünyada değil botun yol bulmasındaydı (bkz. Bot._rota).
 extends SceneTree
 
 const TOHUMLAR := [11, 4242, 90210, 1337, 7, 555000, 20260916, 1, 2, 3, 999999, 123456]
 
 func _initialize() -> void:
+	var acik_bot := 0
 	for acik in [false, true]:
 		DunyaUretici.fay_acik = acik
 		var yol := 0
@@ -30,8 +34,13 @@ func _initialize() -> void:
 		print("fay %s  ->  BFS yol: %d/%d %s  |  bot çekirdeğe vardı: %d/%d %s" % [
 			"AÇIK " if acik else "KAPALI", yol, TOHUMLAR.size(), str(kopuk),
 			bot, TOHUMLAR.size(), str(botsuz)])
+		if acik:
+			acik_bot = bot
 	DunyaUretici.fay_acik = true
-	quit(0)
+	var gecti := acik_bot == TOHUMLAR.size()
+	print("== fay açıkken bot %d/%d tohumda çekirdeğe vardı — %s ==" % [
+		acik_bot, TOHUMLAR.size(), "TAMAM" if gecti else "KALDI"])
+	quit(0 if gecti else 1)
 
 func _ulasilabilir(u: DunyaUretici) -> Dictionary:
 	var gorulen := {}

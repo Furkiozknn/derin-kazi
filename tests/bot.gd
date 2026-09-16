@@ -14,6 +14,11 @@ extends RefCounted
 const DUSUS_HIZ := 150.0        ## açık tünelde serbest iniş (px/sn)
 const GUVENLIK := 1.25          ## dönüş yakıtı payı
 const YAN_TARAMA := 2           ## kaç karo yandaki madene sapılır
+const RADAR_TARAMA := 3         ## radar alındıysa bu kadar daha uzağa bakar
+const ROTA_TIKANMA := 8         ## bu kadar boşuna denemeden sonra BFS rotasına geçer
+const ROTA_PENCERE := 80        ## rota kaç karo aşağıya kadar bakar (mini harita menzili)
+const ROTA_YUKARI := 12         ## rota bu kadar karodan fazla yukarı sapmaz
+const DINAMIT_DEGER := 2.0      ## dinamit ancak bu kadar saniye kazandırıyorsa atılır
 const EN_COK_TUR := 400
 
 ## Kusursuz bot: her karar anında doğru, hiç duraksamıyor.
@@ -36,8 +41,13 @@ const INSAN := {
 var _u: DunyaUretici
 var _d: Durum
 var _kazilan := {}
+var _eklenen := {}      ## deprem sonrası değişen hücreler (Dunya.eklenen ile aynı fikir)
+## DunyaUretici.karo() önbelleği. Üretici saf ve belirlenimci olduğu için güvenli;
+## BFS aynı hücreyi defalarca soruyor ve her soru bir avuç gürültü hesabı demek.
+var _uretim := {}
 var _rng := RandomNumberGenerator.new()
 var _ayar := {}
+var _tohum := 0
 
 ## Tek bir tohumu baştan sona simüle eder. Dönüş: ölçüm sözlüğü.
 static func calistir(tohum: int, ayar: Dictionary) -> Dictionary:
@@ -69,9 +79,12 @@ func _gurultu(x: int, y: int) -> float:
 
 func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 	_ayar = ayar
+	_tohum = tohum
 	_u = DunyaUretici.new(tohum)
 	_d = Durum.new(tohum)
 	_kazilan = {}
+	_eklenen = {}
+	_uretim = {}
 	_rng.seed = hash(Vector2i(tohum, 99991))
 	var x := Ayarlar.US_KARO_X
 	var tunel := 0              ## şaftın ulaştığı derinlik
@@ -86,6 +99,8 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 	var us_sure := float(_ayar.get("us_sure", 8.0))
 
 	for tur in range(1, EN_COK_TUR + 1):
+		_d.sefer = tur
+		var deprem_bekliyor := tur % Deprem.ARALIK == 0
 		_d.can = _d.can_kapasitesi()
 		_d.yuk.clear()
 		_d.yuk_bonus = 0
@@ -112,6 +127,8 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 		var kapi := hedef_y < tunel   ## şaftın dibine inemedi: bu katmanda çalış
 		var tikanma := 0
 		var yon := 1
+		var rota_denendi := false   ## rota tur başına bir kez hesaplanır (BFS pahalı)
+		var kacti := false
 		for adim in 4000:
 			if y + 1 >= Ayarlar.DERINLIK - 1:
 				break
@@ -140,6 +157,24 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 				break
 			if t == Ayarlar.KAYA or t == Ayarlar.LAV:
 				tikanma += 1
+				# Körlemesine yana gitmek yerine mini haritadan rota çıkar (BFS).
+				# v0.3'te tohum 3 tam burada tıkanıyordu: yol vardı, bot göremiyordu.
+				if tikanma == ROTA_TIKANMA and not rota_denendi:
+					rota_denendi = true
+					var r := _rota(x, y)
+					if not r.is_empty():
+						var iz := _rota_izle(r)
+						tur_sure += float(iz["sure"])
+						x = int(iz["x"])
+						y = int(iz["y"])
+						tunel = maxi(tunel, y)
+						if bool(iz["cekirdek"]):
+							if cekirdek_zaman < 0.0:
+								cekirdek_zaman = zaman + tur_sure
+							break
+						if bool(iz["ilerledi"]):
+							tikanma = 0
+							continue
 				if tikanma > 120:
 					kapi = true
 					break
@@ -160,16 +195,32 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 				continue
 
 			tikanma = 0
+			# Sert kayada dinamit zaman kazandırır (oyuncu da öyle kullanıyor).
+			if float(Ayarlar.SERTLIK.get(t, 0.0)) >= 1.2:
+				var patlama := _dinamit(x, y)
+				if patlama >= 0.0:
+					tur_sure += patlama
+					y += 1
+					tunel = maxi(tunel, y)
+					continue
 			tur_sure += _kaz(x, y + 1, t)
 			y += 1
 			tunel = maxi(tunel, y)
+			# Canlı yeraltı: sefer sayacı dolduysa deprem yeraltında patlar.
+			if deprem_bekliyor and y >= 15:
+				deprem_bekliyor = false
+				var dp := _deprem(x, y)
+				tur_sure += float(dp["sure"])
+				if bool(dp["kacti"]):
+					kacti = true
+					break
 			# 3) Yanda maden varsa sap, sonra insan gürültüsü.
 			tur_sure += _yan_maden(x, y)
 			tur_sure += _gurultu(x, y)
 
 		# 3b) Kapıya takıldıysa bu katmanda yatay galeri aç (oyuncu da bunu yapar:
 		#     derine inemiyorsan bulunduğun katmanı tara).
-		if kapi:
+		if kapi and not kacti:
 			tur_sure += _yatay_galeri(x, y)
 
 		# 4) Dönüş.
@@ -230,31 +281,204 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 		"kazilan": _kazilan.size(),
 	}
 
+# --- yol bulma (mini harita + BFS) ----------------------------------------
+
+## Çekirdeğe (ya da matkabın izin verdiği en derin noktaya) giden hücre listesi.
+## Oyuncunun mini haritası ve radarı ne söylüyorsa bot da onu "biliyor" sayılır:
+## ölçüm botu bir insanı temsil etmiyor, oyunun BİTİRİLEBİLİRLİĞİNİ ölçüyor.
+## Önce gaz cebine girmeyen yol aranır; yoksa gazı göze alan yol kabul edilir.
+func _rota(x: int, y: int) -> Array:
+	var hedef := Vector2i(_u.cekirdek_x, Ayarlar.CEKIRDEK_DERINLIK)
+	for gaz_serbest in [false, true]:
+		var yol := _bfs(Vector2i(x, y), hedef, gaz_serbest)
+		if not yol.is_empty():
+			return yol
+	return []
+
+## Genişlik öncelikli arama. Geçilebilir = kazılabilir + matkap yetiyor.
+## KAYA ve LAV geçilmez (dinamit de açmıyor), CEKIRDEK hedeftir.
+## Arama penceresi bilerek dar: bot bütün dünyayı değil, mini haritada
+## gördüğü kadarını tarıyor (ve 17 000 hücrelik tam tarama her turda çok pahalı).
+## Çekirdek pencerede değilse hedef, pencerede ulaşılabilen EN DERİN hücre olur.
+func _bfs(bas: Vector2i, hedef: Vector2i, gaz_serbest: bool) -> Array:
+	var onceki := {bas: bas}
+	var sira: Array[Vector2i] = [bas]
+	var en_derin := bas
+	var i := 0
+	var alt := bas.y + ROTA_PENCERE
+	var ust := bas.y - ROTA_YUKARI
+	while i < sira.size():
+		var h: Vector2i = sira[i]
+		i += 1
+		if h == hedef:
+			return _yol_cikar(onceki, bas, hedef)
+		if h.y > en_derin.y:
+			en_derin = h
+		for d: Vector2i in [Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP]:
+			var k := h + d
+			if k.x < 1 or k.x >= Ayarlar.GENISLIK - 1 or k.y < ust or k.y > alt 					or k.y >= Ayarlar.DERINLIK - 1:
+				continue
+			if onceki.has(k):
+				continue
+			var t := _karo(k.x, k.y)
+			if t == Ayarlar.KAYA or t == Ayarlar.LAV:
+				continue
+			if t == Ayarlar.GAZ and not gaz_serbest:
+				continue
+			if t != Ayarlar.BOS and t != Ayarlar.CEKIRDEK and not _d.matkap_yeterli_mi(k.y):
+				continue
+			onceki[k] = h
+			sira.append(k)
+	# Çekirdeğe pencereden varılmıyor: en azından en derin noktaya doğru git.
+	if en_derin.y - bas.y >= 3:
+		return _yol_cikar(onceki, bas, en_derin)
+	return []
+
+func _yol_cikar(onceki: Dictionary, bas: Vector2i, hedef: Vector2i) -> Array:
+	var yol: Array = []
+	var h := hedef
+	while h != bas:
+		yol.append(h)
+		h = onceki[h]
+	yol.reverse()
+	return yol
+
+## Rotayı yürür: kazar, madeni toplar, bütçe (yakıt/yük/can) bitince durur.
+## Dönüş: {"sure", "x", "y", "cekirdek", "ilerledi"}
+func _rota_izle(yol: Array) -> Dictionary:
+	var sure := 0.0
+	var x := 0
+	var y := 0
+	var ilk := true
+	for adim in yol:
+		var h: Vector2i = adim
+		if ilk:
+			ilk = false
+			x = h.x
+			y = h.y
+		var t := _karo(h.x, h.y)
+		if t == Ayarlar.CEKIRDEK:
+			return {"sure": sure, "x": h.x, "y": h.y, "cekirdek": true, "ilerledi": true}
+		if _d.yakit < float(_donus_maliyeti(y)["yakit"]) * GUVENLIK 				or _d.yuk_dolu() or _d.can <= 1:
+			break
+		if t != Ayarlar.BOS:
+			if h.y > y and float(Ayarlar.SERTLIK[t]) >= 1.2:
+				var patlama := _dinamit(x, y)
+				if patlama >= 0.0:
+					sure += patlama
+					x = h.x
+					y = h.y
+					continue
+			sure += _kaz(h.x, h.y, t)
+		if h.y == y:
+			sure += float(Ayarlar.KARO) / Ayarlar.YATAY_HIZ * _carpan()
+		elif h.y > y:
+			sure += float(Ayarlar.KARO) / DUSUS_HIZ * _carpan()
+		else:
+			sure += float(Ayarlar.KARO) / Ayarlar.TIRMANIS_HIZ * _carpan()
+			_d.yakit -= Ayarlar.YAKIT_ITKI * float(Ayarlar.KARO) / Ayarlar.TIRMANIS_HIZ
+		x = h.x
+		y = h.y
+		sure += _yan_maden(x, y)
+		sure += _gurultu(x, y)
+	return {"sure": sure, "x": x, "y": y, "cekirdek": false, "ilerledi": not ilk}
+
+# --- deprem ---------------------------------------------------------------
+
+## Yeraltında patlayan deprem: tünellerin bir kısmı kapanır, yeni gaz/damar çıkar.
+## Karar (scripts/deprem.gd): uyarı süresi yüzeye çıkmaya yetiyorsa bot çıkar ve
+## ikramiyeyi alır, yetmiyorsa derinde kalıp hasar yer. Bu, oyuncunun önündeki
+## bahsin ölçümdeki karşılığı — v0.3'te bot depremi hiç yaşamıyordu.
+func _deprem(x: int, y: int) -> Dictionary:
+	_d.deprem += 1
+	var korunan := Deprem.korunan_hucreler(_d.istasyonlar, Vector2i(x, y))
+	var karo := func(h: Vector2i) -> int: return _karo(h.x, h.y)
+	var sonuc := Deprem.hesapla(_kazilan, karo, korunan, _tohum, _d.deprem)
+	for h in sonuc["kapanan"]:
+		_kazilan.erase(h)
+	var yeni: Dictionary = sonuc["yeni"]
+	for h in yeni:
+		_kazilan.erase(h)
+		_eklenen[h] = int(yeni[h])
+
+	var uyari := Deprem.uyari_suresi(y)
+	# Işınlanma duraklı bir istasyon varsa kaçış bedava sayılır (oyuncu da öyle yapar).
+	var durak := _d.isinlanma_duragi(Vector2i(x, y)) >= 0
+	var tirmanis := float(y * Ayarlar.KARO) / Ayarlar.TIRMANIS_HIZ * _carpan()
+	if durak or tirmanis <= uyari:
+		var k := Deprem.karar(y, 0)
+		_d.para += int(k["odul"])
+		# Tırmanışın süresi turun sonundaki dönüş maliyetinde zaten sayılıyor;
+		# burada yalnız kararın kendisi (ve varsa ışınlanma) süre yazar.
+		return {"sure": 2.0, "kacti": true}
+	var k2 := Deprem.karar(y, y)
+	_d.hasar_al(int(k2["hasar"]))
+	return {"sure": uyari, "kacti": false}
+
 func _karo(x: int, y: int) -> int:
-	if _kazilan.has(Vector2i(x, y)):
+	var h := Vector2i(x, y)
+	if _kazilan.has(h):
 		return Ayarlar.BOS
-	return _u.karo(x, y)
+	if _eklenen.has(h):
+		return int(_eklenen[h])
+	if not _uretim.has(h):
+		_uretim[h] = _u.karo(x, y)
+	return int(_uretim[h])
 
 ## Bir karoyu kazar: süreyi döner, yakıtı ve yükü günceller.
 func _kaz(x: int, y: int, t: int) -> float:
 	if t == Ayarlar.BOS:
 		return float(Ayarlar.KARO) / DUSUS_HIZ * _carpan()
+	return _kir(x, y, t) * _carpan()
+
+## Karoyu kırar ve içeriğini işler. Kazma süresini döner (çarpansız).
+## `yakit` false ise yakıt harcanmaz — dinamit matkapla kazmıyor, patlatıyor.
+func _kir(x: int, y: int, t: int, yakit := true) -> float:
 	var sure := float(Ayarlar.SERTLIK[t]) / _d.matkap_hizi()
-	_d.yakit -= (Ayarlar.YAKIT_BOSTA + Ayarlar.YAKIT_KAZMA) * sure
+	if yakit:
+		_d.yakit -= (Ayarlar.YAKIT_BOSTA + Ayarlar.YAKIT_KAZMA) * sure
 	_kazilan[Vector2i(x, y)] = true
+	_eklenen.erase(Vector2i(x, y))
 	if Ayarlar.MADEN_DEGER.has(t):
 		_d.maden_ekle(t)
 	elif t == Ayarlar.GAZ:
 		_d.hasar_al(Ayarlar.HASAR_GAZ)
 	elif t == Ayarlar.SANDIK:
 		_d.para += 70
-	return sure * _carpan()
+	return sure
+
+## Dinamit: 3x3'ü bir anda alır. Kazılamaz kayayı AÇMAZ (Arac.kir de açmıyor),
+## yalnız zaman kazandırır — bu yüzden ancak sert kayada ve kazancı varsa atılır.
+## Dönüş: harcanan süre, atılmadıysa -1.
+func _dinamit(x: int, y: int) -> float:
+	if _d.dinamit <= 0:
+		return -1.0
+	var merkez := Vector2i(x, y + 1)
+	var hedefler := []
+	var kazanc := 0.0
+	for dy in range(-Ayarlar.DINAMIT_YARICAP, Ayarlar.DINAMIT_YARICAP + 1):
+		for dx in range(-Ayarlar.DINAMIT_YARICAP, Ayarlar.DINAMIT_YARICAP + 1):
+			var h := merkez + Vector2i(dx, dy)
+			var t := _karo(h.x, h.y)
+			if t == Ayarlar.BOS or t == Ayarlar.KAYA or t == Ayarlar.LAV or t == Ayarlar.CEKIRDEK:
+				continue
+			if not _d.matkap_yeterli_mi(h.y):
+				continue
+			hedefler.append([h, t])
+			kazanc += float(Ayarlar.SERTLIK[t]) / _d.matkap_hizi()
+	if kazanc < DINAMIT_DEGER:
+		return -1.0
+	_d.dinamit -= 1
+	for veri in hedefler:
+		_kir(veri[0].x, veri[0].y, int(veri[1]), false)
+	return 0.6 * _carpan()
 
 ## Aynı derinlikte yandaki madene sapma (zincir çarpanı da buradan besleniyor).
 func _yan_maden(x: int, y: int) -> float:
 	var sure := 0.0
+	var menzil := YAN_TARAMA + (RADAR_TARAMA if _d.alet_var("radar") else 0)
 	for yon: int in [-1, 1]:
-		for i in range(1, YAN_TARAMA + 1):
+		for i in range(1, menzil + 1):
 			var hx := x + yon * i
 			var t := _karo(hx, y)
 			if t == Ayarlar.KAYA or t == Ayarlar.LAV:
@@ -350,6 +574,13 @@ func _gelistir(y: int) -> int:
 			if _d.istasyon_kiti_al():
 				_d.istasyon_kur(Vector2i(Ayarlar.US_KARO_X, y))
 				continue
+		# Radar yandaki madeni daha uzaktan görüyor; dinamit sert kayada zaman
+		# kazandırıyor. İkisi de ancak PARA ARTTIYSA alınır — geliştirme eğrisini
+		# bozmasınlar (tests/test_denge.gd bandı bunu yakalar).
+		if y >= 50 and not _d.alet_var("radar") 				and _d.para > int(Ayarlar.ALET_FIYAT["radar"]) * 3 and _d.alet_al("radar"):
+			continue
+		if y >= 60 and _d.dinamit < 3 and _d.para > Ayarlar.DINAMIT_FIYAT * 12 				and _d.dinamit_al(3):
+			continue
 		var en_iyi := ""
 		var en_ucuz := 1 << 30
 		for alan in ["depo", "kasa", "matkap", "govde"]:

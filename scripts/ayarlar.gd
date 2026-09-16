@@ -33,15 +33,21 @@ const BOS := -1
 const KARO_SAYISI := 17
 
 ## Doku varyantı: karolar.png'de her karo türünün VARYANT_SAYISI satırı var.
-## Aynı 16 px doku ekranda yan yana tekrarlayınca desen fark ediliyordu.
-const VARYANT_SAYISI := 3
-## Yalnız taban kayalarının varyantı var; maden ve tehlike karolarının deseni
-## tanınabilir kalmalı (oyuncu gazı bir bakışta ayırt edebilmeli).
+## Sayı KATMANLAR.size() ile aynı, çünkü satırların iki işi var:
+##   - taban kayaları: aynı 16 px doku yan yana tekrarlayınca desen fark ediliyordu,
+##     satırlar farklı gürültü/degrade veriyor (seçim hücrenin konumundan).
+##   - maden damarları: satır = KATMAN. Damarın zemini bulunduğu katmanın kayası
+##     olsun diye (v0.3'te her zemin aynı mavi-gri taştı; toprak katmanında bakır
+##     damarı yapıştırılmış mavi bir kare gibi duruyordu).
+const VARYANT_SAYISI := 5
+## Taban kayaları: varyant konumdan gelir.
 const VARYANTLI := [TOPRAK, TAS, SERT, BAZALT, OBSIDYEN]
 
-## Konuma bağlı belirlenimci varyant: aynı hücre hep aynı dokuyu alır, komşusu
-## başkasını. Tohumdan bağımsız — bu doku çeşitliliği, dünya üretimi değil.
+## Karonun atlastaki satırı. Tehlike karolarının (gaz, gevşek, lav, sandık, eser)
+## varyantı YOK — deseni bir bakışta tanınmalı.
 static func varyant(x: int, y: int, t: int) -> int:
+	if MADEN_DEGER.has(t):
+		return katman(y)          ## damarın zemini = o derinliğin taban kayası
 	if not VARYANTLI.has(t):
 		return 0
 	return absi(hash(Vector2i(x * 31 + 7, y * 17 + 3))) % VARYANT_SAYISI

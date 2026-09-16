@@ -176,6 +176,10 @@ func _calis() -> void:
 	await _kare(20)
 	var tunel0 := dunya.kazilan.size()
 	durum.deprem_bekliyor = false
+	durum.can = durum.can_kapasitesi()
+	var derinde := arac.derinlik() > Deprem.GUVENLI_DERINLIK
+	var can0 := durum.can
+	sahne.set("_deprem_uyari_derinlik", arac.derinlik())
 	sahne.call("_deprem_uygula")
 	await _kare(30)
 	dogru(dunya.kazilan.size() < tunel0, "deprem tünellerin bir kısmını kapattı (%d → %d)"
@@ -196,6 +200,32 @@ func _calis() -> void:
 		if not dunya.kazilabilir_mi(int(dunya.eklenen[h2])):
 			kazilamaz2 += 1
 	dogru(kazilamaz2 == 0, "deprem karolarının hepsi kazılabilir (%d istisna)" % kazilamaz2)
+	# Kararın iki ucu sahnede: derinde kalmak can götürür, yüzeye çıkmak ikramiye verir.
+	dogru(not derinde or durum.can < can0,
+		"derinde kalınca deprem hasar verdi (can %d → %d, %d m)"
+		% [can0, durum.can, arac.derinlik()])
+	arac.usse_don()
+	durum.onar()
+	await _kare(10)
+	var para0 := durum.para
+	sahne.set("_deprem_uyari_derinlik", 100)
+	sahne.call("_deprem_uygula")
+	await _kare(10)
+	dogru(durum.para == para0 + Deprem.odul(100),
+		"yüzeye çıkınca kabuk nöbeti ikramiyesi geldi (+%d ₺)" % (durum.para - para0))
+	dogru(durum.can == durum.can_kapasitesi(),
+		"yüzeydeyken deprem hasar vermedi (%d/%d can)" % [durum.can, durum.can_kapasitesi()])
+
+	# --- dokunmatik ipucu (sahnede) ---------------------------------------
+	sahne.set("_ipucu_sure", 0.0)   ## depremin geçici mesajı kalıcı ipucuyu örtmesin
+	sahne.set("_dokunmatik", true)
+	var dokun_ipucu := String(sahne.call("_ipucu", 0))
+	sahne.set("_dokunmatik", false)
+	var masa_ipucu := String(sahne.call("_ipucu", 0))
+	dogru(dokun_ipucu != masa_ipucu and not dokun_ipucu.contains("E — Üs"),
+		"sahne dokunmatikte başka ipucu veriyor (%s)" % dokun_ipucu)
+	dogru(masa_ipucu.contains("E — Üs"), "masaüstü ipucu değişmedi (%s)" % masa_ipucu)
+
 	sahne.call("_kaydet")
 	var kayit2 := Kayit.yukle()
 	dogru(PackedInt32Array(kayit2.get("eklenen", PackedInt32Array())).size() / 3

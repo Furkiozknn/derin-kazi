@@ -27,6 +27,7 @@ func _initialize() -> void:
 	_kayit_testleri()
 	_fay_testleri()
 	_deprem_testleri()
+	_ipucu_testleri()
 	_varyant_testleri()
 	_tohum_kodu_testleri()
 	_derin_mod_testleri()
@@ -548,6 +549,32 @@ func _deprem_testleri() -> void:
 	dogru(Array(s3["kapanan"]) != kapanan, "sonraki deprem başka hücreleri kapatıyor")
 	dogru(Deprem.ARALIK == 5, "deprem her 5 seferde bir")
 
+	# --- oyuncunun kararı (v0.4) ---
+	# Uyarı derinlikle uzuyor ki karar verilebilsin, ama tavanı var.
+	dogru(Deprem.uyari_suresi(200) > Deprem.uyari_suresi(20),
+		"uyarı derinde daha uzun (%.1f > %.1f sn)"
+		% [Deprem.uyari_suresi(200), Deprem.uyari_suresi(20)])
+	dogru(Deprem.uyari_suresi(2000) <= Deprem.UYARI_EN_COK,
+		"uyarı süresinin tavanı var (%.1f sn)" % Deprem.uyari_suresi(2000))
+	dogru(Deprem.uyari_suresi(0) >= 3.0, "en sığda bile uyarı var (%.1f sn)" % Deprem.uyari_suresi(0))
+
+	var yuzeyde := Deprem.karar(120, 4)
+	var derinde := Deprem.karar(120, 120)
+	dogru(bool(yuzeyde["guvende"]) and int(yuzeyde["odul"]) > 0 and int(yuzeyde["hasar"]) == 0,
+		"yüzeye çıkan ikramiye alır, hasar almaz (+%d ₺)" % int(yuzeyde["odul"]))
+	dogru(not bool(derinde["guvende"]) and int(derinde["hasar"]) > 0 and int(derinde["odul"]) == 0,
+		"derinde kalan hasar alır, ikramiye almaz (-%d can)" % int(derinde["hasar"]))
+	dogru(Deprem.odul(200) > Deprem.odul(40),
+		"ikramiye derinlikle büyüyor (%d > %d ₺)" % [Deprem.odul(200), Deprem.odul(40)])
+	dogru(Deprem.hasar(220) > Deprem.hasar(20),
+		"risk derinlikle büyüyor (%d > %d can)" % [Deprem.hasar(220), Deprem.hasar(20)])
+	# Karar ölümcül olmasın: en derinde bile en zayıf gövde hayatta kalır.
+	dogru(Deprem.hasar(Ayarlar.CEKIRDEK_DERINLIK) < int(Ayarlar.GOVDE_SEVIYE[0]),
+		"en derin deprem bile tek başına öldürmez (%d < %d can)"
+		% [Deprem.hasar(Ayarlar.CEKIRDEK_DERINLIK), int(Ayarlar.GOVDE_SEVIYE[0])])
+	dogru(Deprem.GUVENLI_DERINLIK >= Deprem.EN_SIG,
+		"güvenli bant depremin dokunmadığı yüzey bandının içinde")
+
 	# Dünya üstünde uygulanınca kayıt gidiş-dönüşü de korunmalı.
 	var dd := Dunya.new()
 	dd.kur(4242, kazilan)
@@ -558,6 +585,69 @@ func _deprem_testleri() -> void:
 	dogru(dd.karo_tur(ilk) != Ayarlar.BOS, "kapanan hücre artık dolu")
 	dogru(dd.kazilabilir_mi(dd.karo_tur(ilk)), "kapanan hücre yeniden kazılabilir")
 	dd.free()
+
+# --- ipucu (dokunmatik / masaüstü) ----------------------------------------
+
+func _ipucu_testleri() -> void:
+	print("- oyun içi ipucu")
+	# v0.3 kusuru: telefonda alt ipucu "E — Üs • T — ışınlanma • M — harita"
+	# yazıyordu; o tuşlar dokunmatik cihazda yok.
+	var tuslar := ["E — Üs", "T ile", "M — harita", "W ile", "S / ↓", "E'ye bas"]
+	var d := Durum.new(1)
+	var masa_us := Ipucu.metin(d, 0, true, false)
+	var dokun_us := Ipucu.metin(d, 0, true, true)
+	dogru(masa_us.contains("E — Üs") and masa_us.contains("M — harita"),
+		"masaüstü ipucu tuşları anlatıyor (değişmedi)")
+	dogru(dokun_us.contains(Ipucu.DUGME_US) and dokun_us.contains(Ipucu.DUGME_HARITA),
+		"dokunmatik ipucu düğmeleri anlatıyor")
+
+	# Bütün ipucu durumlarını gez: dokunmatik metinlerin hiçbirinde tuş geçmemeli.
+	var durumlar := []
+	durumlar.append([Durum.new(1), 0, true])                    ## üste
+	var yeni := Durum.new(1)
+	durumlar.append([yeni, 1, false])                           ## ilk kazı
+	var yuklu := Durum.new(1)
+	yuklu.en_derin = 10
+	yuklu.maden_ekle(Ayarlar.BAKIR)
+	durumlar.append([yuklu, 12, false])                         ## madeni sat
+	var yakitsiz := Durum.new(1)
+	yakitsiz.en_derin = 60
+	yakitsiz.yakit = 1.0
+	durumlar.append([yakitsiz, 60, false])                      ## yakıt azaldı
+	var yarali := Durum.new(1)
+	yarali.en_derin = 60
+	yarali.can = 1
+	durumlar.append([yarali, 60, false])                        ## can azaldı
+	var dolu := Durum.new(1)
+	dolu.en_derin = 60
+	for i in 40:
+		dolu.maden_ekle(Ayarlar.PLATIN)
+	durumlar.append([dolu, 60, false])                          ## yük dolu
+	var kacan := Durum.new(1)
+	kacan.kacis = true
+	durumlar.append([kacan, 240, false])                        ## kaçış
+
+	var sizan := ""
+	var bos := 0
+	for veri in durumlar:
+		var m := Ipucu.metin(veri[0], int(veri[1]), bool(veri[2]), true)
+		if m == "":
+			bos += 1
+		for t in tuslar:
+			if m.contains(t):
+				sizan += "%s | " % m
+	dogru(sizan == "", "dokunmatik ipuçlarında klavye tuşu yok (%s)" % sizan)
+	dogru(bos == 0, "her durumun bir dokunmatik ipucu var (%d boş)" % bos)
+
+	# Deprem geri sayımı: karar HUD'da okunabilir olsun.
+	var sig := Ipucu.deprem_metni(3.0, 4, false)
+	var derin := Ipucu.deprem_metni(9.0, 150, false)
+	dogru(sig.contains("DEPREM") and sig.contains("güvende"),
+		"yüzeydeyken geri sayım güvende olduğunu söylüyor")
+	dogru(derin.contains("%d" % Deprem.odul(150)) and derin.contains("%d" % Deprem.hasar(150)),
+		"derinde geri sayım hem ödülü hem riski yazıyor (%s)" % derin)
+	dogru(not Ipucu.deprem_metni(9.0, 150, true).contains("W ile"),
+		"dokunmatik geri sayımda klavye tuşu yok")
 
 # --- karo varyantları -----------------------------------------------------
 
@@ -578,8 +668,20 @@ func _varyant_testleri() -> void:
 		en_az = mini(en_az, int(dagilim[v]))
 	dogru(en_az > 1600 / (Ayarlar.VARYANT_SAYISI * 3),
 		"varyantlar dengeli dağılıyor (en seyreği %d/1600)" % en_az)
-	for t in [Ayarlar.BAKIR, Ayarlar.GAZ, Ayarlar.KAYA, Ayarlar.CEKIRDEK, Ayarlar.ESER]:
-		dogru(Ayarlar.varyant(3, 7, t) == 0, "maden/tehlike karosunun varyantı yok (%d)" % t)
+	for t in [Ayarlar.GAZ, Ayarlar.KAYA, Ayarlar.CEKIRDEK, Ayarlar.ESER, Ayarlar.GEVSEK]:
+		dogru(Ayarlar.varyant(3, 7, t) == 0, "tehlike karosunun varyantı yok (%d)" % t)
+	# Maden damarının satırı = KATMAN: zemini o derinliğin taban kayası olsun diye.
+	# v0.3'te toprak katmanındaki bakır damarı mavi-gri bir kare gibi duruyordu.
+	dogru(Ayarlar.VARYANT_SAYISI == Ayarlar.KATMANLAR.size(),
+		"varyant satırı sayısı katman sayısıyla aynı (%d)" % Ayarlar.VARYANT_SAYISI)
+	var maden_satiri := true
+	for y in [5, 60, 120, 180, 240]:
+		for t2 in Ayarlar.MADEN_DEGER:
+			if Ayarlar.varyant(9, y, t2) != Ayarlar.katman(y):
+				maden_satiri = false
+	dogru(maden_satiri, "maden damarı bulunduğu katmanın satırından çiziliyor")
+	dogru(Ayarlar.varyant(9, 5, Ayarlar.BAKIR) != Ayarlar.varyant(9, 180, Ayarlar.BAKIR),
+		"aynı maden sığda ve derinde farklı zeminle çiziliyor")
 	var atlas: Texture2D = load("res://assets/sprites/karolar.png")
 	dogru(atlas != null and atlas.get_height() == Ayarlar.KARO * Ayarlar.VARYANT_SAYISI,
 		"karolar.png %d satır içeriyor (%d px)"

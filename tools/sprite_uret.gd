@@ -125,7 +125,30 @@ func _karolar() -> Image:
 		for i in tb.size():
 			_kaya_dokusu(alt, i * K, tb[i][0], tb[i][1], tb[i][2], EGIM[v % EGIM.size()])
 			im.blit_rect(alt, Rect2i(i * K, 0, K, K), Vector2i(i * K, v * K))
+		# Maden damarları: v. satır = v. katman (Ayarlar.varyant → katman(y)).
+		_maden_satiri(alt, v)
+		for i in MADENLER.size():
+			var ox := (Ayarlar.BAKIR + i) * K
+			im.blit_rect(alt, Rect2i(ox, 0, K, K), Vector2i(ox, v * K))
 	return im
+
+## Damar renkleri — zemin değil, damar tanıtır madeni.
+const MADENLER := [
+	[9, 10],     # bakır  — turuncu
+	[20, 19],    # demir  — gümüş
+	[10, 11],    # altın  — sarı
+	[18, 19],    # elmas  — camgöbeği
+	[12, 11],    # platin — yeşil
+]
+
+## 5 maden karosunu tek satıra çizer. Zemin `katman`ın taban kayası: bakır
+## toprakta kahverengi, bazaltta gece mavisi bir zeminle çıkar — damar aynı kalır.
+func _maden_satiri(im: Image, katman: int) -> void:
+	var tb: Array = _tabanlar()[clampi(katman, 0, 4)]
+	for i in MADENLER.size():
+		var ox := (Ayarlar.BAKIR + i) * K
+		_kaya_dokusu(im, ox, tb[0], tb[1], tb[2], EGIM[katman % EGIM.size()])
+		_damar(im, ox, c(int(MADENLER[i][0])), c(int(MADENLER[i][1])))
 
 ## Taban kayası paleti — 5 katman, yüzeyden çekirdeğe doğru koyulaşır.
 func _tabanlar() -> Array:
@@ -145,21 +168,9 @@ func _karolar_satir() -> Image:
 	for i in tabanlar.size():
 		_kaya_dokusu(im, i * K, tabanlar[i][0], tabanlar[i][1], tabanlar[i][2])
 
-	# 5 maden. Damar kayası HER katmanda aynı nötr koyu taş: bakır bazaltın içinde
-	# de çıkabiliyor, kendi katmanının kayasıyla çizilirse oraya yanlış yapıştırılmış
-	# gibi duruyordu. Rengi damar veriyor, zemin değil.
-	var damar_kaya := [c(25), c(23), c(22)]
-	var madenler := [
-		[c(9), c(10)],     # bakır  — turuncu
-		[c(20), c(19)],    # demir  — gümüş
-		[c(10), c(11)],    # altın  — sarı
-		[c(18), c(19)],    # elmas  — camgöbeği
-		[c(12), c(11)],    # platin — yeşil
-	]
-	for i in madenler.size():
-		var ox := (Ayarlar.BAKIR + i) * K
-		_kaya_dokusu(im, ox, damar_kaya[0], damar_kaya[1], damar_kaya[2])
-		_damar(im, ox, madenler[i][0], madenler[i][1])
+	# 5 maden. 0. satır = 0. katman (toprak): damarın zemini bulunduğu katmanın
+	# kayası, geri kalan satırlar _karolar() içinde diğer katmanlar için çiziliyor.
+	_maden_satiri(im, 0)
 
 	_kazilamaz_kaya(im, Ayarlar.KAYA * K)
 	_cekirdek(im, Ayarlar.CEKIRDEK * K)

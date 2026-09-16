@@ -54,6 +54,8 @@ var _ipucu_sabit := ""
 var _ipucu_sure := 0.0
 var _derine_indi := false     ## sefer sayacı: dibe inip üsse dönünce bir sefer biter
 var _deprem_uyari := 0.0      ## >0 iken deprem uyarısı sürüyor
+var _deprem_uyari_derinlik := 0  ## uyarı başladığında neredeydik (ikramiye buna göre)
+var _dokunmatik := false
 var _karo_doku: Texture2D
 var _cekiliyor := false
 
@@ -85,7 +87,8 @@ func _ready() -> void:
 	$HUD/Bitis/M/V/Menu.pressed.connect(_menuye)
 	$HUD/Uyari/M/V/Tamam.pressed.connect(_uyari_kapat)
 
-	$Dokunmatik.visible = DisplayServer.is_touchscreen_available()
+	_dokunmatik = DisplayServer.is_touchscreen_available()
+	$Dokunmatik.visible = _dokunmatik
 	if $Dokunmatik.visible:
 		_dokunmatik_izler()
 
@@ -232,26 +235,16 @@ func _ipucu_goster(metin: String, sure := 2.0) -> void:
 	_ipucu_sabit = metin
 	_ipucu_sure = sure
 
+## Metnin kendisi saf sınıfta (scripts/ipucu.gd): dokunmatik/masaüstü ayrımı
+## testle sınanabilsin diye. Burada yalnız hangi durumun geçerli olduğu seçiliyor.
 func _ipucu(d: int) -> String:
 	if _panel_acik():
 		return ""
+	if _deprem_uyari > 0.0:
+		return Ipucu.deprem_metni(_deprem_uyari, d, _dokunmatik)
 	if _ipucu_sure > 0.0:
 		return _ipucu_sabit
-	if durum.kacis:
-		return "KAÇIŞ! Yakıt bitmeden yüzeye çık."
-	if arac.usste_mi():
-		return "E — Üs (sat, geliştir, yakıt)   •   T — ışınlanma   •   M — harita"
-	if durum.yuk_dolu():
-		return "Yük dolu! Satmak için üsse dön."
-	if durum.can <= 1:
-		return "Can azaldı — üsse dön, onarım bedava."
-	if durum.yakit < durum.yakit_kapasitesi() * 0.25:
-		return "Yakıt azalıyor — üsse dön (T ile ışınlanabilirsin)."
-	if d < 3 and durum.en_derin < 8:
-		return "S / ↓ ile aşağı kaz. İlk bakır damarı hemen altında."
-	if durum.en_derin < 20 and durum.yuk_toplam() > 0:
-		return "Madeni sat: W ile yüzeye çık, üste E'ye bas."
-	return ""
+	return Ipucu.metin(durum, d, arac.usste_mi(), _dokunmatik)
 
 # --- arka plan ve müzik ---------------------------------------------------
 
@@ -516,10 +509,11 @@ func _deprem_isle(delta: float) -> void:
 		return
 	if durum.deprem_bekliyor and not _panel_acik() and arac.derinlik() >= 15:
 		durum.deprem_bekliyor = false
-		_deprem_uyari = Deprem.UYARI_SURE
+		_deprem_uyari_derinlik = arac.derinlik()
+		# Uyarı derinlikle uzuyor: 100 m'de 10 sn, 250 m'de 19 sn. Karar
+		# verilebilsin diye — geri sayım HUD'ın alt satırında (Ipucu.deprem_metni).
+		_deprem_uyari = Deprem.uyari_suresi(_deprem_uyari_derinlik)
 		Ses.cal("uyari", 0.45)
-		_ipucu_goster("DEPREM YAKLAŞIYOR — kabuk kımıldıyor, yüzeye yakın dur!",
-			Deprem.UYARI_SURE)
 
 func _deprem_uygula() -> void:
 	durum.deprem += 1
@@ -539,9 +533,20 @@ func _deprem_uygula() -> void:
 	sars(12.0)
 	Ses.cal("patlama")
 	_toz(arac.global_position, _karo_renk(Ayarlar.TOPRAK), 30, 160.0)
+	# Oyuncunun kararının karşılığı: yüzeye çıktıysa ikramiye, derinde kaldıysa hasar.
+	var k := Deprem.karar(_deprem_uyari_derinlik, arac.derinlik())
+	var son := ""
+	if bool(k["guvende"]):
+		durum.para += int(k["odul"])
+		_ucan_yazi(arac.global_position, "+%d ₺" % int(k["odul"]), Color("fee761"))
+		Ses.cal("sat")
+		son = "  Kabuk nöbeti ikramiyesi +%d ₺." % int(k["odul"])
+	elif int(k["hasar"]) > 0:
+		arac.hasar(int(k["hasar"]), arac.global_position)
+		son = "  Derinde kaldın: -%d can." % int(k["hasar"])
 	_kaydet()
-	_ipucu_goster("DEPREM! %d karo tünel kapandı, %d yeni damar/gaz çıktı."
-		% [kapanan.size(), yeni.size() - kapanan.size()], 4.0)
+	_ipucu_goster("DEPREM! %d karo tünel kapandı, %d yeni damar/gaz çıktı.%s"
+		% [kapanan.size(), yeni.size() - kapanan.size(), son], 4.0)
 
 # --- tehlikeler -----------------------------------------------------------
 
