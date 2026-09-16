@@ -1,0 +1,262 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/oyun.gd" id="1_oyun"]
+[ext_resource type="Script" path="res://scripts/dunya.gd" id="2_dunya"]
+[ext_resource type="Script" path="res://scripts/arac.gd" id="3_arac"]
+
+[sub_resource type="RectangleShape2D" id="Sekil_1"]
+size = Vector2(12, 12)
+
+[node name="Oyun" type="Node2D"]
+script = ExtResource("1_oyun")
+
+[node name="Arkaplan" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="Renk" type="ColorRect" parent="Arkaplan"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0431373, 0.0470588, 0.0784314, 1)
+
+[node name="Dunya" type="TileMapLayer" parent="."]
+script = ExtResource("2_dunya")
+
+[node name="UsGolge" type="Polygon2D" parent="."]
+position = Vector2(488, 0)
+color = Color(0.12549, 0.164706, 0.219608, 1)
+polygon = PackedVector2Array(-56, 0, -56, -14, -40, -40, 40, -40, 56, -14, 56, 0)
+
+[node name="Us" type="Polygon2D" parent="."]
+position = Vector2(488, 0)
+color = Color(0.32549, 0.729412, 0.858824, 1)
+polygon = PackedVector2Array(-44, -2, -44, -12, -30, -32, 30, -32, 44, -12, 44, -2)
+
+[node name="UsKapi" type="Polygon2D" parent="."]
+position = Vector2(488, 0)
+color = Color(0.0941176, 0.152941, 0.207843, 1)
+polygon = PackedVector2Array(-11, -2, -11, -20, 11, -20, 11, -2)
+
+[node name="Arac" type="CharacterBody2D" parent="."]
+position = Vector2(488, -24)
+script = ExtResource("3_arac")
+
+[node name="Sekil" type="CollisionShape2D" parent="Arac"]
+shape = SubResource("Sekil_1")
+
+[node name="Govde" type="Polygon2D" parent="Arac"]
+color = Color(0.988235, 0.784314, 0.25, 1)
+polygon = PackedVector2Array(-6, -6, 6, -6, 6, 2, 0, 6, -6, 2)
+
+[node name="Kabin" type="Polygon2D" parent="Arac"]
+color = Color(0.184314, 0.239216, 0.313726, 1)
+polygon = PackedVector2Array(-3, -4, 3, -4, 3, -1, -3, -1)
+
+[node name="Matkap" type="Polygon2D" parent="Arac"]
+color = Color(0.898039, 0.945098, 1, 1)
+polygon = PackedVector2Array(-3, -3, 3, -3, 0, 4)
+
+[node name="Kamera" type="Camera2D" parent="Arac"]
+zoom = Vector2(2, 2)
+limit_left = 0
+limit_top = -400
+limit_right = 960
+limit_bottom = 5120
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Ust" type="HBoxContainer" parent="HUD"]
+offset_left = 8.0
+offset_top = 5.0
+offset_right = 632.0
+offset_bottom = 25.0
+theme_override_constants/separation = 20
+
+[node name="Derinlik" type="Label" parent="HUD/Ust"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.517647, 0.788235, 0.898039, 1)
+text = "Derinlik 0 m"
+
+[node name="Yakit" type="Label" parent="HUD/Ust"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.639216, 0.290196, 1)
+text = "Yakıt 0/0"
+
+[node name="Yuk" type="Label" parent="HUD/Ust"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.686275, 0.905882, 0.686275, 1)
+text = "Yük 0/0"
+
+[node name="Para" type="Label" parent="HUD/Ust"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.956863, 0.776471, 0.188235, 1)
+text = "Para 0"
+
+[node name="Ipucu" type="Label" parent="HUD"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -32.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.905882, 0.894118, 0.960784, 1)
+text = ""
+horizontal_alignment = 1
+
+[node name="Magaza" type="PanelContainer" parent="HUD"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="HUD/Magaza"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="V" type="VBoxContainer" parent="HUD/Magaza/M"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Baslik" type="Label" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.784314, 0.25, 1)
+theme_override_font_sizes/font_size = 20
+text = "ÜS"
+horizontal_alignment = 1
+
+[node name="Bilgi" type="Label" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "..."
+
+[node name="Sat" type="Button" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "Sat"
+
+[node name="G_matkap" type="Button" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "Matkap"
+
+[node name="G_depo" type="Button" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "Depo"
+
+[node name="G_kasa" type="Button" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "Kasa"
+
+[node name="Yakit" type="Button" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "Yakıt doldur"
+
+[node name="Kapat" type="Button" parent="HUD/Magaza/M/V"]
+layout_mode = 2
+text = "Kapat (Esc)"
+
+[node name="Duraklat" type="PanelContainer" parent="HUD"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="HUD/Duraklat"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="V" type="VBoxContainer" parent="HUD/Duraklat/M"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Baslik" type="Label" parent="HUD/Duraklat/M/V"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Duraklatıldı"
+horizontal_alignment = 1
+
+[node name="Devam" type="Button" parent="HUD/Duraklat/M/V"]
+layout_mode = 2
+text = "Devam et"
+
+[node name="Menu" type="Button" parent="HUD/Duraklat/M/V"]
+layout_mode = 2
+text = "Menüye dön (kaydeder)"
+
+[node name="Bitis" type="PanelContainer" parent="HUD"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="HUD/Bitis"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="V" type="VBoxContainer" parent="HUD/Bitis/M"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Metin" type="Label" parent="HUD/Bitis/M/V"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.988235, 0.784314, 0.25, 1)
+text = "..."
+horizontal_alignment = 1
+
+[node name="Menu" type="Button" parent="HUD/Bitis/M/V"]
+layout_mode = 2
+text = "Menüye dön"
+
+[node name="Uyari" type="PanelContainer" parent="HUD"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="HUD/Uyari"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="V" type="VBoxContainer" parent="HUD/Uyari/M"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Metin" type="Label" parent="HUD/Uyari/M/V"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.976471, 0.545098, 0.454902, 1)
+text = "..."
+horizontal_alignment = 1
+
+[node name="Tamam" type="Button" parent="HUD/Uyari/M/V"]
+layout_mode = 2
+text = "Tamam"
