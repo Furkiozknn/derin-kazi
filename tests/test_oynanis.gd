@@ -1,5 +1,7 @@
-## Oynanış entegrasyon testi: gerçek sahneyi kurar, aracı kazdırır.
-## godot --headless --script res://tests/test_oynanis.gd   (0 = geçti, 1 = kaldı)
+## Oynanış entegrasyon testi: gerçek sahneyi kurar, aracı kazdırır, yeni
+## özellikleri (chunk boşaltma, kazı kaydı, matkap kapısı, dinamit, istasyon)
+## sahne üstünde sınar.
+##   godot --headless --path . --script res://tests/test_oynanis.gd   (0 = geçti)
 extends SceneTree
 
 var _hata := 0
@@ -22,6 +24,8 @@ func _kare(n: int) -> void:
 
 func _calis() -> void:
 	print("== Oynanış testi ==")
+	# Temiz başlangıç: önceki oturumun kaydı bu testi etkilemesin.
+	Kayit.sil()
 	var sahne: Node = load("res://scenes/oyun.tscn").instantiate()
 	root.add_child(sahne)
 	await process_frame
@@ -33,32 +37,56 @@ func _calis() -> void:
 
 	dogru(arac.is_on_floor(), "araç yüzeyde zemine oturdu")
 	dogru(arac.usste_mi(), "başlangıçta üste yakın (menü açılabilir)")
-	dogru(dunya.uretilen_karo > 0, "ilk parçalar üretildi (%d karo)" % dunya.uretilen_karo)
+	dogru(dunya.toplam_uretim > 0, "ilk chunk'lar üretildi (%d karo)" % dunya.toplam_uretim)
+	dogru(dunya.yuklu_parca_sayisi() <= 9, "yalnız çevredeki chunk'lar yüklü (%d)"
+		% dunya.yuklu_parca_sayisi())
 
 	var yakit0 := durum.yakit
-	var parca0 := dunya.uretilen_karo
+	var parca0 := dunya.toplam_uretim
 
-	# 25 saniye aşağı kaz.
+	# --- 25 saniye aşağı kaz --------------------------------------------
+	durum.matkap = Ayarlar.EN_YUKSEK_SEVIYE   ## kapı bu aşamada test edilmiyor
 	Input.action_press("asagi")
 	await _kare(1500)
 	Input.action_release("asagi")
 	await _kare(10)
 
-	var derinlik := floori(arac.global_position.y / Ayarlar.KARO)
+	var derinlik := arac.derinlik()
 	dogru(derinlik > 15, "aşağı kazarak derinleşti (%d m)" % derinlik)
-	dogru(durum.en_derin >= derinlik - 1, "en derin noktası kaydedildi (%d m)" % durum.en_derin)
+	dogru(durum.en_derin >= derinlik - 1, "en derin nokta kaydedildi (%d m)" % durum.en_derin)
 	dogru(durum.yakit < yakit0, "yakıt tüketildi (%.1f → %.1f)" % [yakit0, durum.yakit])
-	dogru(durum.yuk_toplam() > 0, "yol üstündeki maden yüke eklendi (%d parça)" % durum.yuk_toplam())
+	dogru(durum.yuk_toplam() > 0, "yol üstündeki maden yüke eklendi (%d ağırlık)" % durum.yuk_toplam())
 	dogru(not arac.usste_mi(), "araç üsten uzaklaştı")
-	dogru(dunya.uretilen_karo > parca0, "inerken yeni parçalar üretildi (%d → %d karo)"
-		% [parca0, dunya.uretilen_karo])
+	dogru(dunya.toplam_uretim > parca0, "inerken yeni chunk'lar üretildi (%d → %d karo)"
+		% [parca0, dunya.toplam_uretim])
 
-	# Üretim gerçekten parça parça: tüm dünya (%d karo) bir kerede kurulmadı.
+	# --- chunk yönetimi: yalnız çevre bellekte --------------------------
+	var yuklu := dunya.get_used_cells().size()
 	var tum_dunya := Ayarlar.GENISLIK * Ayarlar.DERINLIK
-	dogru(dunya.uretilen_karo < tum_dunya / 2,
-		"parça parça üretim: %d / %d karo bellekte" % [dunya.uretilen_karo, tum_dunya])
+	dogru(dunya.yuklu_parca_sayisi() <= 9, "en fazla 3x3 chunk yüklü (%d)" % dunya.yuklu_parca_sayisi())
+	dogru(yuklu < tum_dunya / 4, "chunk'lı üretim: %d / %d karo bellekte (%%%.0f)"
+		% [yuklu, tum_dunya, 100.0 * float(yuklu) / float(tum_dunya)])
+	dogru(yuklu <= 9 * Ayarlar.PARCA * Ayarlar.PARCA,
+		"bellekteki karo sayısı chunk sınırının altında (%d <= %d)"
+		% [yuklu, 9 * Ayarlar.PARCA * Ayarlar.PARCA])
 
-	# Pervaneyle yukarı çıkabiliyor mu?
+	# --- kazı kaydı: tüneller kalıcı ------------------------------------
+	dogru(dunya.kazilan.size() > 10, "kazılan hücreler fark olarak kaydedildi (%d)" % dunya.kazilan.size())
+	var ornek: Vector2i = dunya.kazilan.keys()[0]
+	dogru(dunya.karo_tur(ornek) == Ayarlar.BOS, "kazılan hücre boş görünüyor")
+	# Chunk'ı boşaltıp yeniden yükle: tünel kapanmamalı.
+	var p := Dunya.parca_no(ornek)
+	dunya.hazirla(Vector2(Ayarlar.US_X, -24.0))       ## uzaklaş → chunk boşalır
+	dunya.hazirla(dunya.hucre_merkezi(ornek))          ## geri dön → yeniden yüklenir
+	dogru(dunya.get_cell_source_id(ornek) < 0, "chunk yeniden yüklenince tünel yerinde kaldı")
+
+	sahne.call("_kaydet")
+	var kayit := Kayit.yukle()
+	var kazilan_dizi := PackedInt32Array(kayit.get("kazilan", PackedInt32Array()))
+	dogru(kazilan_dizi.size() / 2 == dunya.kazilan.size(),
+		"kazılan hücreler kayda yazıldı (%d hücre)" % (kazilan_dizi.size() / 2))
+
+	# --- pervane ---------------------------------------------------------
 	var y0 := arac.global_position.y
 	Input.action_press("yukari")
 	await _kare(90)
@@ -66,14 +94,75 @@ func _calis() -> void:
 	dogru(arac.global_position.y < y0, "pervane ile tünelde yükseldi (%.0f → %.0f px)"
 		% [y0, arac.global_position.y])
 
-	# Yukarı kazmak yasak: tavan kapalıyken yükselemez.
 	var yuk0 := durum.yuk_toplam()
 	Input.action_press("yukari")
 	await _kare(240)
 	Input.action_release("yukari")
 	dogru(durum.yuk_toplam() == yuk0, "yukarı doğru kazma yok (yük değişmedi)")
 
-	print("  bellek: %.1f MB statik, %d karo düğümü" % [
-		OS.get_static_memory_usage() / 1048576.0, dunya.get_used_cells().size()])
+	# --- matkap kapısı ---------------------------------------------------
+	var uyari := [0]
+	arac.matkap_yetersiz.connect(func(_g: int): uyari[0] += 1)
+	# Tünelin dibine in: oranın altı kazılmamış ve 2. katman kapısının ardında.
+	var dip := Vector2i(arac.hucre().x, 0)
+	for k in dunya.kazilan:
+		if int(k.y) > dip.y:
+			dip = Vector2i(k)
+	arac.isinlan(dunya.hucre_merkezi(dip))
+	await _kare(20)
+	durum.matkap = 0
+	durum.yakit = durum.yakit_kapasitesi()
+	var kirilan0 := dunya.kazilan.size()
+	dogru(not durum.matkap_yeterli_mi(dip.y + 1),
+		"%d m'nin altı Matkap Sv%d istiyor" % [dip.y, Durum.gereken_matkap(dip.y + 1) + 1])
+	Input.action_press("asagi")
+	await _kare(150)
+	Input.action_release("asagi")
+	dogru(uyari[0] > 0, "matkap yetersizken uyarı verildi (%d kez)" % uyari[0])
+	dogru(dunya.kazilan.size() == kirilan0, "matkap yetersizken karo kırılmadı")
+	durum.matkap = Ayarlar.EN_YUKSEK_SEVIYE
+
+	# --- dinamit ---------------------------------------------------------
+	durum.dinamit = 1
+	await _kare(30)   ## zemine otursun
+	var once := dunya.kazilan.size()
+	var atildi := arac.dinamit_at()
+	dogru(atildi and durum.dinamit == 0, "dinamit kullanıldı")
+	dogru(dunya.kazilan.size() > once, "dinamit 3x3 alanı patlattı (%d → %d hücre)"
+		% [once, dunya.kazilan.size()])
+	dogru(not arac.dinamit_at(), "dinamit bitince atılmıyor")
+
+	# --- istasyon ve ışınlanma -------------------------------------------
+	durum.istasyon_kiti = 1
+	var h := arac.hucre()
+	h.y = maxi(h.y, Ayarlar.ISTASYON_EN_SIG)
+	dogru(durum.istasyon_kur(h), "istasyon kuruldu (%d m)" % h.y)
+	dogru(durum.isinlanma_duragi(h) == 0, "istasyonun yanında ışınlanma açık")
+	dogru(durum.isinlanma_duragi(h + Vector2i(0, 40)) < 0, "istasyondan uzakta ışınlanma kapalı")
+	arac.isinlan(Vector2(Ayarlar.US_X, -24.0))
+	await _kare(20)
+	dogru(arac.usste_mi(), "ışınlanma aracı üsse taşıdı")
+
+	# --- kazı zinciri sahnede --------------------------------------------
+	durum.zincir_tur = Ayarlar.BOS
+	durum.zincir_adet = 0
+	durum.yuk.clear()
+	durum.yuk_bonus = 0
+	for i in 4:
+		durum.maden_ekle(Ayarlar.BAKIR)
+	dogru(durum.zincir_adet == 4 and durum.zincir_carpani() > 1.0,
+		"art arda aynı maden zinciri çarpan veriyor (×%.2f)" % durum.zincir_carpani())
+
+	# --- mini harita ------------------------------------------------------
+	var harita: TextureRect = sahne.get_node("HUD/Harita")
+	harita.visible = true
+	await _kare(30)
+	dogru(harita.texture != null and harita.texture.get_size() == Vector2(Ayarlar.GENISLIK, Ayarlar.DERINLIK),
+		"mini harita dokusu dünya boyutunda")
+
+	print("  bellek: %.1f MB statik, %d karo düğümü, %d chunk"
+		% [OS.get_static_memory_usage() / 1048576.0, dunya.get_used_cells().size(),
+			dunya.yuklu_parca_sayisi()])
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
+	Kayit.sil()
 	quit(1 if _hata > 0 else 0)
