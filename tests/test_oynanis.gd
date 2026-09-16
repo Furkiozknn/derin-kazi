@@ -208,9 +208,53 @@ func _calis() -> void:
 	dogru(varyant_sayim.size() > 1, "ekranda birden çok karo varyantı çizili (%d)"
 		% varyant_sayim.size())
 
-	print("  bellek: %.1f MB statik, %d karo düğümü, %d chunk"
-		% [OS.get_static_memory_usage() / 1048576.0, dunya.get_used_cells().size(),
-			dunya.yuklu_parca_sayisi()])
+	# Bellek özeti sahne SERBEST BIRAKILMADAN önce alınır: aşağıda oyun sahnesi
+	# kapatılıyor, sonrasında dunya'ya dokunmak serbest bırakılmış nesne hatası
+	# verir ve test quit() e hiç gelmez (bir kez öyle asıldı).
+	var ozet := "  bellek: %.1f MB statik, %d karo düğümü, %d chunk" % [
+		OS.get_static_memory_usage() / 1048576.0, dunya.get_used_cells().size(),
+		dunya.yuklu_parca_sayisi()]
+
+	# --- menü sahnesi: paneller gerçekten açılıyor mu -----------------------
+	# Tohum / günlük / Derin Mod menüde yaşıyor; düğme bağlantısı ya da düğüm
+	# yolu bozulursa oyun değil yalnız menü kırılır ve sessizce fark edilmez.
+	sahne.queue_free()
+	await process_frame
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242, "kazandi": true, "eserler": PackedInt32Array([0, 2])})
+	var menu: Node = load("res://scenes/menu.tscn").instantiate()
+	root.add_child(menu)
+	await _kare(5)
+	var kod := TohumKodu.kodla(4242)
+	dogru(String(menu.get_node("Bilgi").text).contains(kod),
+		"menü kayıtlı dünyanın tohum kodunu yazıyor (%s)" % kod)
+	dogru(menu.get_node("M/V/Derin").visible, "çekirdek çıkarıldıysa Derin Mod düğmesi açık")
+	menu.call("_tohum_ac")
+	await _kare(2)
+	dogru(menu.get_node("TohumPanel").visible
+		and String(menu.get_node("TohumPanel/M/V/Bilgi").text).contains(kod),
+		"tohum paneli açılıyor ve kodu gösteriyor")
+	menu.get_node("TohumPanel/M/V/Giris").text = "abc-def!"
+	menu.call("_kod_degisti", "abc-def!")
+	await _kare(2)
+	dogru(menu.get_node("TohumPanel/M/V/Giris").text == "ABCDEF",
+		"kod alanı alfabe dışını süzüyor (%s)" % menu.get_node("TohumPanel/M/V/Giris").text)
+	menu.call("_tohum_kapat")
+	menu.call("_ayar_ac")
+	await _kare(2)
+	dogru(menu.get_node("Ayar").visible
+		and menu.get_node("Ayar/M/V/Kaydir/Liste").get_child_count() > 3,
+		"ayar paneli açılıyor ve doluyor")
+	menu.call("_ayar_kapat")
+	# Günlük yuva ana ilerlemeye dokunmamalı.
+	var gunluk := Kayit.gunluk_hazirla()
+	dogru(int(gunluk["tohum"]) == Kayit.gunluk_tohum(), "günlük yuva bugünün tohumuyla kuruldu")
+	dogru(int(Kayit.yukle(Kayit.ANA).get("tohum", 0)) == 4242,
+		"günlük yuva ana kaydı bozmadı")
+	menu.queue_free()
+	await process_frame
+
+	print(ozet)
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	Kayit.sil()
 	quit(1 if _hata > 0 else 0)
