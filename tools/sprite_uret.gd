@@ -7,6 +7,9 @@
 extends SceneTree
 
 const K := 16   ## karo kenarı
+## Taban kayası varyantlarının dikey degrade yönü. Yön değiştiği için yan yana
+## duran karolar 16 px'lik çizgiler oluşturmuyor.
+const EGIM := [0.55, 0.0, -0.45]
 
 # --- Endesga 32 -----------------------------------------------------------
 const EDG := [
@@ -70,12 +73,17 @@ static func elips(im: Image, cx: int, cy: int, rx: float, ry: float, renk: Color
 
 ## [koyu, ana, açık] üçlüsü ile gürültülü kaya dokusu.
 ## Sert kenar çizgisi YOK: 16 px'lik karo ekranda tekrarladığı için düz bir üst/alt
-## şerit duvarı tuğlaya çeviriyordu. Onun yerine yumuşak dikey degrade + çakıl kümesi.
-func _kaya_dokusu(im: Image, ox: int, koyu: Color, ana: Color, acik: Color) -> void:
+## şerit duvarı tuğlaya çeviriyordu.
+## v0.3: degradenin kendisi de şerit yapıyordu — her karo üstte açık, altta koyu
+## olunca duvar 16 px'de bir çizgileniyordu. Karşıtlık düşürüldü ve `egim`
+## varyanttan varyanta YÖN değiştiriyor, böylece çizgiler hizalanmıyor.
+func _kaya_dokusu(im: Image, ox: int, koyu: Color, ana: Color, acik: Color,
+		egim := 0.55) -> void:
 	for y in K:
-		# üstte biraz aydınlık, altta biraz koyu — ama karşıtlık düşük
 		var t := float(y) / float(K - 1)
-		var zemin := Color(acik).lerp(ana, clampf(t * 2.2, 0.0, 1.0)).lerp(koyu, clampf((t - 0.55) * 1.1, 0.0, 1.0))
+		var g := (t - 0.5) * egim
+		var zemin := Color(ana).lerp(acik, clampf(-g * 1.6, 0.0, 1.0)) \
+			.lerp(koyu, clampf(g * 1.6, 0.0, 1.0))
 		for x in K:
 			var r := rng.randi() % 100
 			var renk := zemin
@@ -102,18 +110,38 @@ func _damar(im: Image, ox: int, renk: Color, parlak: Color) -> void:
 		elips(im, ox + kume.x, kume.y, float(kume.z) - 0.2, float(kume.z) - 0.2, renk)
 		nokta(im, ox + kume.x - 1, kume.y - 1, parlak)
 
+## Atlas: her karo türünün VARYANT_SAYISI satırı var. 0. satır ana doku;
+## 1. ve 2. satırlar YALNIZ taban kayaları için farklı gürültüyle yeniden çizilir,
+## kalan sütunlar 0. satırın kopyasıdır (madenin ve gazın deseni tanınabilir kalmalı).
 func _karolar() -> Image:
-	rng.seed = 20260916
-	var im := _bos(K * Ayarlar.KARO_SAYISI, K)
+	var satir := _karolar_satir()
+	var im := _bos(K * Ayarlar.KARO_SAYISI, K * Ayarlar.VARYANT_SAYISI)
+	var kaynak := Rect2i(0, 0, satir.get_width(), K)
+	for v in Ayarlar.VARYANT_SAYISI:
+		im.blit_rect(satir, kaynak, Vector2i(0, v * K))
+	for v in range(1, Ayarlar.VARYANT_SAYISI):
+		var alt := _bos(K * Ayarlar.KARO_SAYISI, K)
+		var tb := _tabanlar()
+		for i in tb.size():
+			_kaya_dokusu(alt, i * K, tb[i][0], tb[i][1], tb[i][2], EGIM[v % EGIM.size()])
+			im.blit_rect(alt, Rect2i(i * K, 0, K, K), Vector2i(i * K, v * K))
+	return im
 
-	# 5 katman taban kayası: yüzeyden çekirdeğe doğru koyulaşır.
-	var tabanlar := [
+## Taban kayası paleti — 5 katman, yüzeyden çekirdeğe doğru koyulaşır.
+func _tabanlar() -> Array:
+	return [
 		[c(6), c(5), c(4)],       # toprak  — koyu kahve (bakır üstünde okunsun)
 		[c(22), c(21), c(20)],    # taş     — mavi gri
 		[c(15), c(23), c(22)],    # sert taş— soğuk teal aralık
 		[c(25), c(24), c(23)],    # bazalt  — gece mavisi
 		[c(25), c(27), c(23)],    # obsidyen— mor siyah
 	]
+
+## 0. satır: bütün karo türlerinin ana dokusu (K yüksekliğinde tek şerit).
+func _karolar_satir() -> Image:
+	rng.seed = 20260916
+	var im := _bos(K * Ayarlar.KARO_SAYISI, K)
+	var tabanlar := _tabanlar()
 	for i in tabanlar.size():
 		_kaya_dokusu(im, i * K, tabanlar[i][0], tabanlar[i][1], tabanlar[i][2])
 

@@ -32,6 +32,20 @@ const ESER := 16        ## müzeye gider, kalıcı bonus
 const BOS := -1
 const KARO_SAYISI := 17
 
+## Doku varyantı: karolar.png'de her karo türünün VARYANT_SAYISI satırı var.
+## Aynı 16 px doku ekranda yan yana tekrarlayınca desen fark ediliyordu.
+const VARYANT_SAYISI := 3
+## Yalnız taban kayalarının varyantı var; maden ve tehlike karolarının deseni
+## tanınabilir kalmalı (oyuncu gazı bir bakışta ayırt edebilmeli).
+const VARYANTLI := [TOPRAK, TAS, SERT, BAZALT, OBSIDYEN]
+
+## Konuma bağlı belirlenimci varyant: aynı hücre hep aynı dokuyu alır, komşusu
+## başkasını. Tohumdan bağımsız — bu doku çeşitliliği, dünya üretimi değil.
+static func varyant(x: int, y: int, t: int) -> int:
+	if not VARYANTLI.has(t):
+		return 0
+	return absi(hash(Vector2i(x * 31 + 7, y * 17 + 3))) % VARYANT_SAYISI
+
 ## Kazma süresi (saniye, matkap seviye 0'da). -1 = kazılamaz.
 const SERTLIK := {
 	TOPRAK: 0.55, TAS: 0.85, SERT: 1.20, BAZALT: 1.60, OBSIDYEN: 2.10,
@@ -154,15 +168,25 @@ static func zincir_carpani(adet: int) -> float:
 	return c
 
 # --- eserler (müze) ---
-## Her eser kalıcı küçük bir pasif bonus verir.
+## Her eser kalıcı bir pasif bonus verir ve `hikaye` ile çekirdeğin sırrından bir
+## parça anlatır. Sıra önemli: 1'den 6'ya doğru okununca tek bir hikâye çıkar.
 const ESERLER := [
-	{"ad": "Kırık Pusula", "bonus": "matkap", "deger": 0.05, "metin": "Matkap hızı +%5"},
-	{"ad": "Bakır Madalyon", "bonus": "deger", "deger": 0.04, "metin": "Maden değeri +%4"},
-	{"ad": "Kadim Depo Kapağı", "bonus": "yakit", "deger": 0.08, "metin": "Yakıt kapasitesi +%8"},
-	{"ad": "Taş Tablet", "bonus": "yuk", "deger": 2.0, "metin": "Yük kapasitesi +2"},
-	{"ad": "Isıyutan Levha", "bonus": "cekme", "deger": 0.20, "metin": "Çekme ücreti -%20"},
-	{"ad": "Çekirdek Parçası", "bonus": "matkap", "deger": 0.08, "metin": "Matkap hızı +%8"},
+	{"ad": "Kırık Pusula", "bonus": "matkap", "deger": 0.05, "metin": "Matkap hızı +%5",
+		"hikaye": "İbresi aşağıyı gösteriyor ve hiç şaşmıyor. Kasabanın kurucuları bu pusulayı bir kuyunun dibinde bulmuş; \"aşağıda bizi çeken bir şey var\" demişler ve kazmaya başlamışlar."},
+	{"ad": "Bakır Madalyon", "bonus": "deger", "deger": 0.04, "metin": "Maden değeri +%4",
+		"hikaye": "Arkasında bir sayı kazılı: 250. Madalyonu takanlar bir ölçü ekibiydi. Ölçtükleri şey derinlik değil, sıcaklığın nereden geldiğiydi — ve cevap yukarıdan değildi."},
+	{"ad": "Kadim Depo Kapağı", "bonus": "yakit", "deger": 0.08, "metin": "Yakıt kapasitesi +%8",
+		"hikaye": "Kapağın iç yüzünde bir liste var: inen ekiplerin adları. Son satır yarım kalmış. Deponun kendisi hiç bulunamadı; yakıtı aşağıdan çıkarıyorlardı, yukarıdan indirmiyorlardı."},
+	{"ad": "Taş Tablet", "bonus": "yuk", "deger": 2.0, "metin": "Yük kapasitesi +2",
+		"hikaye": "Tablette tek bir cümle var: \"Kabuk her beş nöbette bir kımıldar, tünelleri geri alır.\" Depremleri bir felaket değil, nefes alma sayıyorlardı."},
+	{"ad": "Isıyutan Levha", "bonus": "cekme", "deger": 0.20, "metin": "Çekme ücreti -%20",
+		"hikaye": "Lavın içinde soğuk duruyor. Bu levhayı yapan atölye 210 metrenin altındaydı — yani çekirdeğin kabuğunda. Birileri oraya kadar inmiş, yerleşmiş ve çalışmış."},
+	{"ad": "Çekirdek Parçası", "bonus": "matkap", "deger": 0.08, "metin": "Matkap hızı +%8",
+		"hikaye": "Elde tutulunca kendi ritmiyle atıyor. Çekirdek bir maden yatağı değil: canlı, yavaş ve sabırlı bir şey. Aşağı inen ekipler onu çıkarmaya değil, uyandırmaya gitmişti."},
 ]
+
+## Müzede eser bulunmadan önce görünen "kilitli" satırı.
+const ESER_KILITLI := "…  ??? — yeraltındaki gizli odalarda"
 
 # --- üs ---
 const US_KARO_X := 32

@@ -6,12 +6,15 @@ extends RefCounted
 
 const ODA_G := 7
 const ODA_Y := 5
+const FAY_YARICAP := 1   ## fay koridoru = 2 * FAY_YARICAP + 1 karo genişlik
 
 var tohum: int
 var cekirdek_x: int
 var _magara: FastNoiseLite
 var _kaya: FastNoiseLite
 var _lav: FastNoiseLite
+var _fay: FastNoiseLite
+var _fay_sutun := PackedInt32Array()   ## y -> koridorun orta sütunu
 var _maden_tablo: Array = []   ## [tür, en_sığ, tepe, yoğunluk]
 
 func _init(p_tohum: int) -> void:
@@ -19,12 +22,15 @@ func _init(p_tohum: int) -> void:
 	_magara = _gurultu(p_tohum, 0.075)
 	_kaya = _gurultu(p_tohum + 7919, 0.13)
 	_lav = _gurultu(p_tohum + 104729, 0.11)
+	# Fay hattının kıvrımı (koridorun kopmaması _fay_kur() içinde garanti ediliyor).
+	_fay = _gurultu(p_tohum + 15485863, 0.020)
 	for i in Ayarlar.KATMANLAR.size():
 		var k: Dictionary = Ayarlar.KATMANLAR[i]
 		var son: int = int(Ayarlar.KATMANLAR[i + 1]["y0"]) if i + 1 < Ayarlar.KATMANLAR.size() else Ayarlar.CEKIRDEK_DERINLIK
 		_maden_tablo.append([int(k["maden"]), int(k["y0"]), (int(k["y0"]) + son) / 2, float(k["yogunluk"])])
 	# Çekirdek kenarlardan uzakta, tohuma göre sabit bir sütunda.
 	cekirdek_x = 6 + absi(hash(p_tohum)) % (Ayarlar.GENISLIK - 12)
+	_fay_kur()
 
 static func _gurultu(t: int, f: float) -> FastNoiseLite:
 	var n := FastNoiseLite.new()
@@ -36,6 +42,34 @@ static func _gurultu(t: int, f: float) -> FastNoiseLite:
 ## Deterministik 0..1 arası sayı. RNG nesnesi kurmadan, sadece hash ile.
 func _sayi(x: int, y: int, tuz: int) -> float:
 	return float(absi(hash(Vector4i(x, y, tohum, tuz))) % 1000000) / 1000000.0
+
+# --- garantili fay hattı --------------------------------------------------
+
+## Üsten çekirdeğe inen, kıvrımlı bir koridorun o derinlikteki orta sütunu.
+## Koridorun İÇİ sıradan kaya ve madenle dolu — oyuncu onu göremez — ama içinde
+## ASLA kazılamaz kaya ya da lav olmaz. Dome Keeper şikâyeti ("kötü dünya üretimi
+## oyunu bitirilemez yapıyor") bu yüzden burada oluşamaz: her tohumda yüzeyden
+## çekirdeğe kazılabilir bir yol var (tests/test_calistir.gd BFS ile doğruluyor).
+func fay_x(y: int) -> int:
+	return _fay_sutun[clampi(y, 0, Ayarlar.DERINLIK)]
+
+## Koridoru bir kez kurar. İki güvence kodda, ayarda değil:
+##   - satır başına en fazla 1 karo kayar (koridor kopmaz)
+##   - iki uçta sapma 0: üsten (US_KARO_X) başlar, çekirdek sütununda biter
+func _fay_kur() -> void:
+	_fay_sutun.resize(Ayarlar.DERINLIK + 1)
+	var onceki := Ayarlar.US_KARO_X
+	for y in range(0, Ayarlar.DERINLIK + 1):
+		var t := clampf(float(y) / float(Ayarlar.CEKIRDEK_DERINLIK), 0.0, 1.0)
+		var taban := lerpf(float(Ayarlar.US_KARO_X), float(cekirdek_x), t)
+		var sapma := _fay.get_noise_1d(float(y)) * 9.0 * sin(PI * t)
+		var hedef := int(round(taban + sapma))
+		onceki = clampi(clampi(hedef, onceki - 1, onceki + 1), 2, Ayarlar.GENISLIK - 3)
+		_fay_sutun[y] = onceki
+
+## Hücre fay koridorunda mı? (3 karo genişlik)
+func fayda_mi(x: int, y: int) -> bool:
+	return absi(x - fay_x(y)) <= FAY_YARICAP
 
 # --- odalar ---------------------------------------------------------------
 
@@ -99,12 +133,14 @@ func karo(x: int, y: int) -> int:
 
 	# Mağara. Derin katmanlarda mağara tabanına lav dolar (kazılmaz ama yolu kapatmaz:
 	# lav hep boşluğun yerine gelir, kayanın değil).
+	var fayda := fayda_mi(x, y)
 	if _magara.get_noise_2d(float(x), float(y)) > Ayarlar.MAGARA_ESIK:
-		if int(kat["tehlike"]) == Ayarlar.LAV and _lav.get_noise_2d(float(x), float(y) * 1.6) > 0.30:
+		if not fayda and int(kat["tehlike"]) == Ayarlar.LAV \
+				and _lav.get_noise_2d(float(x), float(y) * 1.6) > 0.30:
 			return Ayarlar.LAV
 		return Ayarlar.BOS
 
-	if y >= 30 and not cekirdege_yakin:
+	if y >= 30 and not cekirdege_yakin and not fayda:
 		if _kaya.get_noise_2d(float(x), float(y)) > Ayarlar.KAYA_ESIK:
 			return Ayarlar.KAYA
 
