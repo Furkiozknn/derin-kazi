@@ -90,16 +90,55 @@ func _calis() -> void:
 	sahne.call("_nesne_yenile")
 	sahne.set("_radar_acik", true)
 	sahne.get_node("HUD/Harita").visible = true
+	# Mini haritada görülecek bir geçmiş: keşif sisi yalnız gezilen yeri açıyor,
+	# yeni kurulmuş bir sahnede harita bomboş olurdu.
 	for i in 30:
 		sahne.call("_harita_ac", derin + Vector2i(randi_range(-8, 8), randi_range(-30, 6)))
 	await _kare(40)
 	Input.action_press("sag")
 	await _kare(40)
 	Input.action_release("sag")
+	# Deprem panosu: kararın iki ucu ekranda (v0.5'in okunurluk işi).
+	sahne.set("_deprem_uyari_derinlik", arac.derinlik())
+	sahne.set("_deprem_uyari", 7.4)
+	sahne.call("_hud_yenile")
 	await _yaz("ekran-4.png")
+	sahne.set("_deprem_uyari", 0.0)
 
+	await _telefon()
 	await _kapak()
 	quit(0)
+
+## Telefon oranında oyun karesi: dokunmatik düğme şeridi 640x360'a sığıyor mu,
+## alet düğmeleri (DİNAMİT · RADAR) kazı alanlarının üstüne biniyor mu — gözle
+## denetim. Görüntü her zaman 640x360 (stretch aspect=keep), pencere 915x412.
+func _telefon() -> void:
+	sahne.set("_deprem_uyari", 0.0)
+	sahne.set("_dokunmatik", true)
+	sahne.get_node("Dokunmatik").visible = true
+	sahne.call("dokunmatik_kur")
+	durum.dinamit = 3
+	durum.aletler["radar"] = true
+	sahne.set("_radar_acik", true)
+	sahne.get_node("HUD/Harita").visible = false
+	sahne.call("_hud_yenile")
+	var eski := root.size
+	root.size = Vector2i(915, 412)
+	await _kare(20)
+	var im := root.get_texture().get_image()
+	im.save_png(ProjectSettings.globalize_path("res://docs/oyun-telefon.png"))
+	print("  docs/oyun-telefon.png  %dx%d" % [im.get_width(), im.get_height()])
+	# Deprem panosu telefon oranında da okunuyor mu?
+	sahne.set("_deprem_uyari_derinlik", arac.derinlik())
+	sahne.set("_deprem_uyari", 6.2)
+	sahne.call("_hud_yenile")
+	await _kare(4)
+	var im2 := root.get_texture().get_image()
+	im2.save_png(ProjectSettings.globalize_path("res://docs/deprem-telefon.png"))
+	print("  docs/deprem-telefon.png  %dx%d" % [im2.get_width(), im2.get_height()])
+	sahne.set("_deprem_uyari", 0.0)
+	root.size = eski
+	await _kare(5)
 
 ## Menü: masaüstü oranı (yayın görseli) + telefon oranı (arka planın ekranın
 ## altını doldurduğunu gözle denetlemek için; hata v0.2'de burada çıkmıştı).
