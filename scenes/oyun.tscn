@@ -1,17 +1,42 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/oyun.gd" id="1_oyun"]
 [ext_resource type="Script" path="res://scripts/dunya.gd" id="2_dunya"]
 [ext_resource type="Script" path="res://scripts/arac.gd" id="3_arac"]
+[ext_resource type="Texture2D" path="res://assets/sprites/gok.png" id="4_gok"]
+[ext_resource type="Texture2D" path="res://assets/sprites/tepeler.png" id="5_tepeler"]
+[ext_resource type="Texture2D" path="res://assets/sprites/kasaba.png" id="6_kasaba"]
+[ext_resource type="Texture2D" path="res://assets/sprites/fon_kaya.png" id="7_kaya"]
+[ext_resource type="Texture2D" path="res://assets/sprites/us.png" id="8_us"]
+[ext_resource type="Texture2D" path="res://assets/sprites/arac.png" id="9_arac"]
 
 [sub_resource type="RectangleShape2D" id="Sekil_1"]
 size = Vector2(12, 12)
+
+[sub_resource type="RectangleShape2D" id="Dokun_1"]
+size = Vector2(150, 110)
+
+[sub_resource type="StyleBoxFlat" id="Panel_1"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.07, 0.06, 0.11, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.99, 0.68, 0.2, 0.75)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
 
 [node name="Oyun" type="Node2D"]
 script = ExtResource("1_oyun")
 
 [node name="Arkaplan" type="CanvasLayer" parent="."]
-layer = -1
+layer = -3
 
 [node name="Renk" type="ColorRect" parent="Arkaplan"]
 anchors_preset = 15
@@ -19,97 +44,195 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0431373, 0.0470588, 0.0784314, 1)
+color = Color(0.043, 0.047, 0.078, 1)
+
+[node name="Gok" type="TextureRect" parent="Arkaplan"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("4_gok")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Kaya" type="TextureRect" parent="Arkaplan"]
+offset_right = 768.0
+offset_bottom = 488.0
+texture = ExtResource("7_kaya")
+stretch_mode = 1
+modulate = Color(1, 1, 1, 0)
+
+[node name="Tepeler" type="TextureRect" parent="Arkaplan"]
+offset_top = 150.0
+offset_right = 968.0
+offset_bottom = 214.0
+texture = ExtResource("5_tepeler")
+stretch_mode = 1
+
+[node name="Kasaba" type="TextureRect" parent="Arkaplan"]
+offset_top = 200.0
+offset_right = 968.0
+offset_bottom = 248.0
+texture = ExtResource("6_kasaba")
+stretch_mode = 1
 
 [node name="Dunya" type="TileMapLayer" parent="."]
 script = ExtResource("2_dunya")
 
-[node name="UsGolge" type="Polygon2D" parent="."]
-position = Vector2(488, 0)
-color = Color(0.12549, 0.164706, 0.219608, 1)
-polygon = PackedVector2Array(-56, 0, -56, -14, -40, -40, 40, -40, 56, -14, 56, 0)
+[node name="UsGorsel" type="Sprite2D" parent="."]
+position = Vector2(520, -28)
+texture = ExtResource("8_us")
 
-[node name="Us" type="Polygon2D" parent="."]
-position = Vector2(488, 0)
-color = Color(0.32549, 0.729412, 0.858824, 1)
-polygon = PackedVector2Array(-44, -2, -44, -12, -30, -32, 30, -32, 44, -12, 44, -2)
+[node name="Nesneler" type="Node2D" parent="."]
 
-[node name="UsKapi" type="Polygon2D" parent="."]
-position = Vector2(488, 0)
-color = Color(0.0941176, 0.152941, 0.207843, 1)
-polygon = PackedVector2Array(-11, -2, -11, -20, 11, -20, 11, -2)
+[node name="Etkiler" type="Node2D" parent="."]
 
 [node name="Arac" type="CharacterBody2D" parent="."]
-position = Vector2(488, -24)
+position = Vector2(520, -24)
 script = ExtResource("3_arac")
 
 [node name="Sekil" type="CollisionShape2D" parent="Arac"]
 shape = SubResource("Sekil_1")
 
-[node name="Govde" type="Polygon2D" parent="Arac"]
-color = Color(0.988235, 0.784314, 0.25, 1)
-polygon = PackedVector2Array(-6, -6, 6, -6, 6, 2, 0, 6, -6, 2)
-
-[node name="Kabin" type="Polygon2D" parent="Arac"]
-color = Color(0.184314, 0.239216, 0.313726, 1)
-polygon = PackedVector2Array(-3, -4, 3, -4, 3, -1, -3, -1)
-
-[node name="Matkap" type="Polygon2D" parent="Arac"]
-color = Color(0.898039, 0.945098, 1, 1)
-polygon = PackedVector2Array(-3, -3, 3, -3, 0, 4)
+[node name="Gorsel" type="Sprite2D" parent="Arac"]
+texture = ExtResource("9_arac")
+hframes = 4
 
 [node name="Kamera" type="Camera2D" parent="Arac"]
 zoom = Vector2(2, 2)
 limit_left = 0
-limit_top = -400
-limit_right = 960
-limit_bottom = 5120
+limit_top = -320
+limit_right = 1024
+limit_bottom = 4352
 position_smoothing_enabled = true
-position_smoothing_speed = 8.0
+position_smoothing_speed = 7.0
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
 [node name="Ust" type="HBoxContainer" parent="HUD"]
 offset_left = 8.0
-offset_top = 5.0
+offset_top = 4.0
 offset_right = 632.0
-offset_bottom = 25.0
-theme_override_constants/separation = 20
+offset_bottom = 20.0
+theme_override_constants/separation = 12
 
 [node name="Derinlik" type="Label" parent="HUD/Ust"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_colors/font_color = Color(0.517647, 0.788235, 0.898039, 1)
-text = "Derinlik 0 m"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.17, 0.6, 0.86, 1)
+text = "0 m"
 
 [node name="Yakit" type="Label" parent="HUD/Ust"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.639216, 0.290196, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.97, 0.68, 0.2, 1)
 text = "Yakıt 0/0"
 
 [node name="Yuk" type="Label" parent="HUD/Ust"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_colors/font_color = Color(0.686275, 0.905882, 0.686275, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.39, 0.78, 0.3, 1)
 text = "Yük 0/0"
 
-[node name="Para" type="Label" parent="HUD/Ust"]
+[node name="Can" type="Label" parent="HUD/Ust"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_colors/font_color = Color(0.956863, 0.776471, 0.188235, 1)
-text = "Para 0"
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.89, 0.23, 0.27, 1)
+text = "Can 0"
+
+[node name="Para" type="Label" parent="HUD/Ust"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+text = "0 ₺"
+
+[node name="Katman" type="Label" parent="HUD"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
+offset_left = 8.0
+offset_top = 21.0
+offset_right = 320.0
+offset_bottom = 44.0
+theme_override_colors/font_color = Color(0.55, 0.61, 0.71, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+
+[node name="Zincir" type="Label" parent="HUD"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 21.0
+offset_right = -84.0
+offset_bottom = 39.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+horizontal_alignment = 2
+
+[node name="Radar" type="Label" parent="HUD"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 40.0
+offset_right = -84.0
+offset_bottom = 56.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.17, 0.91, 0.96, 1)
+theme_override_font_sizes/font_size = 13
+text = ""
+horizontal_alignment = 2
+
+[node name="Harita" type="TextureRect" parent="HUD"]
+visible = false
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -72.0
+offset_top = -122.0
+offset_right = -8.0
+offset_bottom = 150.0
+grow_horizontal = 0
+grow_vertical = 2
+stretch_mode = 2
 
 [node name="Ipucu" type="Label" parent="HUD"]
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 5
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -32.0
+offset_top = -30.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.905882, 0.894118, 0.960784, 1)
+theme_override_colors/font_color = Color(0.9, 0.89, 0.96, 1)
+theme_override_font_sizes/font_size = 13
 text = ""
 horizontal_alignment = 1
 
 [node name="Magaza" type="PanelContainer" parent="HUD"]
 visible = false
+theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -120,52 +243,166 @@ grow_vertical = 2
 
 [node name="M" type="MarginContainer" parent="HUD/Magaza"]
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
 
 [node name="V" type="VBoxContainer" parent="HUD/Magaza/M"]
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 4
 
 [node name="Baslik" type="Label" parent="HUD/Magaza/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.784314, 0.25, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+theme_override_font_sizes/font_size = 16
 text = "ÜS"
 horizontal_alignment = 1
 
 [node name="Bilgi" type="Label" parent="HUD/Magaza/M/V"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 11
 text = "..."
 
-[node name="Sat" type="Button" parent="HUD/Magaza/M/V"]
+[node name="Kaydir" type="ScrollContainer" parent="HUD/Magaza/M/V"]
 layout_mode = 2
-text = "Sat"
+custom_minimum_size = Vector2(400, 196)
+horizontal_scroll_mode = 0
 
-[node name="G_matkap" type="Button" parent="HUD/Magaza/M/V"]
+[node name="Liste" type="VBoxContainer" parent="HUD/Magaza/M/V/Kaydir"]
 layout_mode = 2
-text = "Matkap"
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
 
-[node name="G_depo" type="Button" parent="HUD/Magaza/M/V"]
-layout_mode = 2
-text = "Depo"
+[node name="Muze" type="PanelContainer" parent="HUD"]
+visible = false
+theme_override_styles/panel = SubResource("Panel_1")
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="G_kasa" type="Button" parent="HUD/Magaza/M/V"]
+[node name="M" type="MarginContainer" parent="HUD/Muze"]
 layout_mode = 2
-text = "Kasa"
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
 
-[node name="Yakit" type="Button" parent="HUD/Magaza/M/V"]
+[node name="V" type="VBoxContainer" parent="HUD/Muze/M"]
 layout_mode = 2
-text = "Yakıt doldur"
+theme_override_constants/separation = 4
 
-[node name="Kapat" type="Button" parent="HUD/Magaza/M/V"]
+[node name="Baslik" type="Label" parent="HUD/Muze/M/V"]
 layout_mode = 2
-text = "Kapat (Esc)"
+theme_override_colors/font_color = Color(0.99, 0.68, 0.2, 1)
+theme_override_font_sizes/font_size = 16
+text = "MÜZE"
+horizontal_alignment = 1
+
+[node name="Bilgi" type="Label" parent="HUD/Muze/M/V"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "..."
+
+[node name="Kaydir" type="ScrollContainer" parent="HUD/Muze/M/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(430, 180)
+horizontal_scroll_mode = 0
+
+[node name="Liste" type="VBoxContainer" parent="HUD/Muze/M/V/Kaydir"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="Isinlanma" type="PanelContainer" parent="HUD"]
+visible = false
+theme_override_styles/panel = SubResource("Panel_1")
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="HUD/Isinlanma"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 12
+
+[node name="V" type="VBoxContainer" parent="HUD/Isinlanma/M"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Baslik" type="Label" parent="HUD/Isinlanma/M/V"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.17, 0.91, 0.96, 1)
+theme_override_font_sizes/font_size = 16
+text = "IŞINLANMA"
+horizontal_alignment = 1
+
+[node name="Bilgi" type="Label" parent="HUD/Isinlanma/M/V"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "..."
+
+[node name="Kaydir" type="ScrollContainer" parent="HUD/Isinlanma/M/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(430, 150)
+horizontal_scroll_mode = 0
+
+[node name="Liste" type="VBoxContainer" parent="HUD/Isinlanma/M/V/Kaydir"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
+
+[node name="Ayar" type="PanelContainer" parent="HUD"]
+visible = false
+theme_override_styles/panel = SubResource("Panel_1")
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="M" type="MarginContainer" parent="HUD/Ayar"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 14
+
+[node name="V" type="VBoxContainer" parent="HUD/Ayar/M"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="Baslik" type="Label" parent="HUD/Ayar/M/V"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Ayarlar"
+horizontal_alignment = 1
+
+[node name="Kaydir" type="ScrollContainer" parent="HUD/Ayar/M/V"]
+layout_mode = 2
+custom_minimum_size = Vector2(430, 190)
+horizontal_scroll_mode = 0
+
+[node name="Liste" type="VBoxContainer" parent="HUD/Ayar/M/V/Kaydir"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 1
 
 [node name="Duraklat" type="PanelContainer" parent="HUD"]
 visible = false
+theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -183,11 +420,11 @@ theme_override_constants/margin_bottom = 14
 
 [node name="V" type="VBoxContainer" parent="HUD/Duraklat/M"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 5
 
 [node name="Baslik" type="Label" parent="HUD/Duraklat/M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 16
 text = "Duraklatıldı"
 horizontal_alignment = 1
 
@@ -195,12 +432,17 @@ horizontal_alignment = 1
 layout_mode = 2
 text = "Devam et"
 
+[node name="Ayar" type="Button" parent="HUD/Duraklat/M/V"]
+layout_mode = 2
+text = "Ayarlar"
+
 [node name="Menu" type="Button" parent="HUD/Duraklat/M/V"]
 layout_mode = 2
 text = "Menüye dön (kaydeder)"
 
 [node name="Bitis" type="PanelContainer" parent="HUD"]
 visible = false
+theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -222,7 +464,7 @@ theme_override_constants/separation = 8
 
 [node name="Metin" type="Label" parent="HUD/Bitis/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.988235, 0.784314, 0.25, 1)
+theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
 text = "..."
 horizontal_alignment = 1
 
@@ -232,6 +474,7 @@ text = "Menüye dön"
 
 [node name="Uyari" type="PanelContainer" parent="HUD"]
 visible = false
+theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -253,10 +496,62 @@ theme_override_constants/separation = 8
 
 [node name="Metin" type="Label" parent="HUD/Uyari/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.976471, 0.545098, 0.454902, 1)
+theme_override_colors/font_color = Color(0.96, 0.46, 0.48, 1)
 text = "..."
 horizontal_alignment = 1
 
 [node name="Tamam" type="Button" parent="HUD/Uyari/M/V"]
 layout_mode = 2
 text = "Tamam"
+
+[node name="Dokunmatik" type="CanvasLayer" parent="."]
+visible = false
+layer = 2
+
+[node name="Sol" type="TouchScreenButton" parent="Dokunmatik"]
+position = Vector2(0, 250)
+shape = SubResource("Dokun_1")
+shape_centered = false
+shape_visible = false
+action = "sol"
+
+[node name="Sag" type="TouchScreenButton" parent="Dokunmatik"]
+position = Vector2(490, 250)
+shape = SubResource("Dokun_1")
+shape_centered = false
+shape_visible = false
+action = "sag"
+
+[node name="Asagi" type="TouchScreenButton" parent="Dokunmatik"]
+position = Vector2(150, 250)
+shape = SubResource("Dokun_1")
+shape_centered = false
+shape_visible = false
+action = "asagi"
+
+[node name="Yukari" type="TouchScreenButton" parent="Dokunmatik"]
+position = Vector2(150, 120)
+shape = SubResource("Dokun_1")
+shape_centered = false
+shape_visible = false
+action = "yukari"
+
+[node name="Izler" type="Control" parent="Dokunmatik"]
+mouse_filter = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Gecis" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Karartma" type="ColorRect" parent="Gecis"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+mouse_filter = 2

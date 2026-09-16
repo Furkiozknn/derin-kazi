@@ -1,0 +1,118 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/kapak.gd" id="1_kapak"]
+[ext_resource type="Texture2D" path="res://assets/sprites/logo.png" id="2_logo"]
+[ext_resource type="Texture2D" path="res://assets/sprites/gok.png" id="3_gok"]
+[ext_resource type="Texture2D" path="res://assets/sprites/karolar.png" id="4_karolar"]
+
+[node name="Kapak" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_kapak")
+
+[node name="Gok" type="TextureRect" parent="."]
+layout_mode = 0
+offset_right = 630.0
+offset_bottom = 190.0
+texture = ExtResource("3_gok")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Oyun" type="TextureRect" parent="."]
+layout_mode = 0
+offset_top = 150.0
+offset_right = 630.0
+offset_bottom = 500.0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Perde" type="ColorRect" parent="."]
+layout_mode = 0
+offset_top = 150.0
+offset_right = 630.0
+offset_bottom = 500.0
+color = Color(0.09, 0.08, 0.14, 0.45)
+
+[node name="Ust" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 630.0
+offset_bottom = 190.0
+color = Color(0.09, 0.08, 0.14, 0.25)
+
+[node name="Logo" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 36.0
+offset_top = 34.0
+offset_right = 132.0
+offset_bottom = 130.0
+texture = ExtResource("2_logo")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Baslik" type="Label" parent="."]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 36.0
+offset_right = 610.0
+offset_bottom = 96.0
+theme_override_colors/font_color = Color(0.99, 0.68, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0.09, 0.08, 0.14, 0.9)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 52
+text = "DERİN KAZI"
+
+[node name="AltBaslik" type="Label" parent="."]
+layout_mode = 0
+offset_left = 152.0
+offset_top = 98.0
+offset_right = 614.0
+offset_bottom = 132.0
+theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+theme_override_colors/font_shadow_color = Color(0.09, 0.08, 0.14, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 19
+text = "250 metre aşağıda bir çekirdek var"
+
+[node name="Serit" type="ColorRect" parent="."]
+layout_mode = 0
+offset_top = 186.0
+offset_right = 630.0
+offset_bottom = 190.0
+color = Color(0.99, 0.68, 0.2, 1)
+
+[node name="SeritAlt" type="ColorRect" parent="."]
+layout_mode = 0
+offset_top = 438.0
+offset_right = 630.0
+offset_bottom = 500.0
+color = Color(0.09, 0.08, 0.14, 0.82)
+
+[node name="Karolar" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 452.0
+offset_right = 288.0
+offset_bottom = 484.0
+texture = ExtResource("4_karolar")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Etiket" type="Label" parent="."]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 456.0
+offset_right = 614.0
+offset_bottom = 482.0
+theme_override_colors/font_color = Color(0.75, 0.79, 0.86, 1)
+theme_override_colors/font_shadow_color = Color(0.09, 0.08, 0.14, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 17
+text = "5 katman · 5 maden · kaz, sat, geliştir"
+horizontal_alignment = 2
