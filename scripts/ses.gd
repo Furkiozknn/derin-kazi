@@ -30,6 +30,9 @@ var _suanki_muzik := ""
 var ayar := {}
 
 func _ready() -> void:
+	# Web'de gömülü yazı tipinde olmayan simgeler (₺ ← ↑ → ↓ ▲ ▶ ▼ ◀ ✔) kutu çıkıyordu.
+	# Autoload olduğu için bir kez burada kurmak menü ve oyun sahnesini birden kapsar.
+	Simgeler.kur()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	for i in SESLER:
 		var p := AudioStreamPlayer.new()
