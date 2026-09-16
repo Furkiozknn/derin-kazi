@@ -20,6 +20,11 @@ const ROTA_PENCERE := 80        ## rota kaç karo aşağıya kadar bakar (mini h
 const ROTA_YUKARI := 12         ## rota bu kadar karodan fazla yukarı sapmaz
 const DINAMIT_DEGER := 2.0      ## dinamit ancak bu kadar saniye kazandırıyorsa atılır
 const EN_COK_TUR := 400
+## Sisli botun tur başına kaç kez rota hesaplayabildiği. Sis varken ilk rota
+## bilinmeyen hücrelerin "sade kaya" varsayımına dayanır; varsayım kırılınca
+## (kazılamaz kaya ya da lav çıkınca) yeniden hesaplamak gerekiyor. Sınır
+## ölçümün dakikalara çıkmasını engelliyor (BFS tur başına ~17 000 hücre).
+const ROTA_EN_COK_SISLI := 3
 
 ## Kusursuz bot: her karar anında doğru, hiç duraksamıyor.
 const MUKEMMEL := {
@@ -38,6 +43,17 @@ const INSAN := {
 	"yanlis_rota": 0.12, "us_sure": 22.0, "karar": 0.35,
 }
 
+## İnsana benzetilmiş bot + KEŞİF SİSİ: yol bulma yalnız keşfedilmiş hücreleri
+## biliyor, keşfedilmemiş olanı "o derinliğin sade kayası" sayıyor. Varsayım
+## kırılınca (kaya/lav çıkınca) rota yeniden kuruluyor — yani sis bota da para
+## ödetiyor. v0.4'ün bilinen sorunu buydu: "botun BFS'i oyuncunun bilgisinden
+## fazlasını görüyor", ölçtüğü şey "oyun bitirilebilir mi"ydi, "oyuncu yolu
+## bulabilir mi" değil. v0.5'te ölçülen ana sayı bu bot.
+const INSAN_SISLI := {
+	"carpan": 1.30, "duraksama_sans": 0.07, "duraksama_sure": 1.1,
+	"yanlis_rota": 0.12, "us_sure": 22.0, "karar": 0.35, "sis": true,
+}
+
 var _u: DunyaUretici
 var _d: Durum
 var _kazilan := {}
@@ -48,6 +64,12 @@ var _uretim := {}
 var _rng := RandomNumberGenerator.new()
 var _ayar := {}
 var _tohum := 0
+var _sisli := false
+## Keşif haritası (1 = görüldü). Dictionary değil düz dizi: ışık her karo
+## değişiminde ~80 hücre işaretliyor, bir ölçümde milyonlarca yazma demek.
+var _kesif := PackedByteArray()
+var _rota_sayac := 0        ## ölçüm: kaç kez BFS rotası kuruldu
+var _sis_kirilma := 0       ## ölçüm: kaç kez "sade kaya" varsayımı kaya/lava çarptı
 
 ## Tek bir tohumu baştan sona simüle eder. Dönüş: ölçüm sözlüğü.
 static func calistir(tohum: int, ayar: Dictionary) -> Dictionary:
@@ -85,6 +107,11 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 	_kazilan = {}
 	_eklenen = {}
 	_uretim = {}
+	_sisli = bool(ayar.get("sis", false))
+	_kesif = PackedByteArray()
+	_kesif.resize(Ayarlar.GENISLIK * Ayarlar.DERINLIK)
+	_rota_sayac = 0
+	_sis_kirilma = 0
 	_rng.seed = hash(Vector2i(tohum, 99991))
 	var x := Ayarlar.US_KARO_X
 	var tunel := 0              ## şaftın ulaştığı derinlik
@@ -121,15 +148,19 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 		tur_sure += inis
 		_d.yakit -= Ayarlar.YAKIT_BOSTA * inis
 		y = hedef_y
+		_kesfet(x, y)
 
 		# 2) Aşağı kaz. Altı kazılamazsa yana tünel açar; 250 m'ye yaklaşınca
 		#    çekirdek sütununa yanaşır (HUD oyuncuya da yönü söylüyor).
 		var kapi := hedef_y < tunel   ## şaftın dibine inemedi: bu katmanda çalış
 		var tikanma := 0
 		var yon := 1
-		var rota_denendi := false   ## rota tur başına bir kez hesaplanır (BFS pahalı)
+		# Rota sissiz botta tur başına BİR kez hesaplanır (BFS pahalı). Sisli
+		# botta varsayım kırılabildiği için birkaç kez hakkı var.
+		var rota_hakki := ROTA_EN_COK_SISLI if _sisli else 1
 		var kacti := false
 		for adim in 4000:
+			_kesfet(x, y)
 			if y + 1 >= Ayarlar.DERINLIK - 1:
 				break
 			if not _d.matkap_yeterli_mi(y + 1):
@@ -159,8 +190,8 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 				tikanma += 1
 				# Körlemesine yana gitmek yerine mini haritadan rota çıkar (BFS).
 				# v0.3'te tohum 3 tam burada tıkanıyordu: yol vardı, bot göremiyordu.
-				if tikanma == ROTA_TIKANMA and not rota_denendi:
-					rota_denendi = true
+				if tikanma == ROTA_TIKANMA and rota_hakki > 0:
+					rota_hakki -= 1
 					var r := _rota(x, y)
 					if not r.is_empty():
 						var iz := _rota_izle(r)
@@ -279,6 +310,8 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 		"cekirdek_dk": cekirdek_zaman / 60.0,
 		"cekirdek_tur": turlar.size() if cekirdek_bulundu else 0,
 		"kazilan": _kazilan.size(),
+		"rota": _rota_sayac,
+		"sis_kirilma": _sis_kirilma,
 	}
 
 # --- yol bulma (mini harita + BFS) ----------------------------------------
@@ -288,6 +321,7 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 ## ölçüm botu bir insanı temsil etmiyor, oyunun BİTİRİLEBİLİRLİĞİNİ ölçüyor.
 ## Önce gaz cebine girmeyen yol aranır; yoksa gazı göze alan yol kabul edilir.
 func _rota(x: int, y: int) -> Array:
+	_rota_sayac += 1
 	var hedef := Vector2i(_u.cekirdek_x, Ayarlar.CEKIRDEK_DERINLIK)
 	for gaz_serbest in [false, true]:
 		var yol := _bfs(Vector2i(x, y), hedef, gaz_serbest)
@@ -320,7 +354,7 @@ func _bfs(bas: Vector2i, hedef: Vector2i, gaz_serbest: bool) -> Array:
 				continue
 			if onceki.has(k):
 				continue
-			var t := _karo(k.x, k.y)
+			var t := _bfs_karo(k.x, k.y)
 			if t == Ayarlar.KAYA or t == Ayarlar.LAV:
 				continue
 			if t == Ayarlar.GAZ and not gaz_serbest:
@@ -359,6 +393,11 @@ func _rota_izle(yol: Array) -> Dictionary:
 		var t := _karo(h.x, h.y)
 		if t == Ayarlar.CEKIRDEK:
 			return {"sure": sure, "x": h.x, "y": h.y, "cekirdek": true, "ilerledi": true}
+		# Sis varsayımı kırıldı: karanlıkta sade kaya sandığımız hücre kazılamaz
+		# kaya ya da lav çıktı. Rota geçersiz, burada dur — çağıran yeniden kurar.
+		if t == Ayarlar.KAYA or t == Ayarlar.LAV:
+			_sis_kirilma += 1
+			break
 		if _d.yakit < float(_donus_maliyeti(y)["yakit"]) * GUVENLIK 				or _d.yuk_dolu() or _d.can <= 1:
 			break
 		if t != Ayarlar.BOS:
@@ -379,6 +418,7 @@ func _rota_izle(yol: Array) -> Dictionary:
 			_d.yakit -= Ayarlar.YAKIT_ITKI * float(Ayarlar.KARO) / Ayarlar.TIRMANIS_HIZ
 		x = h.x
 		y = h.y
+		_kesfet(x, y)
 		sure += _yan_maden(x, y)
 		sure += _gurultu(x, y)
 	return {"sure": sure, "x": x, "y": y, "cekirdek": false, "ilerledi": not ilk}
@@ -414,6 +454,39 @@ func _deprem(x: int, y: int) -> Dictionary:
 	var k2 := Deprem.karar(y, y)
 	_d.hasar_al(int(k2["hasar"]))
 	return {"sure": uyari, "kacti": false}
+
+# --- keşif sisi -----------------------------------------------------------
+
+## Aracın ışık yarıçapını kalıcı olarak açar. Sis kapalıysa hiçbir şey yapmaz
+## (sisli olmayan ölçümler yavaşlamasın).
+func _kesfet(x: int, y: int) -> void:
+	if not _sisli:
+		return
+	var r := Ayarlar.ISIK_YARICAP
+	for dy in range(-r, r + 1):
+		var hy := y + dy
+		if hy < 0 or hy >= Ayarlar.DERINLIK:
+			continue
+		var satir := hy * Ayarlar.GENISLIK
+		for dx in range(-r, r + 1):
+			if dx * dx + dy * dy > r * r:
+				continue
+			var hx := x + dx
+			if hx >= 0 and hx < Ayarlar.GENISLIK:
+				_kesif[satir + hx] = 1
+
+func _bilinen(x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x >= Ayarlar.GENISLIK or y >= Ayarlar.DERINLIK:
+		return true
+	return _kesif[y * Ayarlar.GENISLIK + x] == 1
+
+## Yol bulmanın gördüğü karo. Sis varken keşfedilmemiş hücre "o derinliğin sade
+## taban kayası" varsayılır: oyuncu da karanlıkta ne olduğunu bilmez, kazılabilir
+## umar. Varsayım kırılınca rota `_rota_izle` içinde tıkanır ve yeniden kurulur.
+func _bfs_karo(x: int, y: int) -> int:
+	if not _sisli or _bilinen(x, y):
+		return _karo(x, y)
+	return int(Ayarlar.KATMANLAR[Ayarlar.katman(y)]["taban"])
 
 func _karo(x: int, y: int) -> int:
 	var h := Vector2i(x, y)
@@ -503,6 +576,7 @@ func _yatay_galeri(x: int, y: int) -> float:
 	var hy := y
 	var yon := 1
 	for i in 3000:
+		_kesfet(hx, hy)
 		if _d.yuk_dolu() or _d.can <= 1 or hy < 2:
 			break
 		if _d.yakit < float(_donus_maliyeti(hy)["yakit"]) * GUVENLIK:

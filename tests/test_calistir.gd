@@ -28,6 +28,7 @@ func _initialize() -> void:
 	_fay_testleri()
 	_deprem_testleri()
 	_ipucu_testleri()
+	_sis_testleri()
 	_varyant_testleri()
 	_tohum_kodu_testleri()
 	_derin_mod_testleri()
@@ -639,15 +640,138 @@ func _ipucu_testleri() -> void:
 	dogru(sizan == "", "dokunmatik ipuçlarında klavye tuşu yok (%s)" % sizan)
 	dogru(bos == 0, "her durumun bir dokunmatik ipucu var (%d boş)" % bos)
 
-	# Deprem geri sayımı: karar HUD'da okunabilir olsun.
-	var sig := Ipucu.deprem_metni(3.0, 4, false)
-	var derin := Ipucu.deprem_metni(9.0, 150, false)
-	dogru(sig.contains("DEPREM") and sig.contains("güvende"),
-		"yüzeydeyken geri sayım güvende olduğunu söylüyor")
-	dogru(derin.contains("%d" % Deprem.odul(150)) and derin.contains("%d" % Deprem.hasar(150)),
-		"derinde geri sayım hem ödülü hem riski yazıyor (%s)" % derin)
-	dogru(not Ipucu.deprem_metni(9.0, 150, true).contains("W ile"),
-		"dokunmatik geri sayımda klavye tuşu yok")
+	# Deprem panosu (v0.5): geri sayım + kararın iki ucu AYRI satırlarda, ortada.
+	var sig := Ipucu.deprem_pano(3.0, 4, false)
+	var derin := Ipucu.deprem_pano(9.0, 150, false)
+	dogru(String(sig[0]).contains("DEPREM") and String(sig[1]).contains("Güvendesin"),
+		"yüzeydeyken pano güvende olduğunu söylüyor")
+	dogru(String(derin[0]).contains("DEPREM") and String(derin[0]).contains("9.0"),
+		"pano geri sayımı ayrı satırda yazıyor (%s)" % derin[0])
+	dogru(String(derin[1]).contains("%d" % Deprem.odul(150))
+		and String(derin[1]).contains("YÜZEYE"),
+		"pano yüzeye çıkmanın ikramiyesini yazıyor (%s)" % derin[1])
+	dogru(String(derin[2]).contains("%d" % Deprem.hasar(150))
+		and String(derin[2]).contains("KAL"),
+		"pano derinde kalmanın hasarını yazıyor (%s)" % derin[2])
+	var derin_dokun := Ipucu.deprem_pano(9.0, 150, true)
+	dogru(not String(derin_dokun[1]).contains("W ile")
+		and String(derin_dokun[1]).contains(Ipucu.ALAN_UC),
+		"dokunmatik panoda klavye tuşu yok, dokunma alanı var (%s)" % derin_dokun[1])
+
+	# Mağaza satırları (v0.5): dinamit ve radar artık telefonda da var, metinler
+	# de düğmeyi anlatıyor. v0.4'te mağaza "F ile 3x3 patlat" diyordu.
+	var sizan_magaza := ""
+	for anahtar in Ipucu.MAGAZA:
+		var dokun := Ipucu.magaza(String(anahtar), true)
+		for t in ["F ile", "Q —", "T ile", "E — "]:
+			if dokun.contains(t):
+				sizan_magaza += "%s: %s | " % [anahtar, dokun]
+	dogru(sizan_magaza == "", "dokunmatik mağaza satırlarında klavye tuşu yok (%s)"
+		% sizan_magaza)
+	dogru(Ipucu.magaza("dinamit", false).contains("F ile")
+		and Ipucu.magaza("radar", false).contains("Q"),
+		"masaüstü mağaza satırları tuşları anlatıyor (değişmedi)")
+	dogru(Ipucu.magaza("dinamit", true).contains(Ipucu.DUGME_DINAMIT)
+		and Ipucu.magaza("radar", true).contains(Ipucu.DUGME_RADAR),
+		"dokunmatik mağaza satırları alet düğmelerini anlatıyor")
+
+# --- keşif sisi (v0.5) ----------------------------------------------------
+
+func _sis_testleri() -> void:
+	print("- keşif sisi")
+	var d := Dunya.new()
+	d.kur(4242)
+	dogru(d.kesif_sayisi() == 0, "yeni dünya tamamen keşfedilmemiş (%d)" % d.kesif_sayisi())
+
+	var merkez := Vector2i(30, 60)
+	var yeni := d.kesfet(merkez, Ayarlar.ISIK_YARICAP)
+	dogru(yeni.size() > 20 and d.kesfedildi_mi(merkez),
+		"ışık yarıçapı çevreyi açtı (%d hücre)" % yeni.size())
+	dogru(d.kesfedildi_mi(merkez + Vector2i(Ayarlar.ISIK_YARICAP, 0)),
+		"yarıçapın kenarı açık")
+	dogru(not d.kesfedildi_mi(merkez + Vector2i(Ayarlar.ISIK_YARICAP + 2, 0)),
+		"yarıçapın dışı kapalı")
+	dogru(d.kesfet(merkez, Ayarlar.ISIK_YARICAP).is_empty(),
+		"aynı yer ikinci kez keşfedilmiyor (mini harita boşuna boyanmıyor)")
+	dogru(d.kesfedildi_mi(Vector2i(-1, 5)) and d.kesfedildi_mi(Vector2i(5, -3)),
+		"dünya dışı (gökyüzü, kenar) hep görünür")
+
+	# Kayıt: sıkıştırılmış base64 gidip geliyor ve makul boyutta kalıyor.
+	var kod := d.kesif_dizi()
+	var d2 := Dunya.new()
+	d2.kur(4242, {}, {}, kod)
+	dogru(d2.kesif_sayisi() == d.kesif_sayisi(),
+		"keşif kayıttan aynen geri geldi (%d hücre)" % d2.kesif_sayisi())
+	dogru(d2.kesfedildi_mi(merkez) and not d2.kesfedildi_mi(merkez + Vector2i(9, 0)),
+		"kayıttan gelen keşif doğru hücrelerde")
+	dogru(kod.length() < 4000, "keşif kaydı sıkışık kalıyor (%d karakter)" % kod.length())
+
+	# v0.4 kaydında keşif yok: tüneller yine görünsün (ileri uyumluluk).
+	var eski := Dunya.new()
+	eski.kur(4242, {Vector2i(32, 30): true})
+	dogru(eski.kesfedildi_mi(Vector2i(32, 30)) and eski.kesfedildi_mi(Vector2i(32, 33)),
+		"eski kayıt kapkaranlık açılmıyor: kazılan tünel keşfedilmiş sayılıyor")
+	dogru(not eski.kesfedildi_mi(Vector2i(32, 90)), "eski kayıtta kazılmamış derinlik kapalı")
+	d.free()
+	d2.free()
+	eski.free()
+
+	# Örtü yoğunluğu (scripts/sis.gd): ışığın içi açık, keşfedilen yarı karanlık,
+	# keşfedilmemiş kapkaranlık, yüzey gün ışığında.
+	var derin := Ayarlar.GUN_ISIGI * 4
+	dogru(Sis.ortu(0, derin, true, false) == 0.0, "ışığın merkezi tamamen açık")
+	dogru(Sis.ortu(1, derin, false, false) == 0.0,
+		"ışığın içi keşfedilmemiş olsa da açık (kazdığın yeri görürsün)")
+	var uzak := (Ayarlar.ISIK_YARICAP + 6) * (Ayarlar.ISIK_YARICAP + 6)
+	var kapali := Sis.ortu(uzak, derin, false, false)
+	var hatira := Sis.ortu(uzak, derin, true, false)
+	dogru(kapali > hatira and hatira > 0.0,
+		"keşfedilmemiş karanlık, keşfedilmiş yarı karanlık (%.2f > %.2f > 0)"
+		% [kapali, hatira])
+	dogru(is_equal_approx(kapali, 1.0), "keşfedilmemiş karo tamamen kapalı (%.2f)" % kapali)
+	dogru(Sis.ortu(uzak, 0, false, false) == 0.0, "yüzeyde gün ışığı sisi eritiyor")
+	dogru(Sis.ortu(uzak, -2, false, false) == 0.0, "gökyüzünde sis yok")
+	# Radar sisi GEÇİCİ açar: keşif saymaz, yalnız örtüyü seyreltir.
+	# Işıktan uzak ama radar menzilinin içinde bir hücre seçiliyor.
+	var radar_ici := (Ayarlar.RADAR_SIS_YARICAP - 1) * (Ayarlar.RADAR_SIS_YARICAP - 1)
+	var radarsiz := Sis.ortu(radar_ici, derin, false, false)
+	var radarli := Sis.ortu(radar_ici, derin, false, true)
+	dogru(radarli < radarsiz and radarli <= Ayarlar.SIS_RADAR,
+		"radar açıkken sis seyreliyor (%.2f < %.2f)" % [radarli, radarsiz])
+	var cok_uzak := (Ayarlar.RADAR_SIS_YARICAP + 4) * (Ayarlar.RADAR_SIS_YARICAP + 4)
+	dogru(is_equal_approx(Sis.ortu(cok_uzak, derin, false, true), 1.0),
+		"radarın menzili dışı hâlâ kapkaranlık")
+
+	# Botun sisli varyantı gerçekten daha az biliyor (ölçümün "fazla bilgi" sorunu):
+	# yol bulma keşfedilmemiş hücreyi o katmanın sade kayası sanıyor, keşfedince
+	# gerçeğini görüyor. Ölçümde bedel 0 çıkabilir (fay koridoru botu tıkamıyor,
+	# rota hiç kurulmuyor) — mekanizmanın kendisi burada sınanıyor.
+	dogru(bool(Bot.INSAN_SISLI.get("sis", false)) and not bool(Bot.INSAN.get("sis", false)),
+		"bot ayarlarında sisli varyant var, sissiz olan değişmedi")
+	var b := Bot.new()
+	b._u = DunyaUretici.new(4242)
+	b._d = Durum.new(4242)
+	b._sisli = true
+	b._kesif = PackedByteArray()
+	b._kesif.resize(Ayarlar.GENISLIK * Ayarlar.DERINLIK)
+	var kaya := Vector2i(-1, -1)
+	for y in range(20, Ayarlar.DERINLIK - 2):
+		for x in range(2, Ayarlar.GENISLIK - 2):
+			if b._u.karo(x, y) == Ayarlar.KAYA:
+				kaya = Vector2i(x, y)
+				break
+		if kaya.x >= 0:
+			break
+	dogru(kaya.x >= 0, "dünyada sınanacak bir kazılamaz kaya var (%s)" % kaya)
+	var sanilan := b._bfs_karo(kaya.x, kaya.y)
+	dogru(sanilan != Ayarlar.KAYA and Ayarlar.VARYANTLI.has(sanilan),
+		"sisli bot karanlıktaki kayayı sade kaya sanıyor (%d)" % sanilan)
+	b._kesfet(kaya.x, kaya.y)
+	dogru(b._bilinen(kaya.x, kaya.y) and b._bfs_karo(kaya.x, kaya.y) == Ayarlar.KAYA,
+		"keşfedince aynı hücre kaya olarak biliniyor")
+	b._sisli = false
+	dogru(b._bfs_karo(kaya.x, kaya.y + 40) == b._karo(kaya.x, kaya.y + 40),
+		"sissiz bot her hücreyi olduğu gibi görüyor")
 
 # --- karo varyantları -----------------------------------------------------
 

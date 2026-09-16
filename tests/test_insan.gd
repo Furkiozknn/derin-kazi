@@ -1,10 +1,17 @@
 ## İnsan benzeri ölçüm: godot --headless --path . --script res://tests/test_insan.gd
 ##
-## `tests/test_denge.gd` kusursuz botla ekonominin eğrisini ölçüyor. Burada aynı
+## `tests/test_denge.gd` kusussuz botla ekonominin eğrisini ölçüyor. Burada aynı
 ## simülasyon, tepki gecikmesi + duraksama + yanlış rota olasılığı olan bir botla
 ## 7 tohumda çalıştırılıyor. Cevaplanan iki soru:
 ##   1. İlk 10 dakikada oyuncu nereye varıyor? (derinlik, geliştirme, tur sayısı)
 ##   2. Çekirdeğe kaç dakikada varılıyor?
+##
+## v0.5'te üç bot yan yana ölçülüyor:
+##   Bot.INSAN_SISLI — ANA SAYI. Yol bulması yalnız KEŞFEDİLENİ biliyor, yani
+##                     oyuncunun bilgisiyle oynuyor (keşif sisi, v0.5).
+##   Bot.INSAN       — aynı insan gürültüsü, ama bütün dünyayı görüyor. Sisin
+##                     ölçüme kaç dakika eklediğini görmek için duruyor.
+##   Bot.MUKEMMEL    — duraksamayan robot; ekonominin eğrisi.
 ##
 ## Bu hâlâ bir bottur; gerçek bir insanın yerini tutmaz. Ama "duraksamayan robot"
 ## varsayımını sayıya döküp bandı daraltıyor: v0.2 raporundaki "insan 1,5-2 kat
@@ -26,11 +33,13 @@ func dogru(kosul: bool, ad: String) -> void:
 
 func _initialize() -> void:
 	print("== İnsan benzeri ölçüm (%d tohum) ==" % TOHUMLAR.size())
-	print("  bot ayarı: %s" % str(Bot.INSAN))
-	var insan := []
+	print("  bot ayarı (ana): %s" % str(Bot.INSAN_SISLI))
+	var insan := []       ## keşif sisli — ana ölçüm
+	var acik := []        ## sissiz (bütün dünyayı gören) insan botu
 	var robot := []
 	for tohum in TOHUMLAR:
-		insan.append(Bot.calistir(tohum, Bot.INSAN))
+		insan.append(Bot.calistir(tohum, Bot.INSAN_SISLI))
+		acik.append(Bot.calistir(tohum, Bot.INSAN))
 		robot.append(Bot.calistir(tohum, Bot.MUKEMMEL))
 
 	print("\n| tohum | kod | tur sn | 10. dk derinlik | 10. dk gelist. | cekirdek dk | cekirdek tur |")
@@ -43,6 +52,8 @@ func _initialize() -> void:
 			str(int(s["cekirdek_tur"])) if int(s["cekirdek_tur"]) > 0 else "-"])
 
 	var i_tur := _ort(insan, "ilk8_ort_sure")
+	var a_tur := _ort(acik, "ilk8_ort_sure")
+	var a_cek := _ort(acik, "cekirdek_dk")
 	var r_tur := _ort(robot, "ilk8_ort_sure")
 	var i_derin := _ort(insan, "on_dk_derinlik")
 	var i_gel := _ort(insan, "on_dk_gelistirme")
@@ -55,13 +66,33 @@ func _initialize() -> void:
 			ulasan += 1
 			en_yavas = maxf(en_yavas, float(s["cekirdek_dk"]))
 
+	var a_ulasan := 0
+	for s in acik:
+		if int(s["cekirdek_tur"]) > 0:
+			a_ulasan += 1
+
 	print("\n-- ortalama --")
-	print("  tur süresi          : insan %.0f sn  •  robot %.0f sn  •  oran x%.2f"
-		% [i_tur, r_tur, i_tur / maxf(r_tur, 0.01)])
+	print("  tur süresi          : sisli %.0f sn  •  sissiz %.0f sn  •  robot %.0f sn  •  oran x%.2f"
+		% [i_tur, a_tur, r_tur, i_tur / maxf(r_tur, 0.01)])
 	print("  10. dakikada        : %.0f m derinlik, %.1f geliştirme" % [i_derin, i_gel])
-	print("  çekirdeğe varış     : insan %.0f dk  •  robot %.0f dk" % [i_cek, r_cek])
+	print("  çekirdeğe varış     : sisli %.0f dk  •  sissiz %.0f dk  •  robot %.0f dk"
+		% [i_cek, a_cek, r_cek])
 	print("  çekirdeğe ulaşan    : %d/%d tohum (en yavaşı %.0f dk)"
 		% [ulasan, TOHUMLAR.size(), en_yavas])
+	print("  sisin bedeli        : tur %+.0f sn, çekirdek %+.0f dk (sissiz %d/%d ulaştı)"
+		% [i_tur - a_tur, i_cek - a_cek, a_ulasan, TOHUMLAR.size()])
+	# Sis yalnız BFS rotasını etkiler; rota hiç kurulmadıysa bedelin 0 çıkması
+	# normaldir (fay koridoru botu tıkamıyor). Kaç tohumda kurulduğu burada.
+	var rotali := 0
+	var rota_toplam := 0
+	var kirilma := 0
+	for s in insan:
+		if int(s["rota"]) > 0:
+			rotali += 1
+		rota_toplam += int(s["rota"])
+		kirilma += int(s["sis_kirilma"])
+	print("  BFS rotası kurulan  : %d/%d tohum (toplam %d rota, %d sis kırılması)"
+		% [rotali, TOHUMLAR.size(), rota_toplam, kirilma])
 
 	print("\n- hedefler")
 	# ÖLÇÜLEN (2026-09-16, v0.3): tur 108 sn, çekirdeğe 23 dk.

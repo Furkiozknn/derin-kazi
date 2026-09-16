@@ -90,6 +90,28 @@ func _calis() -> void:
 	dogru(kazilan_dizi.size() / 2 == dunya.kazilan.size(),
 		"kazılan hücreler kayda yazıldı (%d hücre)" % (kazilan_dizi.size() / 2))
 
+	# --- keşif sisi (v0.5) ------------------------------------------------
+	# Aracın ışığı indiği yeri kalıcı açar; inilmemiş derinlik karanlık kalır
+	# ve mini harita yalnız keşfedileni gösterir (rakip analizi madde 13).
+	var karanlik := Vector2i(arac.hucre().x, 200)
+	dogru(dunya.kesif_sayisi() > 50, "inilen koridor keşfedildi (%d hücre)"
+		% dunya.kesif_sayisi())
+	dogru(dunya.kesfedildi_mi(arac.hucre()), "aracın bulunduğu hücre keşfedilmiş")
+	dogru(not dunya.kesfedildi_mi(karanlik), "inilmemiş 200 m hâlâ karanlık")
+	var harita_img: Image = sahne.get("_harita_img")
+	# Dolgu rengi 8 bit'e yuvarlanıyor; karşılaştırma da yuvarlanmış renkle.
+	var dolgu_img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+	dolgu_img.fill(Color(0.05, 0.05, 0.08, 0.9))
+	var dolgu := dolgu_img.get_pixel(0, 0)
+	dogru(harita_img.get_pixelv(karanlik).is_equal_approx(dolgu),
+		"mini haritada keşfedilmemiş hücre kapalı")
+	dogru(not harita_img.get_pixelv(arac.hucre()).is_equal_approx(dolgu),
+		"mini haritada keşfedilen hücre boyalı")
+	var kesif_kod := String(kayit.get("kesif", ""))
+	dogru(kesif_kod != "" and Dunya.diziden_kesif(kesif_kod).size()
+		== Ayarlar.GENISLIK * Ayarlar.DERINLIK,
+		"keşif sisi kayda yazıldı (%d karakter)" % kesif_kod.length())
+
 	# --- pervane ---------------------------------------------------------
 	var y0 := arac.global_position.y
 	Input.action_press("yukari")
@@ -216,6 +238,28 @@ func _calis() -> void:
 	dogru(durum.can == durum.can_kapasitesi(),
 		"yüzeydeyken deprem hasar vermedi (%d/%d can)" % [durum.can, durum.can_kapasitesi()])
 
+	# --- deprem panosu okunur mu (v0.5) ------------------------------------
+	# v0.4'te geri sayım 13 px'lik alt ipucu şeridindeydi; artık ekranın
+	# ortasında üç satırlık pano var ve kararın iki ucunu birden yazıyor.
+	arac.isinlan(dunya.hucre_merkezi(dip2))
+	durum.yakit = durum.yakit_kapasitesi()
+	await _kare(20)
+	sahne.set("_deprem_uyari_derinlik", arac.derinlik())
+	sahne.set("_deprem_uyari", 8.0)
+	sahne.call("_hud_yenile")
+	var pano: VBoxContainer = sahne.get_node("HUD/Deprem")
+	dogru(pano.visible, "deprem uyarısında pano açık")
+	dogru(String(pano.get_node("Sayac").text).contains("DEPREM"),
+		"panoda geri sayım var (%s)" % pano.get_node("Sayac").text)
+	dogru(String(pano.get_node("Kacis").text).contains("₺")
+		and String(pano.get_node("Kal").text).contains("hasar"),
+		"panoda kararın iki ucu birden yazıyor")
+	sahne.set("_deprem_uyari", 0.0)
+	sahne.call("_hud_yenile")
+	dogru(not pano.visible, "uyarı bitince pano kapanıyor")
+	arac.usse_don()
+	await _kare(10)
+
 	# --- dokunmatik ipucu (sahnede) ---------------------------------------
 	sahne.set("_ipucu_sure", 0.0)   ## depremin geçici mesajı kalıcı ipucuyu örtmesin
 	sahne.set("_dokunmatik", true)
@@ -225,6 +269,61 @@ func _calis() -> void:
 	dogru(dokun_ipucu != masa_ipucu and not dokun_ipucu.contains("E — Üs"),
 		"sahne dokunmatikte başka ipucu veriyor (%s)" % dokun_ipucu)
 	dogru(masa_ipucu.contains("E — Üs"), "masaüstü ipucu değişmedi (%s)" % masa_ipucu)
+
+	# --- dokunmatik düzen: tam alet seti, çakışma yok (v0.5) ---------------
+	# v0.4'ün bilinen sorunu: telefonda dinamit ve radar kullanılamıyordu.
+	# Düğmeler geldi; burada ölçülen şey 640x360'a sığdıkları ve DOKUNMA
+	# ALANLARIYLA ÇAKIŞMADIKLARI. Dikdörtgenler sahneden okunuyor (sabit bir
+	# listeden değil) ki düzen değişince test de gerçeği ölçsün.
+	sahne.set("_dokunmatik", true)
+	sahne.get_node("Dokunmatik").visible = true
+	sahne.call("dokunmatik_kur")
+	await _kare(5)
+	var alanlar := []      ## [ad, Rect2]
+	for c in sahne.get_node("Dokunmatik").get_children():
+		if c is TouchScreenButton:
+			alanlar.append([String(c.name), Rect2(c.position, (c.shape as RectangleShape2D).size)])
+		elif c is Container:
+			for b in c.get_children():
+				if b is Button:
+					alanlar.append(["%s/%s" % [c.name, b.text], Rect2(b.global_position, b.size)])
+	dogru(alanlar.size() == 9, "dokunmatikte 4 kazı alanı + 5 düğme var (%d)" % alanlar.size())
+	var tasan := ""
+	var ekran := Rect2(0, 0, Ayarlar.EKRAN_G, Ayarlar.EKRAN_Y)
+	for a in alanlar:
+		if not ekran.encloses(a[1]):
+			tasan += "%s %s | " % [a[0], a[1]]
+	dogru(tasan == "", "bütün dokunma alanları 640x360'a sığıyor (%s)" % tasan)
+	var cakisan := ""
+	for i in alanlar.size():
+		for j in range(i + 1, alanlar.size()):
+			if Rect2(alanlar[i][1]).intersects(Rect2(alanlar[j][1])):
+				cakisan += "%s ↔ %s | " % [alanlar[i][0], alanlar[j][0]]
+	dogru(cakisan == "", "dokunma alanları çakışmıyor (%s)" % cakisan)
+
+	# Düğmeler gerçekten çalışıyor mu: dinamit sayacı düşsün, radar açılsın.
+	var dinamit_dgm: Button = sahne.get("_dgm_dinamit")
+	var radar_dgm: Button = sahne.get("_dgm_radar")
+	durum.dinamit = 0
+	durum.aletler["radar"] = false
+	sahne.call("_hud_yenile")
+	dogru(dinamit_dgm.disabled and radar_dgm.disabled,
+		"alet yokken düğmeler kapalı (%s / %s)" % [dinamit_dgm.text, radar_dgm.text])
+	durum.dinamit = 2
+	durum.aletler["radar"] = true
+	sahne.call("_hud_yenile")
+	dogru(dinamit_dgm.text.contains("2") and not dinamit_dgm.disabled,
+		"dinamit düğmesi sayacı gösteriyor (%s)" % dinamit_dgm.text)
+	arac.isinlan(dunya.hucre_merkezi(dip2))
+	await _kare(30)
+	dinamit_dgm.pressed.emit()
+	await _kare(5)
+	dogru(durum.dinamit == 1, "dinamit düğmesi dinamit attı (%d kaldı)" % durum.dinamit)
+	radar_dgm.pressed.emit()
+	dogru(bool(sahne.get("_radar_acik")), "radar düğmesi radarı açtı")
+	radar_dgm.pressed.emit()
+	dogru(not bool(sahne.get("_radar_acik")), "radar düğmesi radarı kapattı")
+	sahne.set("_dokunmatik", false)
 
 	sahne.call("_kaydet")
 	var kayit2 := Kayit.yukle()

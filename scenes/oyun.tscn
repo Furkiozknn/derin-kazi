@@ -1,6 +1,7 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/oyun.gd" id="1_oyun"]
+[ext_resource type="Script" path="res://scripts/sis.gd" id="10_sis"]
 [ext_resource type="Script" path="res://scripts/dunya.gd" id="2_dunya"]
 [ext_resource type="Script" path="res://scripts/arac.gd" id="3_arac"]
 [ext_resource type="Texture2D" path="res://assets/sprites/gok.png" id="4_gok"]
@@ -108,7 +109,20 @@ limit_bottom = 4352
 position_smoothing_enabled = true
 position_smoothing_speed = 7.0
 
+[node name="Sis" type="Node2D" parent="."]
+z_index = 15
+script = ExtResource("10_sis")
+
 [node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Isaret" type="ColorRect" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.89, 0.23, 0.27, 0)
 
 [node name="Ust" type="HBoxContainer" parent="HUD"]
 offset_left = 8.0
@@ -199,6 +213,49 @@ theme_override_colors/font_color = Color(0.17, 0.91, 0.96, 1)
 theme_override_font_sizes/font_size = 13
 text = ""
 horizontal_alignment = 2
+
+[node name="Deprem" type="VBoxContainer" parent="HUD"]
+visible = false
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -250.0
+offset_top = 58.0
+offset_right = 250.0
+offset_bottom = 126.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 1
+
+[node name="Sayac" type="Label" parent="HUD/Deprem"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 7
+theme_override_colors/font_color = Color(0.89, 0.23, 0.27, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+horizontal_alignment = 1
+
+[node name="Kacis" type="Label" parent="HUD/Deprem"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 6
+theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+horizontal_alignment = 1
+
+[node name="Kal" type="Label" parent="HUD/Deprem"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
+theme_override_constants/outline_size = 6
+theme_override_colors/font_color = Color(0.85, 0.55, 0.5, 1)
+theme_override_font_sizes/font_size = 15
+text = ""
+horizontal_alignment = 1
 
 [node name="Harita" type="TextureRect" parent="HUD"]
 visible = false

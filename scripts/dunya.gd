@@ -10,13 +10,23 @@ const YARICAP := 1          ## kaç chunk uzaklığa kadar yüklü kalsın
 var uretici: DunyaUretici
 var kazilan := {}           ## Vector2i -> true (kırılmış hücre)
 var eklenen := {}           ## Vector2i -> karo türü (deprem sonrası kapanan/çıkan hücre)
+## Keşif sisi: her hücre için 1 bayt (1 = görüldü). Dictionary değil düz dizi,
+## çünkü ışık her karo değişiminde ~80 hücre işaretliyor ve bot simülasyonu
+## bunu milyonlarca kez yapıyor. Kayda sıkıştırılmış olarak yazılır (kesif_dizi).
+var kesfedilen := PackedByteArray()
 var _yuklu := {}            ## chunk Vector2i -> true
 var toplam_uretim := 0      ## ölçüm: oturum boyunca üretilen karo (bkz. yuklu_karo)
 
-func kur(tohum: int, p_kazilan := {}, p_eklenen := {}) -> void:
+func kur(tohum: int, p_kazilan := {}, p_eklenen := {}, p_kesif := "") -> void:
 	uretici = DunyaUretici.new(tohum)
 	kazilan = p_kazilan.duplicate()
 	eklenen = p_eklenen.duplicate()
+	kesfedilen = diziden_kesif(p_kesif)
+	# v0.4 ve öncesinin kaydında keşif yok: kazılmış tünellerin çevresini açarak
+	# eski kayıt kapkaranlık başlamasın (kaydı bozmadan ileri uyumluluk).
+	if p_kesif == "" and not kazilan.is_empty():
+		for h in kazilan:
+			kesfet(h, Ayarlar.ISIK_YARICAP)
 	tile_set = _tileset_kur()
 	clear()
 	_yuklu.clear()
@@ -136,6 +146,59 @@ func en_yakin_maden(merkez: Vector2i, menzil := 14) -> Array:
 				en_uzak = u
 				en_iyi = [h]
 	return en_iyi
+
+# --- keşif sisi -----------------------------------------------------------
+
+static func _sis_boyut() -> int:
+	return Ayarlar.GENISLIK * Ayarlar.DERINLIK
+
+func kesfedildi_mi(h: Vector2i) -> bool:
+	if h.x < 0 or h.y < 0 or h.x >= Ayarlar.GENISLIK or h.y >= Ayarlar.DERINLIK:
+		return true   ## dünyanın dışı (gökyüzü, kenar) hep görünür
+	return kesfedilen[h.y * Ayarlar.GENISLIK + h.x] == 1
+
+## `merkez`in çevresindeki daireyi kalıcı olarak açar.
+## Dönüş: YENİ açılan hücreler (mini haritayı yalnız onlar için boyamak yeter).
+func kesfet(merkez: Vector2i, yaricap: int) -> Array:
+	var yeni: Array = []
+	for dy in range(-yaricap, yaricap + 1):
+		var y := merkez.y + dy
+		if y < 0 or y >= Ayarlar.DERINLIK:
+			continue
+		var satir := y * Ayarlar.GENISLIK
+		for dx in range(-yaricap, yaricap + 1):
+			if dx * dx + dy * dy > yaricap * yaricap:
+				continue
+			var x := merkez.x + dx
+			if x < 0 or x >= Ayarlar.GENISLIK:
+				continue
+			if kesfedilen[satir + x] == 1:
+				continue
+			kesfedilen[satir + x] = 1
+			yeni.append(Vector2i(x, y))
+	return yeni
+
+func kesif_sayisi() -> int:
+	var n := 0
+	for b in kesfedilen:
+		n += b
+	return n
+
+## Kayıt: 17 408 baytlık keşif haritası sıkıştırılıp base64'e çevriliyor.
+## Düz dizi olarak yazılsa ConfigFile'a yüz binlerce karakter giriyordu.
+func kesif_dizi() -> String:
+	return Marshalls.raw_to_base64(kesfedilen.compress(FileAccess.COMPRESSION_DEFLATE))
+
+static func diziden_kesif(s) -> PackedByteArray:
+	var bos := PackedByteArray()
+	bos.resize(_sis_boyut())
+	if s == null or String(s) == "":
+		return bos
+	var ham := Marshalls.base64_to_raw(String(s))
+	if ham.is_empty():
+		return bos
+	var acik := ham.decompress(_sis_boyut(), FileAccess.COMPRESSION_DEFLATE)
+	return acik if acik.size() == _sis_boyut() else bos
 
 ## Deprem sonucunu uygular: kapanan tüneller dolar, yeni gaz/damar hücreleri açılır.
 ## Yüklü chunk'lar boşaltılır — bir sonraki hazirla() çağrısı yeniden üretir.

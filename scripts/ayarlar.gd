@@ -93,6 +93,19 @@ static func katman(y: int) -> int:
 			k = i
 	return k
 
+# --- keşif sisi ---
+## Keşfedilmemiş karo karanlıktır. Işık yarıçapı aracın kendisinden gelir ve
+## BEDAVADIR (yakıtı yoktur): rakip analizinde SteamWorld Dig'in şikâyeti
+## "lamba yakıtı angarya" — sis bir kaynak yönetimi değil, bir bilgi kısıtı.
+## Keşif kalıcıdır ve kayda yazılır (Dunya.kesfedilen).
+const ISIK_YARICAP := 5        ## aracın çevresini kalıcı açan yarıçap (karo)
+const ISIK_YUMUSAMA := 2.0     ## ışık kenarının kaç karoda söndüğü
+const SIS_HATIRA := 0.62       ## keşfedilmiş ama ışık dışındaki karonun örtüsü
+const SIS_RADAR := 0.30        ## radar açıkken geçici açılan sisin örtüsü
+const RADAR_SIS_YARICAP := 9   ## radarın sisi geçici açtığı yarıçap (keşif saymaz)
+const GUN_ISIGI := 8           ## bu derinliğe kadar gün ışığı sisi eritir
+const SIS_RENK := Color(0.035, 0.03, 0.06)
+
 const MAGARA_ESIK := 0.50      ## üstündeki gürültü = boşluk
 const KAYA_ESIK := 0.66        ## üstündeki gürültü = kazılamaz kaya
 const ODA_SANS := 0.22         ## chunk başına hazır oda olasılığı
@@ -131,10 +144,8 @@ static func gelistirme_fiyati(alan: String, s: int) -> int:
 # --- aletler (bir kez alınır) ---
 const ALET_FIYAT := {"radar": 260, "kalkan": 620}
 const ALET_AD := {"radar": "Maden radarı", "kalkan": "Isı kalkanı"}
-const ALET_ACIKLAMA := {
-	"radar": "Q — en yakın madeni HUD'da gösterir",
-	"kalkan": "Lav ve sıcak katmanlarda hasar almazsın",
-}
+## Alet açıklamaları BURADA DEĞİL: dokunmatikte klavye tuşu anlatılmaması
+## gerektiği için metin `Ipucu.MAGAZA` içinde, masaüstü/dokunmatik çifti olarak.
 const DINAMIT_FIYAT := 45      ## adet
 const DINAMIT_YARICAP := 1     ## 1 = 3x3
 const ISTASYON_FIYAT := 150
