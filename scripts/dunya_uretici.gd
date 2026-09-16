@@ -8,6 +8,10 @@ const ODA_G := 7
 const ODA_Y := 5
 const FAY_YARICAP := 1   ## fay koridoru = 2 * FAY_YARICAP + 1 karo genişlik
 
+## Yalnız ölçüm için: kapatılınca dünya v0.2 gibi üretilir (garanti yok).
+## Testte "garanti gerçekten bir şey yapıyor mu" sorusunu cevaplamak için var.
+static var fay_acik := true
+
 var tohum: int
 var cekirdek_x: int
 var _magara: FastNoiseLite
@@ -69,7 +73,7 @@ func _fay_kur() -> void:
 
 ## Hücre fay koridorunda mı? (3 karo genişlik)
 func fayda_mi(x: int, y: int) -> bool:
-	return absi(x - fay_x(y)) <= FAY_YARICAP
+	return fay_acik and absi(x - fay_x(y)) <= FAY_YARICAP
 
 # --- odalar ---------------------------------------------------------------
 

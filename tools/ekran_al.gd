@@ -1,4 +1,5 @@
-## Yayın paketi görselleri: 4 ekran görüntüsü (1280x720) + kapak (630x500).
+## Yayın paketi görselleri: 5 ekran görüntüsü (1280x720) + kapak (630x500)
+## + menünün telefon oranındaki denetim karesi (docs/).
 ## Gerçek oyundan kare alır — montaj yok.
 ##   godot --path . --script res://tools/ekran_al.gd     (--headless ile ÇALIŞMAZ: render gerekiyor)
 ## Çıktı: yayin/ekran-1..4.png, yayin/kapak.png
@@ -34,7 +35,9 @@ func _oda_ac(merkez: Vector2i, gx: int, gy: int) -> void:
 
 func _calis() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(CIKTI))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://docs/"))
 	Kayit.sil()
+	await _menu()
 	sahne = load("res://scenes/oyun.tscn").instantiate()
 	root.add_child(sahne)
 	await _kare(40)
@@ -97,6 +100,23 @@ func _calis() -> void:
 
 	await _kapak()
 	quit(0)
+
+## Menü: masaüstü oranı (yayın görseli) + telefon oranı (arka planın ekranın
+## altını doldurduğunu gözle denetlemek için; hata v0.2'de burada çıkmıştı).
+func _menu() -> void:
+	var m: Node = load("res://scenes/menu.tscn").instantiate()
+	root.add_child(m)
+	await _kare(30)
+	await _yaz("ekran-5-menu.png")
+	var eski := root.size
+	root.size = Vector2i(915, 412)
+	await _kare(20)
+	var im := root.get_texture().get_image()
+	im.save_png(ProjectSettings.globalize_path("res://docs/menu-telefon.png"))
+	print("  docs/menu-telefon.png  %dx%d" % [im.get_width(), im.get_height()])
+	root.size = eski
+	m.queue_free()
+	await _kare(5)
 
 ## Kapak: gerçek oyundan bir kare + logo + başlık, 630x500.
 func _kapak() -> void:

@@ -450,21 +450,31 @@ func _fay_testleri() -> void:
 	dogru(en_buyuk_adim <= 1, "fay koridoru satır başına en fazla 1 karo kayıyor (%d)"
 		% en_buyuk_adim)
 
-	# Koridorun içinde asla kazılamaz kaya ya da lav olmamalı.
+	# Koridorun içinde asla kazılamaz kaya ya da lav olmamalı — 12 tohumda.
+	# (Bir tohumda bakmak yetmez: garanti "her tohumda" iddiasında bulunuyor.)
+	var tohumlar := [11, 4242, 90210, 1337, 7, 555000, 20260916, 1, 2, 3, 999999, 123456]
 	var engel := 0
-	for y in range(Ayarlar.KAPALI_UST, Ayarlar.CEKIRDEK_DERINLIK):
-		for dx in range(-DunyaUretici.FAY_YARICAP, DunyaUretici.FAY_YARICAP + 1):
-			var t := u.karo(u.fay_x(y) + dx, y)
-			if t == Ayarlar.KAYA or t == Ayarlar.LAV:
-				engel += 1
-	dogru(engel == 0, "fay koridorunda kazılamaz engel yok (%d)" % engel)
-
-	# Asıl güvence: 12 tohumun HEPSİNDE yüzeyden çekirdeğe kazılabilir yol olmalı.
-	# (Dome Keeper şikâyeti: kötü dünya üretimi oyunu bitirilemez yapıyor.)
-	var basarisiz := PackedInt32Array()
-	for tohum in [11, 4242, 90210, 1337, 7, 555000, 20260916, 1, 2, 3, 999999, 123456]:
+	for tohum in tohumlar:
 		var uu := DunyaUretici.new(tohum)
-		if not _ulasilabilir(uu).has(Vector2i(uu.cekirdek_x, Ayarlar.CEKIRDEK_DERINLIK)):
+		for y in range(Ayarlar.KAPALI_UST, Ayarlar.CEKIRDEK_DERINLIK):
+			for dx in range(-DunyaUretici.FAY_YARICAP, DunyaUretici.FAY_YARICAP + 1):
+				var t := uu.karo(uu.fay_x(y) + dx, y)
+				if t == Ayarlar.KAYA or t == Ayarlar.LAV:
+					engel += 1
+	dogru(engel == 0, "12 tohumun fay koridorunda kazılamaz engel yok (%d)" % engel)
+	dogru(u.fay_x(0) == Ayarlar.US_KARO_X, "koridor üssün altından başlıyor (%d)" % u.fay_x(0))
+	dogru(absi(u.fay_x(Ayarlar.CEKIRDEK_DERINLIK) - u.cekirdek_x) <= DunyaUretici.FAY_YARICAP,
+		"koridor çekirdek sütununda bitiyor (%d ~ %d)"
+		% [u.fay_x(Ayarlar.CEKIRDEK_DERINLIK), u.cekirdek_x])
+
+	# Yüzeyden çekirdeğe kazılabilir yol 12 tohumda da var. NOT: bu, fay hattı
+	# KAPALIYKEN de geçiyor (tests/test_fay_olcum.gd ölçtü) — dünya üretimi zaten
+	# bitirilemez bir dünya üretmiyordu. Fay hattı yolu VAR yapmıyor, aşağı kazan
+	# bir oyuncunun BULABİLECEĞİ yer yapıyor.
+	var basarisiz := PackedInt32Array()
+	for tohum in tohumlar:
+		var uu2 := DunyaUretici.new(tohum)
+		if not _ulasilabilir(uu2).has(Vector2i(uu2.cekirdek_x, Ayarlar.CEKIRDEK_DERINLIK)):
 			basarisiz.append(tohum)
 	dogru(basarisiz.is_empty(), "12 tohumun hepsinde çekirdeğe yol var (%s)"
 		% ("hepsi tamam" if basarisiz.is_empty() else str(basarisiz)))

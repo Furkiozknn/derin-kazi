@@ -24,8 +24,12 @@ func _kare(n: int) -> void:
 
 func _calis() -> void:
 	print("== Oynanış testi ==")
-	# Temiz başlangıç: önceki oturumun kaydı bu testi etkilemesin.
+	# Temiz başlangıç + SABİT TOHUM. Kayıt yokken oyun sahnesi randi() ile tohum
+	# seçiyor; o zaman bu test her çalıştırmada başka bir dünyada oynuyor ve
+	# arada bir kararsız hata veriyordu (derinlik, deprem ve varyant sınamaları
+	# dünyaya bağlı). Çok tohumlu kapsama tests/test_calistir.gd işi.
 	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242})
 	var sahne: Node = load("res://scenes/oyun.tscn").instantiate()
 	root.add_child(sahne)
 	await process_frame

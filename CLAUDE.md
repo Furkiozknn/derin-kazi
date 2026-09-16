@@ -16,13 +16,21 @@ Arayüz, kod ve belgeler **Türkçe**. Değişken/fonksiyon adları da Türkçe.
 - Ses veri yolları: `Master > Muzik`, `Master > Efekt` (`default_bus_layout.tres`).
 - `Ses` autoload'u (`scripts/ses.gd`) efekt ve müziği yönetir; doğrudan
   `AudioStreamPlayer` eklemek yerine `Ses.cal("olay")` kullan.
+- **Simge yazı tipi:** Godot'nun gömülü yazı tipinde `₺ ← ↑ → ↓ ▲ ▶ ▼ ◀ ✔ ■`
+  yok; masaüstü sistem yazı tipiyle örter, **web örtmez** (kutu çıkar).
+  `Ses._ready()` içindeki `Simgeler.kur()` bunu çözüyor — kaldırma.
+  Yeni bir simge kullanmadan önce `assets/fonts/simgeler.ttf` kapsıyor mu bak
+  (`Simgeler.eksikler()` testte tarıyor); kapsamıyorsa o simgeyi kullanma.
 
 ## Klasörler
 
 ```
 scripts/ayarlar.gd        TÜM denge sabitleri — sayı değiştireceksen burası
-scripts/dunya_uretici.gd  tohumdan karo üreten saf sınıf (Node değil)
-scripts/dunya.gd          TileMapLayer, 16x16 chunk yönetimi, kazı farkı
+scripts/dunya_uretici.gd  tohumdan karo üreten saf sınıf (Node değil) + fay hattı
+scripts/dunya.gd          TileMapLayer, 16x16 chunk yönetimi, kazı + deprem farkı
+scripts/deprem.gd         deprem hesabı (saf sınıf; uygulamak Dunya.degistir işi)
+scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
+scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları (saf sınıf)
 scripts/arac.gd           hareket, kazma, hasar, aletler
 scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
@@ -30,6 +38,7 @@ scripts/ses.gd            autoload: efekt/müzik/ayar
 scripts/ayar_panel.gd     ayarlar ekranının içeriği (menü + duraklatma ortak)
 scenes/                   menu · oyun · kapak
 tools/                    varlık üretimi ve ekran görüntüsü betikleri
+tests/bot.gd              bot simülasyonu (Bot.MUKEMMEL / Bot.INSAN ayarı)
 tests/                    headless testler (çıkış kodu 0 = geçti)
 yayin/                    itch sayfası, ekran görüntüleri, kapak, butler komutları
 _eski/                    kullanımdan kalkmış dosyalar (silme yok, buraya taşı)
@@ -41,11 +50,18 @@ Bütün sayılar `scripts/ayarlar.gd` içinde. Değiştirdikten sonra **mutlaka*
 `tests/test_denge.gd` çalıştır: gerçek üretici ve ekonomiyle bir bot simüle edip
 tur süresini, tur başına geliştirmeyi, 10. dakikayı ve katman başına geliri ölçer.
 
-Bilinmesi gereken iki bağ:
+Bilinmesi gereken bağlar:
 - **Maden ağırlığı** (`MADEN_AGIRLIK`) katman başına geliri ~x1,5'te tutan ayardır.
   Yalnız `MADEN_DEGER`'i büyütürsen gelir katman başına x2'nin üstüne çıkar.
 - **`BEDAVA_YAKIT_ORAN`** kilitlenme önlemi: parasız + yakıtsız oyuncu kalmasın.
   Kaldırırsan simülasyon 88 m'de takılıp 0 gelirle döner.
+- **Fay hattı** (`DunyaUretici._fay_kur`) dünyanın bitirilebilirlik garantisi.
+  Koridorun içinde KAYA ve LAV üretilmez. Dokunursan `test_calistir.gd`
+  BFS testi 12 tohumda da kırılır.
+- **Oturum uzunluğu** `tests/test_insan.gd` ile ölçülür (insana benzetilmiş bot:
+  tepki gecikmesi, duraksama, yanlış rota). Ölçülen: tur 108 sn, çekirdeğe 23 dk.
+  Testteki bantlar hedef değil **gerileme bekçisi** — denge sabitlerini
+  değiştirince ikisini birlikte çalıştır.
 
 ## Komutlar
 
@@ -55,9 +71,11 @@ godot --path .                                                    # oyna
 godot --headless --path . --script res://tests/test_calistir.gd   # birim testleri
 godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış testi
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
+godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
+godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay hattı ne kadar işe yarıyor (ölçüm)
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
 godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası
-godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (render gerekir)
+godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri + menü denetimi (render gerekir)
 godot --headless --path . --export-release "Windows Masaustu"
 godot --headless --path . --export-release "Web (HTML5)"
 ```
@@ -87,6 +105,10 @@ GUI aracı kullanılamıyor. Tüm pixel art `tools/sprite_uret.gd` içinde Godot
 `Image` API'siyle üretiliyor; palet **Endesga 32** ve o dosya tek kaynak.
 Elle PNG düzenleme yok — görseli değiştireceksen betiği değiştir ve yeniden üret,
 sonra `tools/onizleme.gd` ile çıktıyı gözle denetle.
+
+`karolar.png` artık **3 satır**: 0. satır ana doku, 1. ve 2. satır yalnız taban
+kayalarının varyantı (kalan sütunlar kopya). Satır sayısı `Ayarlar.VARYANT_SAYISI`
+ve `Dunya._tileset_kur()` ile bağlı — birini değiştirirsen üçünü birden değiştir.
 
 Ses efektleri rFXGen ön ayarlarından (`D:\Araclar\rFXGen\...\rfxgen.exe`).
 `--generate` aynı ön ayar için **hep aynı** dalgayı veriyor (denendi), bu yüzden

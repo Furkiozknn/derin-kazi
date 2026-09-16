@@ -8,7 +8,7 @@
 - butler kurulu ve `butler login` yapılmış (anahtar `butler_creds` içinde).
 - itch.io'da `derin-kazi` adıyla bir proje sayfası **önceden açılmış** olmalı —
   butler yeni sayfa oluşturamaz, yalnız var olana dosya yükler.
-- Sürüm etiketi bu turda `v0.2`.
+- Sürüm etiketi bu turda `v0.3`.
 
 Kullanıcı adını doğrula:
 
@@ -22,10 +22,10 @@ Proje kökünde (`D:\Repolar\derin-kazi`):
 
 ```powershell
 # Web (tarayıcıda oynanan sürüm)
-butler push build\web furkiozknn/derin-kazi:web --userversion 0.2
+butler push build\web furkiozknn/derin-kazi:web --userversion 0.3
 
 # Windows masaüstü
-butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.2
+butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.3
 ```
 
 Yükleme sonrası durum:
@@ -41,7 +41,8 @@ butler status furkiozknn/derin-kazi
 3. **SharedArrayBuffer kutusu gerekmiyor.** Web çıktısı `thread_support` kapalı
    derlendi; itch'in özel COOP/COEP başlığı olmadan da açılıyor. (Prototip
    turunda bu kutu gerekiyordu, artık gerekmiyor.)
-4. Kapak: `yayin/kapak.png` · Ekran görüntüleri: `yayin/ekran-1..4.png`
+4. Kapak: `yayin/kapak.png` · Ekran görüntüleri: `yayin/ekran-1..4.png` ve
+   `yayin/ekran-5-menu.png`
 5. Sayfa metni: `yayin/itch-sayfa.md` (önce İngilizce bölüm, altına Türkçe).
 
 ## Geri alma
@@ -62,3 +63,7 @@ cd build\web
 python -m http.server 8080
 # tarayıcıda http://localhost:8080/
 ```
+
+v0.3'te tarayıcıda **özellikle şuna bak**: HUD'daki `₺`, menü yardımındaki
+`← → ↓` ve müzedeki `✔` kutu değil simge çıkmalı; menü arka planı ekranın altını
+doldurmalı (siyah bant olmamalı). İkisi de v0.2'de web'de bozuktu.

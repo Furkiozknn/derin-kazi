@@ -36,6 +36,20 @@ half your hold stays down there in a crate with your name on it. Go get it.
   museum and give a small permanent bonus, forever.
 - **Dig chains.** Three of the same ore in a row and the payout multiplier climbs,
   and so does the pitch of the pickup sound.
+- **The ground is alive.** Every five runs the crust shifts. You get a warning
+  underground — the screen shakes, the text lands — and then part of your old
+  tunnel network caves in while fresh gas pockets and ore veins open in the walls
+  of what is left. It never seals you in: a collapsed tile is always diggable rock,
+  and the ground around you, your stations and the base is never touched.
+- **Six relics, one story.** Each relic is a permanent bonus and a piece of what
+  is actually down there. Read them in order in your museum.
+- **Share a world.** Every world has a seven-letter seed code. Hand it to someone
+  and they dig the same ground. No confusable letters, and a checksum so a typo
+  says "invalid" instead of quietly opening a different world.
+- **A daily world** generated from the date, on its own save slot, with the day's
+  deepest point on the menu.
+- **Deep Mode.** Pull the core out and a harder run unlocks: new seed, upgrades
+  reset, harder rock, thirstier engine, richer ore — and your relic bonuses stay.
 - **The finale gives, it does not take.** Touch the core and every tool unlocks
   for the timed escape to the surface.
 
@@ -56,8 +70,9 @@ half your hold stays down there in a crate with your name on it. Go get it.
 **You cannot dig upward.** You rise through the tunnel you already cut, so the
 way back is something you dig on the way down.
 
-On touch devices: tap the left, right or bottom third of the screen to dig that
-way; the big upper button is the thruster.
+On touch devices: tap the bottom-left, bottom-right or bottom-centre of the screen
+to dig that way; the upper-centre area is the thruster. Three buttons top right:
+base, map, pause. The menu switches its help text to touch controls on its own.
 
 Turkish interface. Made in Godot 4.7, GL Compatibility — runs on integrated
 graphics. All art and audio generated from code in this repository.
@@ -94,6 +109,20 @@ aşağıda bir sandıkta kalıyor. Git al.
   ve kalıcı küçük bir bonus verir.
 - **Kazı zinciri.** Art arda üç aynı maden → çarpan yükselir, toplama sesinin
   perdesi de.
+- **Yeraltı canlı.** Her beş seferde bir kabuk kımıldıyor. Yeraltındayken önce
+  uyarı geliyor — ekran sarsılıyor, yazı düşüyor — sonra eski tünellerinin bir
+  kısmı kapanıyor ve kalanların duvarlarında yeni gaz cepleri ve damarlar
+  açılıyor. Seni asla içeride bırakmıyor: kapanan karo her zaman kazılabilir
+  kaya, aracının / istasyonlarının / üssün çevresine hiç dokunulmuyor.
+- **Altı eser, tek hikâye.** Her eser hem kalıcı bir bonus hem de aşağıda gerçekte
+  ne olduğunun bir parçası. Müzede sırayla okunuyor.
+- **Dünyanı paylaş.** Her dünyanın 7 harflik bir tohum kodu var. Kodu verdiğin
+  kişi aynı yeri kazıyor. Karışan harf yok, sağlaması var: yanlış yazarsan
+  "geçersiz" der, sessizce başka bir dünya açmaz.
+- **Günlük dünya**, tarihten üretiliyor, ayrı kayıt yuvasında; menüde o günün
+  en derin noktası yazıyor.
+- **Derin Mod.** Çekirdeği çıkarınca açılıyor: yeni tohum, sıfırlanan geliştirme,
+  sert kaya, susamış motor, değerli maden — eser bonusların kalıyor.
 - **Final aletleri elden almıyor.** Çekirdeğe dokununca tüm aletler açılır ve
   yüzeye zamanlı kaçış başlar.
 
@@ -114,8 +143,9 @@ aşağıda bir sandıkta kalıyor. Git al.
 **Yukarı kazılmaz.** Yükselmek için kendi açtığın tüneli kullanırsın; dönüş yolu
 inerken kazdığın şeydir.
 
-Dokunmatik: ekranın sol/sağ/alt üçte birine dokununca o yöne kazar, üstteki büyük
-düğme pervanedir.
+Dokunmatik: ekranın alt sol / alt sağ / alt orta bölgesine dokununca o yöne kazar,
+üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Menüdeki
+yardım metni dokunmatik cihazda kendiliğinden bu anlatıma geçiyor.
 
 Godot 4.7, GL Compatibility — tümleşik ekran kartıyla çalışır. Tüm görseller ve
 sesler bu depoda kodla üretildi.
@@ -132,4 +162,6 @@ sesler bu depoda kodla üretildi.
 - **SharedArrayBuffer kutusu:** **işaretlenmesine gerek yok** — web çıktısı
   `thread_support` kapalı derlendi, özel COOP/COEP başlığı istemiyor.
 - **Kapak:** `kapak.png` (630 × 500)
-- **Ekran görüntüleri:** `ekran-1.png` … `ekran-4.png` (1280 × 720)
+- **Ekran görüntüleri:** `ekran-1.png` … `ekran-4.png` + `ekran-5-menu.png`
+  (1280 × 720)
+- **Sürüm:** v0.3
