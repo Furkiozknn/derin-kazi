@@ -160,6 +160,50 @@ func _calis() -> void:
 	dogru(harita.texture != null and harita.texture.get_size() == Vector2(Ayarlar.GENISLIK, Ayarlar.DERINLIK),
 		"mini harita dokusu dünya boyutunda")
 
+	# --- deprem sahnede ---------------------------------------------------
+	# Aracı tünelin dibine götür, depremi elle tetikle: araç sıkışmamalı,
+	# tünellerin bir kısmı kapanmalı, dünya yeniden yüklenmeli.
+	var dip2 := Vector2i(arac.hucre().x, 0)
+	for k2 in dunya.kazilan:
+		if int(k2.y) > dip2.y:
+			dip2 = Vector2i(k2)
+	arac.isinlan(dunya.hucre_merkezi(dip2))
+	durum.yakit = durum.yakit_kapasitesi()
+	await _kare(20)
+	var tunel0 := dunya.kazilan.size()
+	durum.deprem_bekliyor = false
+	sahne.call("_deprem_uygula")
+	await _kare(30)
+	dogru(dunya.kazilan.size() < tunel0, "deprem tünellerin bir kısmını kapattı (%d → %d)"
+		% [tunel0, dunya.kazilan.size()])
+	dogru(dunya.eklenen.size() > 0, "deprem yeni karolar ekledi (%d)" % dunya.eklenen.size())
+	dogru(dunya.get_used_cells().size() > 0, "deprem sonrası chunk'lar yeniden yüklendi")
+	# Aracın çevresi korunmuş olmalı: hemen etrafında kaya olmamalı.
+	var cevre_dolu := 0
+	for dy2 in range(-1, 2):
+		for dx2 in range(-1, 2):
+			if dunya.karo_tur(arac.hucre() + Vector2i(dx2, dy2)) != Ayarlar.BOS:
+				cevre_dolu += 1
+	dogru(cevre_dolu < 9, "araç depremden sonra kapalı bir kutuda değil (%d/9 dolu)"
+		% cevre_dolu)
+	# Kapanan hücreler yeniden kazılabilir olmalı (sıkışma yok).
+	var kazilamaz2 := 0
+	for h2 in dunya.eklenen:
+		if not dunya.kazilabilir_mi(int(dunya.eklenen[h2])):
+			kazilamaz2 += 1
+	dogru(kazilamaz2 == 0, "deprem karolarının hepsi kazılabilir (%d istisna)" % kazilamaz2)
+	sahne.call("_kaydet")
+	var kayit2 := Kayit.yukle()
+	dogru(PackedInt32Array(kayit2.get("eklenen", PackedInt32Array())).size() / 3
+		== dunya.eklenen.size(), "deprem farkı kayda yazıldı")
+
+	# --- karo varyantları sahnede -----------------------------------------
+	var varyant_sayim := {}
+	for h3 in dunya.get_used_cells():
+		varyant_sayim[dunya.get_cell_atlas_coords(h3).y] = true
+	dogru(varyant_sayim.size() > 1, "ekranda birden çok karo varyantı çizili (%d)"
+		% varyant_sayim.size())
+
 	print("  bellek: %.1f MB statik, %d karo düğümü, %d chunk"
 		% [OS.get_static_memory_usage() / 1048576.0, dunya.get_used_cells().size(),
 			dunya.yuklu_parca_sayisi()])

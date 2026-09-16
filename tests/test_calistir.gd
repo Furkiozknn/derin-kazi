@@ -25,6 +25,12 @@ func _initialize() -> void:
 	_yakit_can_testleri()
 	_eser_testleri()
 	_kayit_testleri()
+	_fay_testleri()
+	_deprem_testleri()
+	_varyant_testleri()
+	_tohum_kodu_testleri()
+	_derin_mod_testleri()
+	_simge_testleri()
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	quit(1 if _hata > 0 else 0)
 
@@ -429,6 +435,242 @@ func _kayit_testleri() -> void:
 	dogru(geri.size() == 3 and geri.has(Vector2i(4, 10)), "kazılan hücreler gidiş-dönüş korunuyor")
 	dogru(Dunya.diziden_kazilan(null).is_empty(), "kayıt yoksa kazılan hücre listesi boş")
 	dogru(Dunya.parca_no(Vector2i(17, 33)) == Vector2i(1, 2), "chunk numarası 16x16 ızgarada doğru")
+
+
+# --- garantili fay hattı --------------------------------------------------
+
+func _fay_testleri() -> void:
+	print("- fay hattı (dünya her tohumda bitirilebilir)")
+	var u := DunyaUretici.new(4242)
+
+	# Koridor kopmamalı: satır başına en fazla 1 karo kayabilir.
+	var en_buyuk_adim := 0
+	for y in range(0, Ayarlar.CEKIRDEK_DERINLIK):
+		en_buyuk_adim = maxi(en_buyuk_adim, absi(u.fay_x(y + 1) - u.fay_x(y)))
+	dogru(en_buyuk_adim <= 1, "fay koridoru satır başına en fazla 1 karo kayıyor (%d)"
+		% en_buyuk_adim)
+
+	# Koridorun içinde asla kazılamaz kaya ya da lav olmamalı.
+	var engel := 0
+	for y in range(Ayarlar.KAPALI_UST, Ayarlar.CEKIRDEK_DERINLIK):
+		for dx in range(-DunyaUretici.FAY_YARICAP, DunyaUretici.FAY_YARICAP + 1):
+			var t := u.karo(u.fay_x(y) + dx, y)
+			if t == Ayarlar.KAYA or t == Ayarlar.LAV:
+				engel += 1
+	dogru(engel == 0, "fay koridorunda kazılamaz engel yok (%d)" % engel)
+
+	# Asıl güvence: 12 tohumun HEPSİNDE yüzeyden çekirdeğe kazılabilir yol olmalı.
+	# (Dome Keeper şikâyeti: kötü dünya üretimi oyunu bitirilemez yapıyor.)
+	var basarisiz := PackedInt32Array()
+	for tohum in [11, 4242, 90210, 1337, 7, 555000, 20260916, 1, 2, 3, 999999, 123456]:
+		var uu := DunyaUretici.new(tohum)
+		if not _ulasilabilir(uu).has(Vector2i(uu.cekirdek_x, Ayarlar.CEKIRDEK_DERINLIK)):
+			basarisiz.append(tohum)
+	dogru(basarisiz.is_empty(), "12 tohumun hepsinde çekirdeğe yol var (%s)"
+		% ("hepsi tamam" if basarisiz.is_empty() else str(basarisiz)))
+
+# --- deprem (canlı yeraltı) -----------------------------------------------
+
+func _deprem_testleri() -> void:
+	print("- deprem")
+	var u := DunyaUretici.new(4242)
+	# Üsten aşağı düz bir şaft + yanlara birkaç galeri: sahte bir "oynanmış" dünya.
+	var kazilan := {}
+	for y in range(Ayarlar.KAPALI_UST, 120):
+		for dx in range(-2, 3):
+			kazilan[Vector2i(Ayarlar.US_KARO_X + dx, y)] = true
+	var karo := func(h: Vector2i) -> int:
+		return Ayarlar.BOS if kazilan.has(h) else u.karo(h.x, h.y)
+
+	var arac := Vector2i(Ayarlar.US_KARO_X, 100)
+	var istasyonlar := [Vector2i(Ayarlar.US_KARO_X, 60)]
+	var korunan := Deprem.korunan_hucreler(istasyonlar, arac)
+	var s := Deprem.hesapla(kazilan, karo, korunan, 4242, 1)
+	var kapanan: Array = s["kapanan"]
+	var yeni: Dictionary = s["yeni"]
+
+	dogru(kapanan.size() > 0, "deprem eski tünellerin bir kısmını kapattı (%d karo)"
+		% kapanan.size())
+	dogru(float(kapanan.size()) / float(kazilan.size()) < 0.5,
+		"tünelin yarısından azı kapandı (%.0f%%)"
+		% (100.0 * float(kapanan.size()) / float(kazilan.size())))
+
+	# 1. kural: kapanan her hücre KAZILABİLİR bir karoyla dolar — oyuncu asla
+	# kapalı bir boşlukta sıkışmaz, her zaman kendini dışarı kazabilir.
+	var kazilamaz := 0
+	for h in kapanan:
+		if float(Ayarlar.SERTLIK.get(int(yeni[h]), -1.0)) <= 0.0:
+			kazilamaz += 1
+	dogru(kazilamaz == 0, "kapanan hücreler kazılabilir kayayla doluyor (%d istisna)" % kazilamaz)
+
+	# 2. kural: araç, üs ve istasyon çevresi korunur.
+	var ihlal := 0
+	for m in korunan:
+		for dy in range(-Deprem.KORUMA, Deprem.KORUMA + 1):
+			for dx in range(-Deprem.KORUMA, Deprem.KORUMA + 1):
+				var h: Vector2i = Vector2i(m) + Vector2i(dx, dy)
+				if kapanan.has(h) or yeni.has(h):
+					ihlal += 1
+	dogru(ihlal == 0, "araç/üs/istasyon çevresine dokunulmadı (%d ihlal)" % ihlal)
+
+	# 3. kural: yüzey (üs) hiç etkilenmez.
+	var sig := 0
+	for h in kapanan:
+		if h.y < Deprem.EN_SIG:
+			sig += 1
+	dogru(sig == 0, "yüzeydeki ilk %d m korunuyor" % Deprem.EN_SIG)
+
+	# Yeni gaz cebi ve damar çıkmalı.
+	var gaz := 0
+	var maden := 0
+	for h in yeni:
+		if int(yeni[h]) == Ayarlar.GAZ:
+			gaz += 1
+		elif Ayarlar.MADEN_DEGER.has(int(yeni[h])):
+			maden += 1
+	dogru(gaz > 0, "yeni gaz cebi çıktı (%d)" % gaz)
+	dogru(maden > 0, "yeni maden damarı çıktı (%d)" % maden)
+
+	# Belirlenimcilik: aynı girdi = aynı deprem, farklı numara = farklı deprem.
+	var s2 := Deprem.hesapla(kazilan, karo, korunan, 4242, 1)
+	var s3 := Deprem.hesapla(kazilan, karo, korunan, 4242, 2)
+	dogru(Array(s2["kapanan"]) == kapanan, "aynı deprem numarası aynı sonucu veriyor")
+	dogru(Array(s3["kapanan"]) != kapanan, "sonraki deprem başka hücreleri kapatıyor")
+	dogru(Deprem.ARALIK == 5, "deprem her 5 seferde bir")
+
+	# Dünya üstünde uygulanınca kayıt gidiş-dönüşü de korunmalı.
+	var dd := Dunya.new()
+	dd.kur(4242, kazilan)
+	dd.degistir(kapanan, yeni)
+	var geri := Dunya.diziden_eklenen(dd.eklenen_dizi())
+	dogru(geri.size() == yeni.size(), "deprem farkı kayıtta gidiş-dönüş korunuyor")
+	var ilk: Vector2i = kapanan[0]
+	dogru(dd.karo_tur(ilk) != Ayarlar.BOS, "kapanan hücre artık dolu")
+	dogru(dd.kazilabilir_mi(dd.karo_tur(ilk)), "kapanan hücre yeniden kazılabilir")
+	dd.free()
+
+# --- karo varyantları -----------------------------------------------------
+
+func _varyant_testleri() -> void:
+	print("- karo varyantları")
+	dogru(Ayarlar.VARYANT_SAYISI >= 2, "en az 2 varyant tanımlı (%d)" % Ayarlar.VARYANT_SAYISI)
+	dogru(Ayarlar.varyant(5, 9, Ayarlar.TOPRAK) == Ayarlar.varyant(5, 9, Ayarlar.TOPRAK),
+		"varyant seçimi belirlenimci (aynı hücre = aynı doku)")
+	var dagilim := {}
+	for x in 40:
+		for y in 40:
+			var v := Ayarlar.varyant(x, y, Ayarlar.TAS)
+			dagilim[v] = int(dagilim.get(v, 0)) + 1
+	dogru(dagilim.size() == Ayarlar.VARYANT_SAYISI,
+		"bütün varyantlar kullanılıyor (%d tür)" % dagilim.size())
+	var en_az := 1 << 30
+	for v in dagilim:
+		en_az = mini(en_az, int(dagilim[v]))
+	dogru(en_az > 1600 / (Ayarlar.VARYANT_SAYISI * 3),
+		"varyantlar dengeli dağılıyor (en seyreği %d/1600)" % en_az)
+	for t in [Ayarlar.BAKIR, Ayarlar.GAZ, Ayarlar.KAYA, Ayarlar.CEKIRDEK, Ayarlar.ESER]:
+		dogru(Ayarlar.varyant(3, 7, t) == 0, "maden/tehlike karosunun varyantı yok (%d)" % t)
+	var atlas: Texture2D = load("res://assets/sprites/karolar.png")
+	dogru(atlas != null and atlas.get_height() == Ayarlar.KARO * Ayarlar.VARYANT_SAYISI,
+		"karolar.png %d satır içeriyor (%d px)"
+		% [Ayarlar.VARYANT_SAYISI, 0 if atlas == null else atlas.get_height()])
+
+# --- tohum kodu -----------------------------------------------------------
+
+func _tohum_kodu_testleri() -> void:
+	print("- tohum kodu")
+	dogru(TohumKodu.ALFABE.length() == 32, "alfabe 32 harf (%d)" % TohumKodu.ALFABE.length())
+	var karisan := ""
+	for ch in "IO01":
+		if TohumKodu.ALFABE.contains(ch):
+			karisan += ch
+	dogru(karisan == "", "karışan harfler alfabede yok (%s)" % karisan)
+
+	var hepsi := true
+	var uzunluk := true
+	for t in [0, 1, 4242, 90210, 2147483647, 4294967295, 20260916]:
+		var kod := TohumKodu.kodla(t)
+		if kod.length() != TohumKodu.UZUNLUK:
+			uzunluk = false
+		if TohumKodu.coz(kod) != t:
+			hepsi = false
+	dogru(uzunluk, "kod hep %d karakter" % TohumKodu.UZUNLUK)
+	dogru(hepsi, "tohum → kod → tohum gidiş-dönüş korunuyor")
+
+	var farkli := TohumKodu.kodla(11) != TohumKodu.kodla(12)
+	dogru(farkli, "farklı tohum farklı kod")
+	dogru(TohumKodu.coz("ABC") == TohumKodu.GECERSIZ, "kısa kod geçersiz")
+	dogru(TohumKodu.coz("ABCDEFI") == TohumKodu.GECERSIZ, "alfabe dışı harf geçersiz")
+	# Tek harf değişince sağlama tutmamalı (kodun sessizce başka dünya açmaması).
+	var dogru_kod := TohumKodu.kodla(4242)
+	var bozuk := 0
+	var deneme := 0
+	for i in dogru_kod.length():
+		for ch in TohumKodu.ALFABE:
+			if ch == dogru_kod[i]:
+				continue
+			deneme += 1
+			if TohumKodu.coz(dogru_kod.substr(0, i) + ch + dogru_kod.substr(i + 1)) == TohumKodu.GECERSIZ:
+				bozuk += 1
+	dogru(float(bozuk) / float(deneme) > 0.8,
+		"tek harf hatasının %%%.0f'i yakalanıyor" % (100.0 * float(bozuk) / float(deneme)))
+	dogru(TohumKodu.suz("a-b c!1d") == "ABCD", "giriş süzgeci alfabeye indirgiyor (%s)"
+		% TohumKodu.suz("a-b c!1d"))
+
+	# Günlük tohum: aynı gün aynı dünya, başka gün başka dünya.
+	dogru(Kayit.gunluk_tohum("2026-09-16") == Kayit.gunluk_tohum("2026-09-16"),
+		"günlük tohum aynı gün için sabit")
+	dogru(Kayit.gunluk_tohum("2026-09-16") != Kayit.gunluk_tohum("2026-09-17"),
+		"günlük tohum her gün değişiyor")
+	dogru(Kayit.bugun().length() == 10, "bugün etiketi YYYY-AA-GG (%s)" % Kayit.bugun())
+
+# --- Derin Mod ------------------------------------------------------------
+
+func _derin_mod_testleri() -> void:
+	print("- Derin Mod")
+	var a := Durum.new(7)
+	var b := Durum.new(7)
+	b.derin_seviye = 2
+	dogru(b.matkap_hizi() < a.matkap_hizi(), "Derin Mod'da kaya daha sert (%.2f < %.2f)"
+		% [b.matkap_hizi(), a.matkap_hizi()])
+	dogru(b.maden_degeri(Ayarlar.BAKIR) > a.maden_degeri(Ayarlar.BAKIR),
+		"Derin Mod'da maden daha değerli")
+	var ya := a.yakit
+	var yb := b.yakit
+	a.yakit_harca(10.0)
+	b.yakit_harca(10.0)
+	dogru((yb - b.yakit) > (ya - a.yakit), "Derin Mod'da yakıt daha hızlı bitiyor")
+
+	# Eser bonusları korunur: Derin Mod turu eserleri taşır.
+	var c := Durum.new(9)
+	c.derin_seviye = 1
+	c.eserler = [0, 5]
+	dogru(c.eser_bonus("matkap") > 0.0, "Derin Mod'da eser bonusu duruyor")
+	# Kayıt gidiş-dönüşü
+	var d := Durum.new(3)
+	d.sozlukten(b.sozluge())
+	dogru(d.derin_seviye == 2, "Derin Mod seviyesi kayıtta korunuyor")
+	b.sefer = 12
+	b.deprem = 2
+	b.deprem_bekliyor = true
+	var e := Durum.new(0)
+	e.sozlukten(b.sozluge())
+	dogru(e.sefer == 12 and e.deprem == 2 and e.deprem_bekliyor,
+		"sefer ve deprem sayaçları kayıtta korunuyor")
+
+# --- simge yazı tipi ------------------------------------------------------
+
+func _simge_testleri() -> void:
+	print("- simge yazı tipi (web'de kutu çıkmasın)")
+	var kullanilan := "₺←↑→↓▲▶▼◀✔■•—…"
+	dogru(ResourceLoader.exists(Simgeler.YOL), "simgeler.ttf projede")
+	dogru(FileAccess.file_exists("res://assets/fonts/LISANS-simgeler.txt"),
+		"yazı tipi lisansı yanında duruyor")
+	Simgeler.kur()
+	var eksik := Simgeler.eksikler(kullanilan)
+	dogru(eksik == "", "oyunda geçen bütün simgeler yazı tipi zincirinde (eksik: '%s')" % eksik)
+	dogru(ThemeDB.fallback_font.has_char(0x20BA), "₺ (U+20BA) çiziliyor")
+	dogru(ThemeDB.fallback_font.has_char(0x25A0), "■ (U+25A0) çiziliyor")
 
 ## Yüzeyden başlayıp kazılabilir/boş hücreler üzerinden genişleyen erişim kümesi.
 func _ulasilabilir(u: DunyaUretici) -> Dictionary:
