@@ -88,7 +88,7 @@
       (ekonominin eğrisi) ve insan benzeri bot (tepki gecikmesi ×1,30 · yön
       kararı 0,35 sn · %7 duraksama · %12 yanlış rota · üste 22 sn).
       7 tohumda ölçüldü, tablo raporda
-- [x] 172 birim + 38 oynanış sınaması + iki bot ölçümü + fay etkisi ölçümü
+- [x] 172 birim + 45 oynanış sınaması + iki bot ölçümü + fay etkisi ölçümü
 
 ## Sonraki tur
 
