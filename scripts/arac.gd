@@ -235,8 +235,22 @@ func dinamit_at() -> bool:
 	patlama.emit(dunya.hucre_merkezi(merkez), r + 1)
 	return true
 
+## Üsün üstünde, altı DOLU bir hücrenin merkezi. Oyuncu şaftı üssün tam altına
+## kazıyor; v0.5'e kadar üsse ışınlanan ya da çekilen araç (520, -24)'e konup kendi
+## şaftına düşüyordu — mağaza açılamıyor, depremden ışınlanan ikramiyeyi kaçırıyordu
+## (v0.6 sahne testi "istasyondan bedava kaçış" senaryosunda yakaladı). Şaftın
+## yanındaki ilk dolu sütuna iner; üs yarıçapı (60 px) ±3 karoyu kapsıyor.
+func yuzey_konumu() -> Vector2:
+	var x := Ayarlar.US_KARO_X
+	if dunya != null:
+		for dx in [0, 1, -1, 2, -2, 3, -3]:
+			if dunya.karo_tur(Vector2i(Ayarlar.US_KARO_X + dx, 0)) != Ayarlar.BOS:
+				x = Ayarlar.US_KARO_X + dx
+				break
+	return Vector2(float(x) * Ayarlar.KARO + Ayarlar.KARO * 0.5, -24.0)
+
 func isinlan(hedef: Vector2) -> void:
-	global_position = hedef
+	global_position = yuzey_konumu() if hedef.y < 0.0 else hedef
 	velocity = Vector2.ZERO
 	_hedef = YOK
 	_ilerleme = 0.0
@@ -244,7 +258,7 @@ func isinlan(hedef: Vector2) -> void:
 	durum.yakit_harca(Ayarlar.ISINLAMA_YAKIT)
 
 func usse_don() -> void:
-	global_position = Vector2(Ayarlar.US_X, -24.0)
+	global_position = yuzey_konumu()
 	velocity = Vector2.ZERO
 	_hedef = YOK
 	_ilerleme = 0.0

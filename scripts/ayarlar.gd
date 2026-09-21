@@ -99,12 +99,44 @@ static func katman(y: int) -> int:
 ## "lamba yakıtı angarya" — sis bir kaynak yönetimi değil, bir bilgi kısıtı.
 ## Keşif kalıcıdır ve kayda yazılır (Dunya.kesfedilen).
 const ISIK_YARICAP := 5        ## aracın çevresini kalıcı açan yarıçap (karo)
+const ISIK_YARICAP_DERIN := 3  ## Derin Mod'da ışık dar: karanlık daha yakından bakar (v0.6)
 const ISIK_YUMUSAMA := 2.0     ## ışık kenarının kaç karoda söndüğü
 const SIS_HATIRA := 0.62       ## keşfedilmiş ama ışık dışındaki karonun örtüsü
 const SIS_RADAR := 0.30        ## radar açıkken geçici açılan sisin örtüsü
 const RADAR_SIS_YARICAP := 9   ## radarın sisi geçici açtığı yarıçap (keşif saymaz)
 const GUN_ISIGI := 8           ## bu derinliğe kadar gün ışığı sisi eritir
 const SIS_RENK := Color(0.035, 0.03, 0.06)
+
+## Modun ışık yarıçapı. Eser bonusu (7. eser, "isik") Durum.isik_yaricap() ekler;
+## bot da aynı fonksiyonu kullanıyor — ikisi ayrı sabit okumasın.
+static func isik_yaricap(derin: bool) -> int:
+	return ISIK_YARICAP_DERIN if derin else ISIK_YARICAP
+
+# --- derinlik ambiyansı (v0.6) ---
+## Dört bant: toprak → kaya → bazalt → çekirdek. Her bandın kendi müziği
+## (Ses.muzik_cal ile crossfade), kendi arka plan tonu ($Arkaplan/Renk) ve kendi
+## parçacığı var: sığda süzülen toz, derinde yükselen kıvılcım. Sisten bağımsız.
+## Bant sınırları katman sınırlarıyla aynı değil (taş + sert taş tek "kaya" bandı):
+## 5 parça müzik 4 parçadan daha iyi olmazdı, sadece daha büyük bir pck olurdu.
+const AMBIYANS := [
+	{"ad": "toprak", "y0": 0, "muzik": "muzik", "parcacik": "toz",
+		"renk": Color("b86f50"), "fon": Color(0.075, 0.055, 0.04)},
+	{"ad": "kaya", "y0": 40, "muzik": "muzik_derin", "parcacik": "toz",
+		"renk": Color("8b9bb4"), "fon": Color(0.043, 0.047, 0.078)},
+	{"ad": "bazalt", "y0": 150, "muzik": "muzik_bazalt", "parcacik": "kivilcim",
+		"renk": Color("f77622"), "fon": Color(0.075, 0.035, 0.055)},
+	{"ad": "cekirdek", "y0": 210, "muzik": "muzik_cekirdek", "parcacik": "kivilcim",
+		"renk": Color("e43b44"), "fon": Color(0.10, 0.03, 0.04)},
+]
+const MUZIK_GECIS := 1.6       ## bant değişince iki parça arasındaki crossfade (sn)
+
+## y derinliğindeki ambiyans bandının indeksi (0..3).
+static func ambiyans(y: int) -> int:
+	var b := 0
+	for i in AMBIYANS.size():
+		if y >= int(AMBIYANS[i]["y0"]):
+			b = i
+	return b
 
 const MAGARA_ESIK := 0.50      ## üstündeki gürültü = boşluk
 const KAYA_ESIK := 0.66        ## üstündeki gürültü = kazılamaz kaya
@@ -187,6 +219,9 @@ static func zincir_carpani(adet: int) -> float:
 # --- eserler (müze) ---
 ## Her eser kalıcı bir pasif bonus verir ve `hikaye` ile çekirdeğin sırrından bir
 ## parça anlatır. Sıra önemli: 1'den 6'ya doğru okununca tek bir hikâye çıkar.
+## 7. eser (`derin: true`) YALNIZ Derin Mod'da bulunur — hikâyenin "sonrası":
+## çekirdek bir kez uyandırıldı, kabuk artık daha sık kımıldıyor (deprem 4 seferde
+## bir) ve karanlık daha yakın (ışık 3 karo); eser ışığın bir karosunu geri verir.
 const ESERLER := [
 	{"ad": "Kırık Pusula", "bonus": "matkap", "deger": 0.05, "metin": "Matkap hızı +%5",
 		"hikaye": "İbresi aşağıyı gösteriyor ve hiç şaşmıyor. Kasabanın kurucuları bu pusulayı bir kuyunun dibinde bulmuş; \"aşağıda bizi çeken bir şey var\" demişler ve kazmaya başlamışlar."},
@@ -200,7 +235,15 @@ const ESERLER := [
 		"hikaye": "Lavın içinde soğuk duruyor. Bu levhayı yapan atölye 210 metrenin altındaydı — yani çekirdeğin kabuğunda. Birileri oraya kadar inmiş, yerleşmiş ve çalışmış."},
 	{"ad": "Çekirdek Parçası", "bonus": "matkap", "deger": 0.08, "metin": "Matkap hızı +%8",
 		"hikaye": "Elde tutulunca kendi ritmiyle atıyor. Çekirdek bir maden yatağı değil: canlı, yavaş ve sabırlı bir şey. Aşağı inen ekipler onu çıkarmaya değil, uyandırmaya gitmişti."},
+	{"ad": "Uyanmış Kabuk Parçası", "bonus": "isik", "deger": 1.0, "metin": "Işık yarıçapı +1", "derin": true,
+		"hikaye": "Yüzeyde soğuk, elde sıcak. Çekirdeğe bir kez dokunulunca uyudu sanmıştık; uyanmıştı. Kabuk artık beş nöbette değil dörtte bir kımıldıyor ve karanlık daha yakından bakıyor. Bu parça kendi ışığını taşıyor — aşağı inen ekiplerin yolu bulmak için değil, geri dönebilmek için aradığı şey buydu."},
 ]
+
+## Derin Mod'a özel eser mi? İlk oyunda müzede görünmez, bulunmaz, sayılmaz.
+static func eser_derin_mi(i: int) -> bool:
+	if i < 0 or i >= ESERLER.size():
+		return false   ## bozuk/eski kayıttaki indeks çökertmesin
+	return bool(ESERLER[i].get("derin", false))
 
 ## Müzede eser bulunmadan önce görünen "kilitli" satırı.
 const ESER_KILITLI := "…  ??? — yeraltındaki gizli odalarda"

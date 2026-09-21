@@ -13,6 +13,7 @@ class_name Deprem
 extends RefCounted
 
 const ARALIK := 5              ## kaç seferde bir deprem
+const ARALIK_DERIN := 4        ## Derin Mod'da: kabuk uyanmış, daha sık kımıldar (v0.6)
 const KAPANMA_ORAN := 0.22     ## açık tünelin kaçta kaçı kapanır
 const KORUMA := 4              ## korunan yarıçap (karo)
 const YENI_GAZ := 12           ## deprem başına yeni gaz cebi
@@ -43,6 +44,10 @@ const HASAR_METRE := 100
 ## Ceza hâlâ gerçek (canı yarılanmış oyuncu yüzeye çekilir), ama "uyarıyı kaçırdın,
 ## koşu bitti" değil. Sıkışma güvenceleri gibi bu da koda bağlı, ayara değil.
 const HASAR_EN_COK := 2
+
+## Kaç seferde bir deprem. Sahne (oyun.gd → _sefer_isle) ve bot aynı yerden okur.
+static func aralik(derin: bool) -> int:
+	return ARALIK_DERIN if derin else ARALIK
 
 ## Uyarı ne kadar sürer? Derinde daha uzun: 250 m'den yüzeye çıkmak 40 sn sürer,
 ## yani derin oyuncunun kararı "tırman" değil "ışınlan ya da göğüsle".

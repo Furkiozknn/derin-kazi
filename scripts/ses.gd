@@ -1,11 +1,21 @@
 ## Ses yöneticisi (autoload "Ses"). Muzik ve Efekt veri yolları üzerinden çalar.
 ## Efektler rFXGen ön ayarlarından üretildi; çeşitlilik perde (pitch) ile sağlanıyor —
 ## rFXGen --generate aynı ön ayar için hep aynı dalgayı veriyor (denendi), bu yüzden
-## 7 ham dosya + perde eşlemesi 11 ayrı olayı karşılıyor. Bkz. tools/sesler.md
+## 7 ham dosya + perde eşlemesi 11 ayrı olayı karşılıyor.
+##
+## Müzik (v0.6): İKİ oyuncu var (_muzik_a / _muzik_b). `muzik_cal(ad, gecis)` gecis > 0
+## verilirse yeni parça öteki oyuncuda başlar ve ikisi birden sesi çaprazlar
+## (crossfade); süre bitince eski durur. Böylece derinlik bantları arasında
+## (toprak → kaya → bazalt → çekirdek) kesinti yok. Bütün parçalar açılışta
+## belleğe alınır (MUZIKLER): web'de ilk `load()` bant sınırında takılma yapmasın.
 extends Node
 
 const KLASOR := "res://assets/audio/"
 const SESLER := 10   ## eşzamanlı efekt kanalı
+const SESSIZ_DB := -40.0   ## crossfade'in başladığı/bittiği düzey
+
+## Açılışta önyüklenen müzikler (ambiyans bantları + menü + bitiş).
+const MUZIKLER := ["muzik_menu", "muzik", "muzik_derin", "muzik_bazalt", "muzik_cekirdek", "bitis"]
 
 ## olay -> [dosya, perde, ses (dB)]
 const EFEKT := {
@@ -24,7 +34,10 @@ const EFEKT := {
 
 var _kanallar: Array[AudioStreamPlayer] = []
 var _sonraki := 0
-var _muzik: AudioStreamPlayer
+var _muzik_a: AudioStreamPlayer
+var _muzik_b: AudioStreamPlayer
+var _muzik: AudioStreamPlayer     ## şu an "aktif" olan (yeni parça hep ötekine gider)
+var _gecis: Tween
 var _akis := {}
 var _suanki_muzik := ""
 var ayar := {}
@@ -39,12 +52,23 @@ func _ready() -> void:
 		p.bus = "Efekt"
 		add_child(p)
 		_kanallar.append(p)
-	_muzik = AudioStreamPlayer.new()
-	_muzik.bus = "Muzik"
-	add_child(_muzik)
-	_muzik.finished.connect(func(): _muzik.play())
+	_muzik_a = _muzik_oyuncu()
+	_muzik_b = _muzik_oyuncu()
+	_muzik = _muzik_a
+	for ad in MUZIKLER:
+		_akis_al(ad)
 	ayar = Kayit.ayar_yukle()
 	ayarlari_uygula()
+
+func _muzik_oyuncu() -> AudioStreamPlayer:
+	var p := AudioStreamPlayer.new()
+	p.bus = "Muzik"
+	add_child(p)
+	# Döngü noktası olmayan bir parça biterse başa sar (stop() bunu tetiklemez).
+	p.finished.connect(func() -> void:
+		if p == _muzik:
+			p.play())
+	return p
 
 func _akis_al(ad: String) -> AudioStream:
 	if not _akis.has(ad):
@@ -67,8 +91,10 @@ func cal(olay: String, perde_carpan := 1.0) -> void:
 	p.volume_db = float(e[2])
 	p.play()
 
-func muzik_cal(ad: String) -> void:
-	if _suanki_muzik == ad and _muzik.playing:
+## Müzik çalar. `gecis` > 0 ise çalan parçadan yenisine o kadar saniyede çaprazlar;
+## 0 ise anında değişir (menü → bitiş jingle'ı gibi).
+func muzik_cal(ad: String, gecis := 0.0) -> void:
+	if _suanki_muzik == ad:
 		return
 	_suanki_muzik = ad
 	var akis := _akis_al(ad)
@@ -77,14 +103,52 @@ func muzik_cal(ad: String) -> void:
 	if akis is AudioStreamWAV:
 		akis.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		akis.loop_begin = 0
-		akis.loop_end = 0
-	_muzik.stream = akis
-	if bool(ayar.get("muzik_acik", true)):
-		_muzik.play()
+		# Döngü sonu AÇIKÇA son örnek: 0 bırakılınca (v0.5) parça 18 sn sonra
+		# bitiyor ve `finished` ile yeniden başlatılıyordu — arada bir karelik
+		# sessizlik ve crossfade'in "eski parça çalmıyor" sanıp sert geçiş yapması.
+		akis.loop_end = int(akis.get_length() * float(akis.mix_rate))
+	var acik := bool(ayar.get("muzik_acik", true))
+	if _gecis != null and _gecis.is_valid():
+		_gecis.kill()
+	if gecis <= 0.0 or not _muzik.playing:
+		_oteki().stop()
+		_muzik.stream = akis
+		_muzik.volume_db = 0.0
+		if acik:
+			_muzik.play()
+		return
+	# Crossfade: yeni parça öteki oyuncuda sessiz başlar, ikisi birlikte kayar.
+	var eski := _muzik
+	var yeni := _oteki()
+	_muzik = yeni
+	# Aynı parça hâlâ sönmekteyse (bant sınırında gidip gelme) baştan başlatma.
+	if yeni.stream != akis or not yeni.playing:
+		yeni.stream = akis
+		yeni.volume_db = SESSIZ_DB
+		if acik:
+			yeni.play()
+	_gecis = create_tween().set_parallel(true)
+	_gecis.tween_property(yeni, "volume_db", 0.0, gecis)
+	_gecis.tween_property(eski, "volume_db", SESSIZ_DB, gecis)
+	_gecis.chain().tween_callback(eski.stop)
+
+func _oteki() -> AudioStreamPlayer:
+	return _muzik_b if _muzik == _muzik_a else _muzik_a
 
 func muzik_durdur() -> void:
 	_suanki_muzik = ""
-	_muzik.stop()
+	if _gecis != null and _gecis.is_valid():
+		_gecis.kill()
+	_muzik_a.stop()
+	_muzik_b.stop()
+
+## Çalan parçanın adı (testler ve HUD için).
+func calan_muzik() -> String:
+	return _suanki_muzik
+
+## Şu an ses üreten müzik oyuncusu sayısı: crossfade sırasında 2, dışında 1 (ya da 0).
+func calan_muzik_sayisi() -> int:
+	return int(_muzik_a.playing) + int(_muzik_b.playing)
 
 # --- ayarlar --------------------------------------------------------------
 
@@ -101,8 +165,10 @@ func ayarlari_uygula() -> void:
 		AudioServer.set_bus_volume_db(i, _db(float(ayar.get(anahtar, 0.8))))
 		AudioServer.set_bus_mute(i, not acik)
 	if not bool(ayar.get("muzik_acik", true)):
-		_muzik.stop()
+		_muzik_a.stop()
+		_muzik_b.stop()
 	elif _suanki_muzik != "" and not _muzik.playing:
+		_muzik.volume_db = 0.0
 		_muzik.play()
 	if not OS.has_feature("web"):
 		var mod := DisplayServer.WINDOW_MODE_FULLSCREEN if bool(ayar.get("tam_ekran", false)) else DisplayServer.WINDOW_MODE_WINDOWED

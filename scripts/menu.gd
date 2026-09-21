@@ -1,12 +1,14 @@
 ## Ana menü. Üç yuva var:
 ##   ana oyun  — "Başla" kayıtlı dünyayı sürdürür (tüneller dahil)
 ##   günlük    — tarihten türeyen tohum, ayrı kayıt, günün en derin noktası
-##   Derin Mod — çekirdek bulunduktan sonra yeni tohum + zorlaştırıcılar,
-##               eser bonusları korunur
+##   Derin Mod — çekirdek bulunduktan sonra açılır; v0.6'dan beri AYRI yuva
+##               ([derin]): yeni tohum, dar ışık, sık deprem, 7. eser; eser
+##               bonusları korunur, ana dünya yerinde kalır. Sağ üstte rozet.
 ## Tohum kodu (7 karakter) dünyayı paylaşmak için: göster / gir.
 extends Control
 
 @onready var _bilgi: Label = $Bilgi
+@onready var _rozet: Label = $Rozet
 @onready var _kontroller: Label = $Kontroller
 @onready var _ayar: PanelContainer = $Ayar
 @onready var _tohum_panel: PanelContainer = $TohumPanel
@@ -37,7 +39,7 @@ func _ready() -> void:
 	$M/V/Basla.grab_focus()
 	# Dokunmatik cihazda klavye/gamepad yardımı yanlış bilgi: dokunma alanlarını anlat.
 	_kontroller.text = YARDIM_DOKUNMA if DisplayServer.is_touchscreen_available() else YARDIM_TUS
-	Ses.muzik_cal("muzik_menu")
+	Ses.muzik_cal("muzik_menu", 0.8)   ## oyundan dönerken bant müziğinden yumuşak geçiş
 	_bilgi_yenile()
 
 func _bilgi_yenile() -> void:
@@ -49,22 +51,43 @@ func _bilgi_yenile() -> void:
 		gunluk_satir += "  •  bugünün en derin noktası %d m" % int(gunluk.get("en_derin", 0))
 	$M/V/Gunluk.text = "Günlük dünya (%s)" % Kayit.bugun()
 
+	_derin_yenile()
 	if k.is_empty():
 		_bilgi.text = "Kayıt yok — yeni bir dünya üretilecek.\n%s" % gunluk_satir
 		$M/V/Basla.text = "Başla (yeni dünya)"
-		$M/V/Derin.visible = false
 		return
 	var kazilan := PackedInt32Array(k.get("kazilan", PackedInt32Array())).size() / 2
 	var eser := PackedInt32Array(k.get("eserler", PackedInt32Array())).size()
 	var derin := int(k.get("derin_seviye", 0))
+	# v0.5 kaydı Derin Mod'u ana yuvada taşıyabilir; etiket ve eser sayısı ona göre.
 	var mod := "" if derin <= 0 else "  •  Derin Mod x%d" % derin
+	var eser_toplam := Ayarlar.ESERLER.size() if derin > 0 else Ayarlar.ESERLER.size() - 1
 	_bilgi.text = "Tohum %s  •  %d ₺  •  En derin %d m  •  %d/%d eser%s\n%d karo kazılmış — tüneller yerinde duruyor\n%s" % [
 		TohumKodu.kodla(int(k.get("tohum", 0))), int(k.get("para", 0)),
-		int(k.get("en_derin", 0)), eser, Ayarlar.ESERLER.size(), mod, kazilan, gunluk_satir]
+		int(k.get("en_derin", 0)), eser, eser_toplam, mod, kazilan, gunluk_satir]
 	$M/V/Basla.text = "Başla (kayıttan devam)"
-	# Derin Mod yalnız çekirdek bir kez çıkarıldıysa açılır.
-	$M/V/Derin.visible = bool(k.get("kazandi", false))
-	$M/V/Derin.text = "Derin Mod x%d — yeni tohum, eserler kalır" % (derin + 1)
+
+## Derin Mod düğmesi ve sağ üstteki rozet. Düğme çekirdek bir kez çıkarıldıysa
+## (ana yuva) ya da süren/bitmiş bir Derin Mod yuvası varsa açılır.
+func _derin_yenile() -> void:
+	var ana := Kayit.yukle(Kayit.ANA)
+	var derin := Kayit.yukle(Kayit.DERIN)
+	var seviye := Kayit.derin_seviyesi()
+	var suruyor := not derin.is_empty() and not bool(derin.get("kazandi", false))
+	$M/V/Derin.visible = bool(ana.get("kazandi", false)) or not derin.is_empty()
+	if suruyor:
+		$M/V/Derin.text = "Derin Mod x%d — devam et (%d m, %d ₺)" % [
+			int(derin.get("derin_seviye", 1)), int(derin.get("en_derin", 0)), int(derin.get("para", 0))]
+	else:
+		$M/V/Derin.text = "Derin Mod x%d — yeni tohum, eserler kalır" % (seviye + 1)
+	# Rozet: Derin Mod'a girilmişse (herhangi bir yuvada) menüde görünür kalır.
+	_rozet.visible = seviye > 0
+	if _rozet.visible:
+		var eser := 0
+		for e in PackedInt32Array(derin.get("eserler", PackedInt32Array())):
+			eser = maxi(eser, 1 if Ayarlar.eser_derin_mi(int(e)) else 0)
+		_rozet.text = "▼ DERİN MOD x%d ▼   %s" % [seviye,
+			"7. eser bulundu" if eser > 0 else "7. eser yalnız burada"]
 
 func _basla() -> void:
 	Ses.cal("menu")
@@ -86,16 +109,11 @@ func _gunluk() -> void:
 	Kayit.aktif = Kayit.GUNLUK
 	_basla()
 
-## Derin Mod: yeni tohum + zorlaştırıcılar, eserler ve Derin Mod seviyesi korunur.
+## Derin Mod: kendi yuvasında sürer ya da yeni tohumla bir üst seviye kurulur
+## (Kayit.derin_mod_hazirla). Ana dünya yerinde kalır.
 func _derin_mod() -> void:
 	Ses.cal("menu")
-	Kayit.aktif = Kayit.ANA
-	var k := Kayit.yukle()
-	var eserler := PackedInt32Array(k.get("eserler", PackedInt32Array()))
-	var seviye := int(k.get("derin_seviye", 0)) + 1
-	Kayit.sil()
-	Kayit.kaydet({"tohum": randi(), "eserler": eserler, "derin_seviye": seviye})
-	_bilgi_yenile()
+	Kayit.derin_mod_hazirla()
 	_basla()
 
 # --- tohum kodu -----------------------------------------------------------

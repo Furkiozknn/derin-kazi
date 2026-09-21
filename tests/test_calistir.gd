@@ -32,6 +32,7 @@ func _initialize() -> void:
 	_varyant_testleri()
 	_tohum_kodu_testleri()
 	_derin_mod_testleri()
+	_ambiyans_testleri()
 	_simge_testleri()
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	quit(1 if _hata > 0 else 0)
@@ -391,7 +392,7 @@ func _eser_testleri() -> void:
 	dogru(d.yakit_kapasitesi() > yakit0, "eser yakıt kapasitesini kalıcı artırdı")
 	var hepsi := true
 	for e in Ayarlar.ESERLER:
-		if not ["matkap", "deger", "yakit", "yuk", "cekme"].has(String(e["bonus"])):
+		if not ["matkap", "deger", "yakit", "yuk", "cekme", "isik"].has(String(e["bonus"])):
 			hepsi = false
 	dogru(hepsi, "her eserin tanınan bir bonus türü var")
 
@@ -437,6 +438,38 @@ func _kayit_testleri() -> void:
 	dogru(geri.size() == 3 and geri.has(Vector2i(4, 10)), "kazılan hücreler gidiş-dönüş korunuyor")
 	dogru(Dunya.diziden_kazilan(null).is_empty(), "kayıt yoksa kazılan hücre listesi boş")
 	dogru(Dunya.parca_no(Vector2i(17, 33)) == Vector2i(1, 2), "chunk numarası 16x16 ızgarada doğru")
+
+	# v0.5 kaydı v0.6'da açılmalı. Fikstür GERÇEK bir dosya: v0.5 etiketindeki
+	# oyun tests/veri/kayit-v0.5.cfg'yi kendi yazdı (tools/kayit_fikstur.gd).
+	# v0.6'nın eklediği hiçbir alan (ışık, deprem aralığı, 7. eser, [derin] yuvası)
+	# eski kayıtta yok; hepsi varsayılana düşmeli, tüneller ve keşif yerinde kalmalı.
+	var cfg := ConfigFile.new()
+	dogru(cfg.load("res://tests/veri/kayit-v0.5.cfg") == OK, "v0.5 kayıt fikstürü okunuyor")
+	var eski := {}
+	for anahtar in cfg.get_section_keys(Kayit.ANA):
+		eski[anahtar] = cfg.get_value(Kayit.ANA, anahtar)
+	var v5 := Durum.new(0)
+	v5.sozlukten(eski)
+	dogru(v5.tohum == int(eski["tohum"]) and v5.para == int(eski["para"]) and v5.matkap == int(eski["matkap"]),
+		"v0.5 kaydının tohumu, parası ve geliştirmesi okundu (%s, %d ₺, matkap %d)"
+		% [TohumKodu.kodla(v5.tohum), v5.para, v5.matkap])
+	dogru(not v5.derin_mi() and v5.isik_yaricap() == Ayarlar.ISIK_YARICAP
+		and v5.deprem_araligi() == Deprem.ARALIK,
+		"v0.5 kaydı ilk oyun olarak açılıyor: ışık %d karo, deprem %d seferde bir"
+		% [v5.isik_yaricap(), v5.deprem_araligi()])
+	dogru(v5.eser_sayisi() == 6 and v5.sonraki_eser() >= 0 and v5.sonraki_eser() < 6,
+		"v0.5 kaydında 7. eser yok, sıradaki eser ilk altıdan (%d)" % v5.sonraki_eser())
+	var dv5 := Dunya.new()
+	dv5.kur(v5.tohum, Dunya.diziden_kazilan(eski.get("kazilan", null)),
+		Dunya.diziden_eklenen(eski.get("eklenen", null)), String(eski.get("kesif", "")))
+	dogru(dv5.kazilan.size() > 10 and dv5.kesif_sayisi() > 50,
+		"v0.5 kaydının tünelleri (%d hücre) ve keşfi (%d hücre) yerinde"
+		% [dv5.kazilan.size(), dv5.kesif_sayisi()])
+	var v6 := Durum.new(0)
+	v6.sozlukten(v5.sozluge())
+	dogru(v6.para == v5.para and v6.sefer == v5.sefer and v6.eserler == v5.eserler,
+		"v0.5 kaydı v0.6 biçiminde yeniden yazılınca aynı kalıyor")
+	dv5.free()
 
 
 # --- garantili fay hattı --------------------------------------------------
@@ -893,6 +926,91 @@ func _derin_mod_testleri() -> void:
 	e.sozlukten(b.sozluge())
 	dogru(e.sefer == 12 and e.deprem == 2 and e.deprem_bekliyor,
 		"sefer ve deprem sayaçları kayıtta korunuyor")
+
+	# --- v0.6: Derin Mod'un kimliği çarpanlardan ibaret değil ---
+	# Işık dar, deprem sık, 7. eser yalnız burada. Sahne de bot da bu üç bilgiyi
+	# Durum'dan okuyor; sabitler Ayarlar / Deprem'de.
+	var n := Durum.new(1)
+	var dm := Durum.new(1)
+	dm.derin_seviye = 1
+	dogru(n.isik_yaricap() == Ayarlar.ISIK_YARICAP and dm.isik_yaricap() == Ayarlar.ISIK_YARICAP_DERIN
+		and Ayarlar.ISIK_YARICAP_DERIN < Ayarlar.ISIK_YARICAP,
+		"Derin Mod'da ışık dar (%d → %d karo)" % [n.isik_yaricap(), dm.isik_yaricap()])
+	dogru(n.deprem_araligi() == Deprem.ARALIK and dm.deprem_araligi() == Deprem.ARALIK_DERIN
+		and Deprem.ARALIK_DERIN == 4 and Deprem.aralik(true) == 4 and Deprem.aralik(false) == 5,
+		"Derin Mod'da deprem her 4 seferde bir (ilk oyun 5)")
+	dogru(Ayarlar.ESERLER.size() == 7 and Ayarlar.eser_derin_mi(6) and not Ayarlar.eser_derin_mi(5),
+		"7. eser Derin Mod'a özel, ilk altısı değil")
+	dogru(n.eser_sayisi() == 6 and dm.eser_sayisi() == 7, "eser sayısı modla değişiyor (6 / 7)")
+	n.eserler = [0, 1, 2, 3, 4, 5]
+	dogru(n.sonraki_eser() == -1, "ilk oyunda altı eserden sonra sıradaki yok — 7. hiç gelmez")
+	dm.eserler = [0, 1, 2, 3, 4, 5]
+	dogru(dm.sonraki_eser() == 6, "Derin Mod'da sıradaki eser 7.")
+	var dm2 := Durum.new(2)
+	dm2.derin_seviye = 1
+	dm2.eserler = [0, 3]
+	dogru(dm2.sonraki_eser() == 6, "Derin Mod'da 7. eser kalan sıradan ÖNCE gelir (ilk odada kimlik)")
+	dm.eserler.append(6)
+	dogru(dm.isik_yaricap() == Ayarlar.ISIK_YARICAP_DERIN + 1 and dm.eser_toplanan() == 7,
+		"7. eser ışığı bir karo geri veriyor (%d) ve 7/7 sayılıyor" % dm.isik_yaricap())
+	dogru(dm.sonraki_eser() == -1, "7/7'den sonra sıradaki yok")
+	n.eserler = [0, 6]
+	dogru(n.eser_toplanan() == 1 and n.isik_yaricap() == Ayarlar.ISIK_YARICAP + 1,
+		"ilk oyunda 7. eser müzede sayılmaz ama taşınan bonusu çalışır")
+	# Sis örtüsü dar ışıkla daha yakında kararıyor (Sis.ortu'nun 5. parametresi).
+	var dort_karo := 16
+	var genis := Sis.ortu(dort_karo, 40, false, false, Ayarlar.ISIK_YARICAP)
+	var dar := Sis.ortu(dort_karo, 40, false, false, Ayarlar.ISIK_YARICAP_DERIN)
+	dogru(dar > genis and is_equal_approx(dar, 1.0),
+		"dar ışıkta 4 karo ötesi kapkaranlık (%.2f > %.2f)" % [dar, genis])
+	dogru(Sis.ortu(0, 40, false, false, Ayarlar.ISIK_YARICAP_DERIN) == 0.0, "dar ışığın merkezi açık")
+	dogru(Sis.ortu(dort_karo, 40, false, false) == genis, "yarıçap verilmezse ilk oyunun ışığı (eski çağrılar bozulmadı)")
+	dogru(int(Bot.INSAN_DERIN["derin_seviye"]) == 1 and Array(Bot.INSAN_DERIN["eserler"]).size() == 6
+		and bool(Bot.INSAN_DERIN["sis"]),
+		"Derin Mod botu: x1, altı eserle, sisli")
+	dogru(Kayit.DERIN != Kayit.ANA and Kayit.DERIN != Kayit.GUNLUK, "Derin Mod'un kendi kayıt yuvası var")
+
+# --- derinlik ambiyansı (v0.6) ------------------------------------------------
+
+func _ambiyans_testleri() -> void:
+	print("- derinlik ambiyansı")
+	dogru(Ayarlar.AMBIYANS.size() == 4, "dört bant: toprak → kaya → bazalt → çekirdek")
+	dogru(Ayarlar.ambiyans(0) == 0 and Ayarlar.ambiyans(39) == 0 and Ayarlar.ambiyans(40) == 1
+		and Ayarlar.ambiyans(149) == 1 and Ayarlar.ambiyans(150) == 2 and Ayarlar.ambiyans(209) == 2
+		and Ayarlar.ambiyans(210) == 3 and Ayarlar.ambiyans(260) == 3,
+		"bant sınırları 40 / 150 / 210 m")
+	var eksik := ""
+	var parcalar := {}
+	var onyuksuz := ""
+	# Autoload'a --script testinden ADIYLA erişilmez ("Identifier not found: Ses"
+	# derleme hatası); düğüm ağacından, dinamik tipte alınır.
+	var ses = root.get_node("Ses")
+	for a in Ayarlar.AMBIYANS:
+		var yol := "res://assets/audio/%s.wav" % a["muzik"]
+		if not ResourceLoader.exists(yol):
+			eksik += yol + " "
+		parcalar[a["muzik"]] = true
+		if not ses.MUZIKLER.has(a["muzik"]):
+			onyuksuz += String(a["muzik"]) + " "
+	dogru(eksik == "", "her bandın müziği projede (eksik: %s)" % eksik)
+	dogru(parcalar.size() == 4, "dört bandın dört AYRI parçası var")
+	dogru(onyuksuz == "", "bant müzikleri açılışta önyükleniyor — web'de sınırda takılma yok (eksik: %s)" % onyuksuz)
+	dogru(Ayarlar.MUZIK_GECIS >= 0.5 and Ayarlar.MUZIK_GECIS <= 4.0,
+		"crossfade süresi makul (%.1f sn)" % Ayarlar.MUZIK_GECIS)
+	var toz := 0
+	var kivilcim := 0
+	for a in Ayarlar.AMBIYANS:
+		if String(a["parcacik"]) == "kivilcim":
+			kivilcim += 1
+		elif String(a["parcacik"]) == "toz":
+			toz += 1
+	dogru(toz == 2 and kivilcim == 2, "sığ bantlar toz, derin bantlar kıvılcım")
+	# Müzik üreticinin ikinci yeraltı ruhu: davulsuz (kalp atışı), ağır notalar.
+	var uretici: GDScript = load("res://tools/muzik_uret.gd")
+	var ruhlar: Dictionary = uretici.get_script_constant_map()["RUHLAR"]
+	dogru(ruhlar.has("cekirdek") and int(ruhlar["cekirdek"]["davul"]) == 0
+		and bool(ruhlar["cekirdek"].get("agir", false)) and int(ruhlar["cekirdek"]["bpm"]) < 90,
+		"müzik üreticide 2. yeraltı ruhu: cekirdek (kalp atışı, ağır, %d bpm)" % int(ruhlar["cekirdek"]["bpm"]))
 
 # --- simge yazı tipi ------------------------------------------------------
 

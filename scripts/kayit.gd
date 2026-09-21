@@ -1,16 +1,23 @@
 ## user://kayit.cfg okuma/yazma. Bölümler:
 ##   [oyun]   ana ilerleme (para, geliştirme, eserler, istasyonlar, kazılan hücreler)
 ##   [gunluk] günlük dünya — ayrı yuva, ana ilerlemeyi hiç etkilemez
+##   [derin]  Derin Mod — v0.6'dan beri AYRI yuva: ana kayıt (çekirdeği çıkarmış
+##            dünya, tünelleriyle) yerinde kalır, Derin Mod kendi dünyasında sürer
 ##   [ayar]   ses düzeyleri, tam ekran, oyun hissi
 ##
 ## `aktif` hangi yuvanın oynandığını söyler; menü sahne değiştirmeden önce ayarlar.
 ## Statik değişken olduğu için sahne geçişinde korunur, uygulama kapanınca "oyun"a döner.
+##
+## v0.5 ve öncesi Derin Mod'u ana yuvanın üstüne yazıyordu (derin_seviye > 0 olan
+## bir [oyun] kaydı). Öyle bir kayıt v0.6'da olduğu gibi açılır ve "Başla" ile sürer;
+## bir sonraki Derin Mod turu artık [derin] yuvasına gider.
 class_name Kayit
 extends RefCounted
 
 const YOL := "user://kayit.cfg"
 const ANA := "oyun"
 const GUNLUK := "gunluk"
+const DERIN := "derin"
 
 static var aktif := ANA
 
@@ -84,6 +91,36 @@ static func gunluk_hazirla() -> Dictionary:
 	sil(GUNLUK)
 	var yeni := {"tohum": gunluk_tohum(g), "gun": g, "dun_derin": dun}
 	kaydet(yeni, GUNLUK)
+	return yeni
+
+# --- Derin Mod ------------------------------------------------------------
+
+## Menüde gösterilecek Derin Mod seviyesi: iki yuvanın en yükseği
+## (v0.5 kaydı Derin Mod'u ana yuvada taşıyor olabilir).
+static func derin_seviyesi() -> int:
+	return maxi(int(yukle(ANA).get("derin_seviye", 0)), int(yukle(DERIN).get("derin_seviye", 0)))
+
+## Derin Mod yuvasını hazırlar ve aktif yuva yapar. Süren bir Derin Mod turu varsa
+## ona döner; yoksa (hiç yok ya da bitmiş) yeni tohumla bir üst seviyeyi kurar:
+## eserler iki yuvanın birleşimi (bonuslar kalır), geliştirmeler sıfır.
+## Dönüş: oynanacak yuvanın kaydı.
+static func derin_mod_hazirla() -> Dictionary:
+	aktif = DERIN
+	var derin := yukle(DERIN)
+	if not derin.is_empty() and not bool(derin.get("kazandi", false)):
+		return derin
+	var ana := yukle(ANA)
+	var birlesim := {}
+	for e in PackedInt32Array(ana.get("eserler", PackedInt32Array())):
+		birlesim[int(e)] = true
+	for e in PackedInt32Array(derin.get("eserler", PackedInt32Array())):
+		birlesim[int(e)] = true
+	var eserler := PackedInt32Array(birlesim.keys())
+	eserler.sort()
+	var seviye := derin_seviyesi() + 1
+	sil(DERIN)
+	var yeni := {"tohum": randi(), "eserler": eserler, "derin_seviye": seviye}
+	kaydet(yeni, DERIN)
 	return yeni
 
 # --- ayarlar --------------------------------------------------------------

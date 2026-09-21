@@ -72,6 +72,52 @@ func zorluk_yakit() -> float:
 func zorluk_deger() -> float:
 	return 1.0 + DERIN_DEGER * float(derin_seviye)
 
+func derin_mi() -> bool:
+	return derin_seviye > 0
+
+## Derin Mod'un kimliği (v0.6) çarpanlardan ibaret değil:
+##   - ışık dar (3 karo; 7. eser bir karo geri verir),
+##   - deprem daha sık (4 seferde bir),
+##   - 7. eser yalnız burada bulunur.
+## Üçü de buradan okunur; sahne ve bot aynı fonksiyonları kullanıyor.
+func isik_yaricap() -> int:
+	return Ayarlar.isik_yaricap(derin_mi()) + int(eser_bonus("isik"))
+
+func deprem_araligi() -> int:
+	return Deprem.aralik(derin_mi())
+
+## Bu modda bulunabilecek eser sayısı (Derin Mod'a özel olanlar ilk oyunda sayılmaz).
+func eser_sayisi() -> int:
+	var n := 0
+	for i in Ayarlar.ESERLER.size():
+		if derin_mi() or not Ayarlar.eser_derin_mi(i):
+			n += 1
+	return n
+
+## Toplanmış eserlerden bu modda görünenlerin sayısı.
+func eser_toplanan() -> int:
+	var n := 0
+	for i in eserler:
+		if derin_mi() or not Ayarlar.eser_derin_mi(int(i)):
+			n += 1
+	return n
+
+## Bir sonraki bulunacak eser; hepsi toplandıysa -1. Derin Mod'a özel eser varsa
+## ÖNCE o gelir — modun kimliği ilk gizli odada belli olsun — sonra kalan sıra.
+func sonraki_eser() -> int:
+	var sira: Array = []
+	for i in Ayarlar.ESERLER.size():
+		if eserler.has(i):
+			continue
+		var derin := Ayarlar.eser_derin_mi(i)
+		if derin and not derin_mi():
+			continue
+		if derin:
+			sira.push_front(i)
+		else:
+			sira.append(i)
+	return int(sira[0]) if not sira.is_empty() else -1
+
 # --- geliştirmeden türeyen değerler ---------------------------------------
 
 func yakit_kapasitesi() -> float:

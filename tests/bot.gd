@@ -54,6 +54,15 @@ const INSAN_SISLI := {
 	"yanlis_rota": 0.12, "us_sure": 22.0, "karar": 0.35, "sis": true,
 }
 
+## Sisli insan botu DERİN MOD'da (v0.6): x1 tur, ilk oyunun 6 eseri elde (bonuslar
+## kalır), kaya %15 sert, yakıt %12 hızlı, maden %25 değerli, ışık 3 karo, deprem
+## 4 seferde bir. Ölçülen: Derin Mod ilk oyundan ne kadar uzun/kısa?
+const INSAN_DERIN := {
+	"carpan": 1.30, "duraksama_sans": 0.07, "duraksama_sure": 1.1,
+	"yanlis_rota": 0.12, "us_sure": 22.0, "karar": 0.35, "sis": true,
+	"derin_seviye": 1, "eserler": [0, 1, 2, 3, 4, 5],
+}
+
 var _u: DunyaUretici
 var _d: Durum
 var _kazilan := {}
@@ -104,6 +113,12 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 	_tohum = tohum
 	_u = DunyaUretici.new(tohum)
 	_d = Durum.new(tohum)
+	# Derin Mod ölçümü: seviye + taşınan eserler, kapasiteler eser bonusuyla.
+	_d.derin_seviye = int(ayar.get("derin_seviye", 0))
+	for e in Array(ayar.get("eserler", [])):
+		_d.eserler.append(int(e))
+	_d.yakit = _d.yakit_kapasitesi()
+	_d.can = _d.can_kapasitesi()
 	_kazilan = {}
 	_eklenen = {}
 	_uretim = {}
@@ -127,7 +142,7 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 
 	for tur in range(1, EN_COK_TUR + 1):
 		_d.sefer = tur
-		var deprem_bekliyor := tur % Deprem.ARALIK == 0
+		var deprem_bekliyor := tur % _d.deprem_araligi() == 0
 		_d.can = _d.can_kapasitesi()
 		_d.yuk.clear()
 		_d.yuk_bonus = 0
@@ -312,6 +327,7 @@ func _simule(tohum: int, ayar: Dictionary) -> Dictionary:
 		"kazilan": _kazilan.size(),
 		"rota": _rota_sayac,
 		"sis_kirilma": _sis_kirilma,
+		"deprem": _d.deprem,
 	}
 
 # --- yol bulma (mini harita + BFS) ----------------------------------------
@@ -462,7 +478,7 @@ func _deprem(x: int, y: int) -> Dictionary:
 func _kesfet(x: int, y: int) -> void:
 	if not _sisli:
 		return
-	var r := Ayarlar.ISIK_YARICAP
+	var r := _d.isik_yaricap()   ## Derin Mod'da 3 — oyunla aynı fonksiyon
 	for dy in range(-r, r + 1):
 		var hy := y + dy
 		if hy < 0 or hy >= Ayarlar.DERINLIK:

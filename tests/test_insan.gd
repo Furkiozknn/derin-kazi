@@ -6,9 +6,11 @@
 ##   1. İlk 10 dakikada oyuncu nereye varıyor? (derinlik, geliştirme, tur sayısı)
 ##   2. Çekirdeğe kaç dakikada varılıyor?
 ##
-## v0.5'te üç bot yan yana ölçülüyor:
+## Dört bot yan yana ölçülüyor:
 ##   Bot.INSAN_SISLI — ANA SAYI. Yol bulması yalnız KEŞFEDİLENİ biliyor, yani
 ##                     oyuncunun bilgisiyle oynuyor (keşif sisi, v0.5).
+##   Bot.INSAN_DERIN — aynı bot DERİN MOD x1'de (v0.6): altı eser elde, kaya sert,
+##                     yakıt hızlı, maden değerli, ışık 3 karo, deprem 4 seferde bir.
 ##   Bot.INSAN       — aynı insan gürültüsü, ama bütün dünyayı görüyor. Sisin
 ##                     ölçüme kaç dakika eklediğini görmek için duruyor.
 ##   Bot.MUKEMMEL    — duraksamayan robot; ekonominin eğrisi.
@@ -35,10 +37,12 @@ func _initialize() -> void:
 	print("== İnsan benzeri ölçüm (%d tohum) ==" % TOHUMLAR.size())
 	print("  bot ayarı (ana): %s" % str(Bot.INSAN_SISLI))
 	var insan := []       ## keşif sisli — ana ölçüm
+	var derin := []       ## aynı bot Derin Mod x1'de (v0.6)
 	var acik := []        ## sissiz (bütün dünyayı gören) insan botu
 	var robot := []
 	for tohum in TOHUMLAR:
 		insan.append(Bot.calistir(tohum, Bot.INSAN_SISLI))
+		derin.append(Bot.calistir(tohum, Bot.INSAN_DERIN))
 		acik.append(Bot.calistir(tohum, Bot.INSAN))
 		robot.append(Bot.calistir(tohum, Bot.MUKEMMEL))
 
@@ -49,6 +53,19 @@ func _initialize() -> void:
 			int(s["tohum"]), TohumKodu.kodla(int(s["tohum"])), float(s["ilk8_ort_sure"]),
 			int(s["on_dk_derinlik"]), int(s["on_dk_gelistirme"]),
 			("%.0f" % float(s["cekirdek_dk"])) if int(s["cekirdek_tur"]) > 0 else "ULASILMADI",
+			str(int(s["cekirdek_tur"])) if int(s["cekirdek_tur"]) > 0 else "-"])
+
+	print("\n-- Derin Mod x1 (sisli insan botu, altı eserle; ilk oyunla yan yana) --")
+	print("| tohum | tur sn (derin / ilk) | 10. dk derinlik | 10. dk gelist. | cekirdek dk (derin / ilk) | cekirdek tur |")
+	print("|---|---|---|---|---|---|")
+	for i in derin.size():
+		var s: Dictionary = derin[i]
+		var s0: Dictionary = insan[i]
+		print("| %d | %.0f / %.0f | %d m | %d | %s / %.0f | %s |" % [
+			int(s["tohum"]), float(s["ilk8_ort_sure"]), float(s0["ilk8_ort_sure"]),
+			int(s["on_dk_derinlik"]), int(s["on_dk_gelistirme"]),
+			("%.0f" % float(s["cekirdek_dk"])) if int(s["cekirdek_tur"]) > 0 else "ULASILMADI",
+			float(s0["cekirdek_dk"]),
 			str(int(s["cekirdek_tur"])) if int(s["cekirdek_tur"]) > 0 else "-"])
 
 	var i_tur := _ort(insan, "ilk8_ort_sure")
@@ -93,6 +110,19 @@ func _initialize() -> void:
 		kirilma += int(s["sis_kirilma"])
 	print("  BFS rotası kurulan  : %d/%d tohum (toplam %d rota, %d sis kırılması)"
 		% [rotali, TOHUMLAR.size(), rota_toplam, kirilma])
+	var d_tur := _ort(derin, "ilk8_ort_sure")
+	var d_cek := _ort(derin, "cekirdek_dk")
+	var d_derin := _ort(derin, "on_dk_derinlik")
+	var d_ulasan := 0
+	var d_deprem := 0
+	var d_rota := 0
+	for s in derin:
+		if int(s["cekirdek_tur"]) > 0:
+			d_ulasan += 1
+		d_deprem += int(s["deprem"])
+		d_rota += int(s["rota"])
+	print("  Derin Mod x1        : tur %.0f sn (%+.0f), 10. dk %.0f m, çekirdek %.0f dk (%+.0f), %d/%d ulaştı, %d deprem, %d rota"
+		% [d_tur, d_tur - i_tur, d_derin, d_cek, d_cek - i_cek, d_ulasan, TOHUMLAR.size(), d_deprem, d_rota])
 
 	print("\n- hedefler")
 	# ÖLÇÜLEN (2026-09-16, v0.3): tur 108 sn, çekirdeğe 23 dk.
@@ -119,6 +149,14 @@ func _initialize() -> void:
 	# müze okuma ve deprem gecikmesi yaşamıyor — gerçek oyuncu daha uzun oynar.
 	dogru(i_cek >= 15.0 and i_cek <= 60.0,
 		"çekirdeğe varış 15-60 dk bandında (%.0f dk)" % i_cek)
+	# Derin Mod x1 (v0.6): dar ışık + sık deprem oyunu bitirilemez yapmamalı ve
+	# "uzun kuyruk" ilk oyunla aynı düzende kalmalı. Bantlar ölçüldükten sonra
+	# gerileme bekçisi olarak kondu (rapor 2026-09-16-derin-kazi-gelistirme-5.md).
+	dogru(d_ulasan == TOHUMLAR.size(), "Derin Mod x1'de her tohumda çekirdeğe ulaşıldı (%d/%d)"
+		% [d_ulasan, TOHUMLAR.size()])
+	dogru(d_cek >= 15.0 and d_cek <= 90.0, "Derin Mod x1 çekirdeğe varış 15-90 dk bandında (%.0f dk)" % d_cek)
+	dogru(d_tur >= 80.0 and d_tur <= 300.0, "Derin Mod x1 turu 1,3-5 dk bandında (%.0f sn)" % d_tur)
+	dogru(d_deprem > 0, "Derin Mod botu depremi yaşıyor (%d deprem / 7 tohum)" % d_deprem)
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	quit(1 if _hata > 0 else 0)
 

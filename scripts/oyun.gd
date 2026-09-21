@@ -46,6 +46,7 @@ const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
 @onready var _fon_tepe: TextureRect = $Arkaplan/Tepeler
 @onready var _fon_kasaba: TextureRect = $Arkaplan/Kasaba
 @onready var _fon_kaya: TextureRect = $Arkaplan/Kaya
+@onready var _fon_renk: ColorRect = $Arkaplan/Renk
 
 var durum: Durum
 var _sarsinti := 0.0
@@ -66,6 +67,8 @@ var _cekiliyor := false
 var _son_hucre := Vector2i(1 << 30, 1 << 30)   ## keşif sisi bu değişince yenilenir
 var _dgm_dinamit: Button                       ## dokunmatik alet düğmeleri (yoksa null)
 var _dgm_radar: Button
+var _ambiyans: CPUParticles2D                  ## banda göre toz / kıvılcım (araca bağlı)
+var _bant := -1                                ## şu anki ambiyans bandı (Ayarlar.AMBIYANS)
 
 func _ready() -> void:
 	_karo_doku = load("res://assets/sprites/karolar.png")
@@ -106,7 +109,8 @@ func _ready() -> void:
 	_kesif_yenile()
 	_nesne_yenile()
 	_hud_yenile()
-	Ses.muzik_cal("muzik")
+	_ambiyans_kur()
+	_ambiyans_yenile()
 	_karart(false)
 
 # --- ana döngü ------------------------------------------------------------
@@ -114,7 +118,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	dunya.hazirla(arac.global_position)
 	_kesif_yenile()
-	_arkaplan_yenile()
+	_arkaplan_yenile(delta)
 	_sarsinti_isle(delta)
 	_sefer_isle()
 	_deprem_isle(delta)
@@ -128,7 +132,7 @@ func _process(delta: float) -> void:
 		_harita_zaman = 0.25
 		_harita_ciz()
 	_hud_yenile()
-	_muzik_katmani()
+	_ambiyans_yenile()
 
 func _unhandled_input(olay: InputEvent) -> void:
 	if durum.kazandi:
@@ -189,9 +193,10 @@ func _kesif_yenile(zorla := false) -> void:
 	if h == _son_hucre and not zorla:
 		return
 	_son_hucre = h
-	for k in dunya.kesfet(h, Ayarlar.ISIK_YARICAP):
+	# Yarıçap moda bağlı: Derin Mod'da 3, 7. eserle 4 (Durum.isik_yaricap).
+	for k in dunya.kesfet(h, durum.isik_yaricap()):
 		_harita_boya(k)
-	sis.yenile(h, _radar_acik and durum.alet_var("radar"))
+	sis.yenile(h, _radar_acik and durum.alet_var("radar"), durum.isik_yaricap())
 
 func _panel_acik() -> bool:
 	return _magaza.visible or _muze.visible or _isinlanma.visible or _ayar_panel.visible \
@@ -314,9 +319,10 @@ func _ipucu(d: int) -> String:
 
 # --- arka plan ve müzik ---------------------------------------------------
 
-func _arkaplan_yenile() -> void:
+func _arkaplan_yenile(delta: float) -> void:
 	var kam := kamera.get_screen_center_position()
 	var d := arac.derinlik()
+	var kayma := minf(1.0, delta * 2.0)   ## renk geçişleri ~1 sn'de oturur
 	# Yüzey katmanları: yatay parallaks, derinde solar.
 	var gorunur := clampf(1.0 - float(d) / 18.0, 0.0, 1.0)
 	_fon_gok.modulate.a = gorunur
@@ -329,14 +335,66 @@ func _arkaplan_yenile() -> void:
 		orta + (ufuk - orta) * 0.30 - 64.0)
 	_fon_kasaba.position = Vector2(fmod(-kam.x * 0.32, 320.0) - 320.0,
 		orta + (ufuk - orta) * 0.55 - 48.0)
-	# Yeraltı: katman rengiyle boyanmış kaya dokusu.
+	# Yeraltı: katman rengiyle boyanmış kaya dokusu. Renk katman sınırında yumuşak
+	# geçer (v0.5'te sınırda tek karede atlıyordu); düz fon bandın tonunu alır.
 	var yer := clampf((float(d) - 4.0) / 14.0, 0.0, 1.0)
-	var renk: Color = Ayarlar.KATMANLAR[Ayarlar.katman(d)]["renk"]
+	var hedef: Color = Ayarlar.KATMANLAR[Ayarlar.katman(d)]["renk"]
+	var renk := Color(_fon_kaya.modulate, 1.0).lerp(hedef, kayma)
 	_fon_kaya.modulate = Color(renk.r, renk.g, renk.b, yer * 0.85)
 	_fon_kaya.position = Vector2(fmod(-kam.x * 0.25, 64.0) - 64.0, fmod(-kam.y * 0.25, 64.0) - 64.0)
+	var fon: Color = Ayarlar.AMBIYANS[Ayarlar.ambiyans(d)]["fon"]
+	_fon_renk.color = _fon_renk.color.lerp(fon, kayma)
 
-func _muzik_katmani() -> void:
-	Ses.muzik_cal("muzik_derin" if arac.derinlik() >= 90 else "muzik")
+## Derinlik ambiyansı (v0.6): dört bant (Ayarlar.AMBIYANS). Bant değişince müzik
+## öteki parçaya çaprazlanır (Ses.muzik_cal, iki oyuncu), parçacık tozdan
+## kıvılcıma döner. Parçacık aracın çocuğu ama dünya koordinatında salınır;
+## sisin altında çizilir ki karanlıkta o da sönsün.
+func _ambiyans_kur() -> void:
+	_ambiyans = CPUParticles2D.new()
+	_ambiyans.name = "Ambiyans"
+	_ambiyans.texture = load("res://assets/sprites/benek.png")
+	_ambiyans.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	_ambiyans.emission_rect_extents = Vector2(200, 120)   ## 2x kamerada ekran 320x180
+	_ambiyans.local_coords = false
+	_ambiyans.z_as_relative = false
+	_ambiyans.z_index = 5
+	_ambiyans.emitting = false
+	arac.add_child(_ambiyans)
+
+func _ambiyans_yenile() -> void:
+	var d := arac.derinlik()
+	_ambiyans.emitting = d > Ayarlar.GUN_ISIGI
+	var b := Ayarlar.ambiyans(d)
+	if b == _bant:
+		return
+	_bant = b
+	var a: Dictionary = Ayarlar.AMBIYANS[b]
+	Ses.muzik_cal(String(a["muzik"]), Ayarlar.MUZIK_GECIS)
+	var renk: Color = a["renk"]
+	if String(a["parcacik"]) == "kivilcim":
+		# Yükselen kıvılcım: kısa ömür, yukarı, titrek.
+		_ambiyans.amount = 18
+		_ambiyans.lifetime = 1.6
+		_ambiyans.direction = Vector2.UP
+		_ambiyans.spread = 35.0
+		_ambiyans.initial_velocity_min = 10.0
+		_ambiyans.initial_velocity_max = 28.0
+		_ambiyans.gravity = Vector2(0, -22)
+		_ambiyans.scale_amount_min = 0.3
+		_ambiyans.scale_amount_max = 0.7
+		_ambiyans.color = Color(renk, 0.9)
+	else:
+		# Süzülen toz: uzun ömür, ağır, her yöne.
+		_ambiyans.amount = 12
+		_ambiyans.lifetime = 5.0
+		_ambiyans.direction = Vector2.DOWN
+		_ambiyans.spread = 180.0
+		_ambiyans.initial_velocity_min = 2.0
+		_ambiyans.initial_velocity_max = 7.0
+		_ambiyans.gravity = Vector2(0, 4)
+		_ambiyans.scale_amount_min = 0.5
+		_ambiyans.scale_amount_max = 0.9
+		_ambiyans.color = Color(renk, 0.5)
 
 # --- oyun hissi -----------------------------------------------------------
 
@@ -473,11 +531,8 @@ func _sandik_acildi(tur: int, konum: Vector2) -> void:
 	_ipucu_goster("Sandık: %s" % metin, 2.0)
 
 func _eser_bul(konum: Vector2) -> void:
-	var sonraki := -1
-	for i in Ayarlar.ESERLER.size():
-		if not durum.eserler.has(i):
-			sonraki = i
-			break
+	# Sıra Durum.sonraki_eser'de: Derin Mod'da 7. eser ilk odada gelir, ilk oyunda hiç.
+	var sonraki := durum.sonraki_eser()
 	if sonraki < 0:
 		durum.para += 300
 		_ucan_yazi(konum, "+300 ₺", Color("fee761"))
@@ -489,7 +544,8 @@ func _eser_bul(konum: Vector2) -> void:
 	Ses.cal("sat")
 	sars(3.0)
 	_uyari_goster("ESER BULUNDU  (%d/%d)\n\n%s — %s\n\n%s\n\nMüzeye eklendi (üs menüsünden okuyabilirsin)."
-		% [durum.eserler.size(), Ayarlar.ESERLER.size(), e["ad"], e["metin"], e["hikaye"]])
+		% [durum.eser_toplanan(), durum.eser_sayisi(), e["ad"], e["metin"], e["hikaye"]])
+	_kesif_yenile(true)   ## 7. eser ışığı büyütüyor
 
 func _cekirdege_ulasildi() -> void:
 	if durum.kacis or durum.kazandi:
@@ -538,11 +594,15 @@ func _kazandi() -> void:
 	Ses.cal("sat")
 	Ses.muzik_cal("bitis")
 	var son := "Bütün eserleri topladın — çekirdeğin hikâyesi müzede tamam."
-	if durum.eserler.size() < Ayarlar.ESERLER.size():
+	if durum.eser_toplanan() < durum.eser_sayisi():
 		son = "Eksik eserler çekirdeğin hikâyesinin kalan parçalarını taşıyor."
-	$HUD/Bitis/M/V/Metin.text = "ÇEKİRDEK ÇIKARILDI!\n\nSüre: %s\nEn derin: %d m\nPara: %d ₺\nEser: %d/%d\nTohum kodu: %s\n\n%s\n\nMenüde DERİN MOD açıldı: yeni tohum, daha sert kaya, eser bonusların kalır." % [
+	var sonraki_mod := "Menüde DERİN MOD açıldı: yeni tohum, sert kaya, dar ışık, sık deprem ve yalnız orada bulunan 7. eser — eser bonusların kalır."
+	if durum.derin_mi():
+		sonraki_mod = "Derin Mod x%d tamamlandı. Menüde x%d açıldı — eserlerin seninle gelir." % [
+			durum.derin_seviye, durum.derin_seviye + 1]
+	$HUD/Bitis/M/V/Metin.text = "ÇEKİRDEK ÇIKARILDI!\n\nSüre: %s\nEn derin: %d m\nPara: %d ₺\nEser: %d/%d\nTohum kodu: %s\n\n%s\n\n%s" % [
 		_sure_metni(durum.sure), durum.en_derin, durum.para,
-		durum.eserler.size(), Ayarlar.ESERLER.size(), TohumKodu.kodla(durum.tohum), son]
+		durum.eser_toplanan(), durum.eser_sayisi(), TohumKodu.kodla(durum.tohum), son, sonraki_mod]
 	_bitis.visible = true
 
 static func _sure_metni(s: float) -> String:
@@ -559,7 +619,7 @@ func _sefer_isle() -> void:
 	elif _derine_indi and arac.usste_mi():
 		_derine_indi = false
 		durum.sefer += 1
-		if durum.sefer % Deprem.ARALIK == 0:
+		if durum.sefer % durum.deprem_araligi() == 0:   ## Derin Mod'da 4, ilk oyunda 5
 			durum.deprem_bekliyor = true
 
 ## Deprem, üste dönüldüğünde kurulur ama YERALTINDA patlar: uyarı yeraltında
@@ -762,7 +822,7 @@ func _magaza_yenile() -> void:
 	_dugme(liste, "İstasyon kiti  (%d ₺) — %s"
 		% [Ayarlar.ISTASYON_FIYAT, Ipucu.magaza("istasyon", _dokunmatik)],
 		durum.para < Ayarlar.ISTASYON_FIYAT, _istasyon_kiti_al)
-	_dugme(liste, "Müze  (%d/%d eser)" % [durum.eserler.size(), Ayarlar.ESERLER.size()], false, _muze_ac)
+	_dugme(liste, "Müze  (%d/%d eser)" % [durum.eser_toplanan(), durum.eser_sayisi()], false, _muze_ac)
 	_dugme(liste, "Kapat  (Esc)", false, _panelleri_kapat)
 
 func _sat() -> void:
@@ -801,10 +861,12 @@ func _muze_ac() -> void:
 	_muze.visible = true
 	arac.kilitli = true
 	$HUD/Muze/M/V/Bilgi.text = "Her eser hem kalıcı bir bonus verir hem de çekirdeğin\nsırrından bir parça anlatır — %d/%d parça toplandı." % [
-		durum.eserler.size(), Ayarlar.ESERLER.size()]
+		durum.eser_toplanan(), durum.eser_sayisi()]
 	var liste: VBoxContainer = $HUD/Muze/M/V/Kaydir/Liste
 	_temizle(liste)
 	for i in Ayarlar.ESERLER.size():
+		if Ayarlar.eser_derin_mi(i) and not durum.derin_mi():
+			continue   ## 7. eser ilk oyunda müzede bile görünmez (Derin Mod'un sürprizi)
 		var e: Dictionary = Ayarlar.ESERLER[i]
 		var bulundu := durum.eserler.has(i)
 		var l := Label.new()
@@ -909,7 +971,7 @@ func _harita_kur() -> void:
 ## Bir merkezin çevresini ışık yarıçapı kadar keşfeder ve haritaya işler.
 ## (tools/ekran_al.gd yayın görselinde haritayı doldurmak için bunu çağırıyor.)
 func _harita_ac(merkez: Vector2i) -> void:
-	for k in dunya.kesfet(merkez, Ayarlar.ISIK_YARICAP):
+	for k in dunya.kesfet(merkez, durum.isik_yaricap()):
 		_harita_boya(k)
 
 ## Depremden sonra değişen hücreleri haritada tazeler (zaten keşfedilmiş yerler).
