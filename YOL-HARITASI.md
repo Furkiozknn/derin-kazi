@@ -232,6 +232,44 @@
 - [x] Windows + Web dışa aktarımı, 6 ekran görüntüsü (yeni: Derin Mod dar ışık)
       + kapak, `yayin/` sürüm 0.6.0
 
+## Geliştirme turu 6 — v0.7 "Yüzey, ara kareler, iki yeni ses, istatistik, işaret" (2026-09-21)
+
+### Sunum
+- [x] **Yüzey karosu**: 0. satırın toprağı ayrı atlastan (`yuzey.png`, 4 varyant,
+      `Dunya.YUZEY_KAYNAK`): çimen bandı, kum sınırı, gökyüzüne açılan yaprak ve
+      çukurlar — birleşim artık düz çizgi değil. Karo türü değişmedi (üretici,
+      kazı, deprem, kayıt TOPRAK görür). `yayin/ekran-1.png`
+- [x] **Araç ara kareleri**: `arac.png` 4 → 9 kare (bekle · 2 kazma · 3 palet · 3
+      alev). Palet yolla döner (hız × süre / 3 px), yön `flip_h`; alev 12 kare/sn.
+      Seçim saf (`Arac.animasyon_durumu / faz_ilerlet / kare_sec`), bot kareyi
+      bilmez. Birim test zamanlayıcıyı (1 sn'de 12 / 14 / 24 değişim) ve kare
+      aralıklarını, sahne testi yürürken/kazarken/uçarken gerçek kareyi sınıyor
+- [x] **Matkap döngü sesi** (`matkap.wav`, 0,6 sn dikişsiz; `Ses.dongu_*`,
+      `Arac.kazma_degisti`, 0,3 sn kuyruk) ve **depreme özel gürültü**
+      (`deprem.wav`: vuruş + 15-60 Hz sarsıntı + çatırtı; uyarıda tiz/kısık) —
+      patlama sesi artık yalnız gaz/dinamit/çekirdek. `tools/ses_uret.gd`
+      deterministik (aynı tohum aynı baytlar, testli)
+- [x] **Bitiş istatistiği**: kazılan karo, deprem, yüzeye çekilme, satış toplamı,
+      süre — bu dünya + bütün dünyaların `[oyuncu]` toplamı (fark yöntemi, iki kez
+      sayma yok). Panel 480 px'e sarılır, 536×296 (test 640×360'ı ölçüyor).
+      `docs/bitis.png`
+- [x] Dokunmatikte alet şeridi ve kazı alanı yazıları panel açıkken gizleniyor
+
+### Oynanış
+- [x] **Işınlama işareti**: `R` / gamepad B / İŞARET düğmesi (sol şeritte üçüncü,
+      şerit y 100'e alındı) yeraltında tek kullanımlık dönüş noktası koyar;
+      ışınlanma panelinde satır, asansör kuralı aynı (üsten/istasyondan), gidince
+      silinir; deprem kapatmışsa varışta hücre açılır; mini haritada pembe. Eski
+      kayıt işaretsiz açılır (v0.5 fikstürü). Bot bilmez — ölçüm v0.6 ile birebir
+      (tur 106 sn, çekirdek 25 dk, Derin Mod 122 sn / 24 dk, fay 12/12)
+
+### Doğrulama ve paket
+- [x] 304 birim + 156 oynanış sınaması, denge/insan/fay yeşil ve değişmedi
+- [x] Windows + Web dışa aktarımı (pck 1,83 MB), 6 ekran görüntüsü + kapak yenilendi
+      (ekran-4: işaret + alev + pano), `docs/v07-kareler.png`, `yayin/` sürüm 0.7.0
+- [x] Web çıktısı Playwright ile tarayıcıda açıldı (menü, konsol hatası yok) —
+      ses ve oynanış tarayıcıda dinlenmedi (bkz. `yayin/butler-komutlari.md`)
+
 ## Sonraki tur
 
 ### Oynanış
@@ -247,29 +285,38 @@
 - [x] **Derin Mod'da yeni içerik**, yalnız çarpan değil (v0.6: dar ışık, sık
       deprem, 7. eser, ayrı yuva). Sıradaki: 6. katman ya da Derin Mod'a özel
       tehlike
-- [ ] **Müzik gerçekten dinlenmeli.** v0.6'da döngü hatası ölçümle bulundu ama
-      parçaların kulağa nasıl geldiği (özellikle `cekirdek` ruhu ve 160 bpm bazalt)
-      hâlâ dinlenmedi; tohum değiştirmek bir komut
-- [ ] Işınlama işareti (istasyon dışı, tek kullanımlık dönüş noktası)
-- [ ] Günlük dünyada skor tablosu — çevrimdışı olduğu için yalnız kendi rekorun
+- [ ] **Müzik ve yeni sesler gerçekten dinlenmeli.** Döngü/crossfade ve v0.7'nin
+      matkap döngüsü + deprem gürültüsü ölçümle doğrulandı (sonda, RMS, alçak
+      frekans enerjisi) ama kulakla hiç dinlenmedi; matkap sesi 25 dk boyunca
+      yormuyor mu, deprem gürültüsü patlamadan ayrışıyor mu — tohum ve karışım
+      düzeyi `tools/ses_uret.gd` / `Ses.DONGU` içinde tek satır
+- [x] Işınlama işareti (v0.7: tek kullanımlık, üsten/istasyondan, bot bilmez)
+- [ ] **İşaretin insanda karşılığı.** Bot kullanmadığı için ölçümü yok: oyuncu
+      işareti sandığa dönmek için mi, derin damara dönmek için mi kullanıyor, tur
+      süresini kısaltıyor mu — insan denemesinde sor
+- [ ] Günlük dünyada skor tablosu — çevrimdışı olduğu için yalnız kendi rekorun;
+      `[oyuncu]` sayaçları artık var, günlük rekor aynı yöntemle eklenebilir
 
 ### Sunum
-- [ ] Yüzey karosu için ayrı "üst" görünümü (şu an toprak her yerde aynı)
-- [ ] Araç animasyonuna pervane alevi ve palet dönüşü için ara kareler
-- [ ] Ses: matkap döngü sesi, depreme özel gürültü (şu an patlama sesi kullanılıyor)
-- [ ] Bitiş ekranına istatistik dökümü (kazılan karo, deprem sayısı, ölüm sayısı)
+- [x] Yüzey karosu için ayrı "üst" görünümü (v0.7)
+- [x] Araç animasyonuna pervane alevi ve palet dönüşü için ara kareler (v0.7)
+- [x] Ses: matkap döngü sesi, depreme özel gürültü (v0.7)
+- [x] Bitiş ekranına istatistik dökümü (v0.7; `[oyuncu]` toplamıyla)
+- [ ] Yüzeyde araç için ayrı "yürüme tozu" ve pervane rüzgârı parçacığı (palet
+      artık dönüyor, altındaki toprak hâlâ hareketsiz)
+- [ ] Menüde `[oyuncu]` toplamı (bitiş ekranı dışında da görünsün)
 
 ### Dağıtım
 - [x] Web çıktısı v0.4 ile tarayıcıda doğrulandı (yönetici: menü, kazı, dokunmatik
       ipucu, konsolda hata yok)
 - [x] Web çıktısı v0.5 ile tarayıcıda doğrulandı (yönetici: sis, alet düğmeleri,
       deprem panosu; deprem 5. sefere kadar beklenmedi — v0.6 sahne testi kapattı)
-- [ ] Web çıktısını v0.6 ile tarayıcıda doğrula, **sesi açık**: 40/150/210 m'de
-      müzik geçişi kesintisiz mi, rozet ve Derin Mod yuvası, eski tarayıcı kaydı —
-      `yayin/butler-komutlari.md` altı maddeyi yazıyor
-- [ ] (eski) Web çıktısını v0.5 ile tarayıcıda doğrula: alet düğmeleri, keşif sisi
-      (özellikle `draw_rect` örtüsünün web'de hızı), deprem panosu —
-      `yayin/butler-komutlari.md` beş maddeyi yazıyor
+- [x] Web çıktısı v0.6 ile tarayıcıda doğrulandı (yönetici, bulut: menü, kazı,
+      derinlik bandı, duraklatma, telefon emülasyonu; ses ölçülmedi)
+- [x] Web çıktısı v0.7 Playwright ile açıldı (bu oturum: menü, konsol hatası yok)
+- [ ] Web çıktısını v0.7 ile tarayıcıda **sesi açık** doğrula: matkap döngüsü
+      kazarken çalıp durunca sönüyor mu (web'de loop), deprem gürültüsü, R/İŞARET
+      akışı, bitiş paneli, eski tarayıcı kaydı — `yayin/butler-komutlari.md`
 - [ ] itch.io sayfası ve yükleme — **Furki'nin onayı gerekiyor**
 - [ ] GitHub deposu ve push — **Furki'nin onayı gerekiyor**
 

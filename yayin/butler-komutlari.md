@@ -8,7 +8,7 @@
 - butler kurulu ve `butler login` yapılmış (anahtar `butler_creds` içinde).
 - itch.io'da `derin-kazi` adıyla bir proje sayfası **önceden açılmış** olmalı —
   butler yeni sayfa oluşturamaz, yalnız var olana dosya yükler.
-- Sürüm etiketi bu turda `v0.6` (butler'a `0.6.0`).
+- Sürüm etiketi bu turda `v0.7` (butler'a `0.7.0`).
 
 Kullanıcı adını doğrula:
 
@@ -22,10 +22,10 @@ Proje kökünde (`D:\Repolar\derin-kazi`):
 
 ```powershell
 # Web (tarayıcıda oynanan sürüm)
-butler push build\web furkiozknn/derin-kazi:web --userversion 0.6.0
+butler push build\web furkiozknn/derin-kazi:web --userversion 0.7.0
 
 # Windows masaüstü
-butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.6.0
+butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.7.0
 ```
 
 Yükleme sonrası durum:
@@ -65,29 +65,30 @@ python -m http.server 8080
 # tarayıcıda http://localhost:8080/
 ```
 
-v0.6'da tarayıcıda **özellikle şuna bak** (ses açık; telefon emülasyonu 915×412
-için geliştirici araçlarında dokunmatiği işaretle):
+v0.7'de tarayıcıda **özellikle şuna bak** (ses açık; telefon emülasyonu 915×412
+için geliştirici araçlarında dokunmatiği işaretle). Bu oturumda Playwright ile
+yalnız açılış denendi (menü, konsol hatası yok); aşağıdakiler kulak ve el ister:
 
-1. **Müzik geçişi.** 40 m, 150 m ve 210 m'yi geçerken parça değişmeli ve
-   değişim **kesintisiz** olmalı (iki parça 1,6 sn üst üste çaprazlanır; takılma,
-   sessiz boşluk ya da baştan başlama yok). Sınırda bir aşağı bir yukarı gidince
-   parça yeniden başlamamalı. Menüden oyuna ve oyundan menüye dönüşte de geçiş
-   yumuşak.
-2. **Parçacık ve ton.** 8 m'den derinde havada süzülen toz (toprakta kahverengi,
-   taşta gri), 150 m'den derinde yukarı doğru kıvılcım; düz arka plan sığda
-   kahverengi, bazaltta mor-kızıl, çekirdek kabuğunda kızıl. Yüzeyde parçacık yok.
-3. **Derin Mod.** Bir kayıtta çekirdek çıkarılmışsa menüde sağ üstte
-   `▼ DERİN MOD x1 ▼` rozeti ve "Derin Mod x1" düğmesi. Girince ana dünya
-   silinmemeli: menüye dönüp "Başla" eski dünyayı (tünelleriyle) açmalı, "Derin
-   Mod" ise süren Derin Mod turuna "devam et" demeli. Derin Mod'da ışık 3 karo
-   (dar), deprem 4 seferde bir, ilk gizli odada 7. eser ("Uyanmış Kabuk
-   Parçası") çıkmalı ve ışık bir karo büyümeli; müze 7 satır.
-4. **Deprem seferi.** 5 sefer (Derin Mod'da 4) tamamlayıp 15 m'den derine in:
-   uyarı kendiliğinden başlar; pervaneyle çıkınca `+… ₺`, derinde kalınca `-1 can`,
-   istasyondan ışınlanınca ikramiye ve hasar yok. (Sahne testi üçünü de sınıyor;
-   tarayıcıda bir kez gözle görmek yeter.)
-5. **Eski kayıt.** v0.5 web sürümünde oynanmış bir tarayıcı kaydı (IndexedDB) v0.6'da
-   açılmalı: tüneller, keşif, para yerinde; menüde rozet yok, "Başla" sürüyor.
-6. v0.5'ten gelenler hâlâ sağlam mı: alet düğmeleri (DİNAMİT/RADAR), keşif sisi
-   ve mini harita, deprem panosunun üç satırı, mağaza metinlerinin düğme anlatması,
-   `₺ ← → ↓ ✔ ▼` simgeleri kutu değil.
+1. **Matkap döngü sesi.** Kazmaya başlayınca motor vızıltısı başlamalı, karo
+   kırılıp araç düşerken KESİLMEMELİ (0,3 sn kuyruk), tuşu bırakınca kısa sönümle
+   susmalı. Matkap Sv1 → Sv5 arasında perde tizleşir. Web'de `AudioStreamPlayer`
+   döngüsü — 0,6 sn'de bir dikiş duyuluyor mu?
+2. **Deprem gürültüsü.** Uyarı başlarken kısık/tiz bir sarsıntı, deprem patlarken
+   tam gürültü (vuruş + uğultu + çatırtı). Patlama sesi (dinamit/gaz) ile
+   karışmamalı.
+3. **Yüzey ve araç.** Yüzeyde çimen üstü kırık kenarlı, gökle birleşim düz çizgi
+   değil; yürürken paletler dönüyor (yavaşken yavaş), uçarken alev üç kareyle
+   titriyor, kazarken matkap dişleri kayıyor.
+4. **Işınlama işareti.** Yeraltında `R` (telefonda İŞARET KOY): pembe flama ve
+   "İşaret N m'de" ipucu; üsse dön, `T` (Üs düğmesi) → "İşarete ışınlan — N m"
+   satırı; git → işaret silinmeli; mini haritada pembe nokta. Deprem sonrası
+   işarete gidince araç kayanın içinde kalmamalı.
+5. **Bitiş paneli.** Çekirdeği çıkarınca döküm: bu dünya + "Toplam (bütün
+   dünyalar)". Telefon oranında panel taşmamalı, alet şeridi panelin üstüne
+   binmemeli.
+6. **Eski kayıt.** v0.6 web sürümünde oynanmış bir tarayıcı kaydı (IndexedDB)
+   v0.7'de açılmalı: tüneller, keşif, para yerinde; işaret yok; bitiş panelinde
+   toplam sıfırdan başlar.
+7. v0.6'dan gelenler hâlâ sağlam mı: müzik geçişleri 40/150/210 m'de kesintisiz,
+   toz/kıvılcım, Derin Mod rozeti ve ayrı yuva, deprem seferi ve panosu, alet
+   düğmeleri, keşif sisi, `₺ ← → ↓ ✔ ▼` simgeleri kutu değil.

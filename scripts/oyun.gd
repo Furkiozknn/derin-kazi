@@ -269,6 +269,11 @@ func _hud_yenile() -> void:
 	_lbl_katman.visible = not panel
 	_lbl_zincir.visible = not panel
 	_lbl_radar.visible = not panel
+	# Dokunmatik alet şeridi ve kazı alanı yazıları panelin üstüne binmesin (v0.7: bitiş
+	# panelinde fark edildi). Sağ üstteki Üs·Harita·■ kalır — paneli o kapatıyor.
+	if _dgm_dinamit != null:
+		$Dokunmatik/Aletler.visible = not panel
+		$Dokunmatik/Izler.visible = not panel
 	_harita.visible = _harita.visible and not panel
 	_deprem_pano.visible = _deprem_uyari > 0.0 and not panel
 	if _deprem_pano.visible:

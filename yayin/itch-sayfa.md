@@ -6,7 +6,8 @@
 > Görseller: `yayin/tanitim.gif` (480×270, 4 sn — kazı, maden, deprem uyarısı;
 > sayfanın en üstüne, kapak görselinin hemen altına), `yayin/kapak.png`
 > (630×500, kapak), `yayin/ekran-1..6-*.png` (1280×720, ekran görüntüleri;
-> 6. kare Derin Mod'un dar ışığı).
+> 1. kare v0.7 yüzeyi, 4. kare işaret + alev + deprem panosu, 6. kare Derin
+> Mod'un dar ışığı).
 
 ---
 
@@ -79,6 +80,18 @@ half your hold stays down there in a crate with your name on it. Go get it.
   menu marks the mode.
 - **The finale gives, it does not take.** Touch the core and every tool unlocks
   for the timed escape to the surface.
+- **Drop a marker, come back later.** Press `R` anywhere underground to plant a
+  one-shot return point. Next time you are at the base or a station, the travel
+  panel offers "teleport to marker" — one ride, then the marker is gone. It is the
+  cheap, temporary cousin of a station: perfect for getting back to a crate you
+  dropped or a vein you had to leave.
+- **The rig sounds and moves like a machine.** The drill hums while it bites and
+  fades when it stops; quakes have their own low rumble and crackle instead of an
+  explosion. Tracks roll as fast as you drive, the thruster flame flickers, and
+  the surface has real grass with a ragged edge against the sky.
+- **Your record, in numbers.** The core screen lists this world's tally — blocks
+  dug, quakes survived, times winched up, total sales, time — and your lifetime
+  total across every world.
 
 **Controls**
 
@@ -88,7 +101,8 @@ half your hold stays down there in a crate with your name on it. Go get it.
 | `S` / `↓` | Down | Dig down |
 | `W` / `Space` | A | Thruster — rise through open tunnel |
 | `E` | X | Base (sell, upgrade, refuel, museum) |
-| `T` | RB | Travel (surface ↔ station) |
+| `T` | RB | Travel (surface ↔ station ↔ marker) |
+| `R` | B | Plant a one-shot return marker (underground) |
 | `Q` | LB | Ore radar |
 | `F` | Y | Dynamite |
 | `M` | Back | Minimap |
@@ -99,10 +113,10 @@ way back is something you dig on the way down.
 
 On touch devices: tap the bottom-left, bottom-right or bottom-centre of the screen
 to dig that way; the upper-centre area is the thruster. Three buttons top right:
-base, map, pause. Two more on the left: **DYNAMITE** (with a counter) and
-**RADAR** — the full tool set works on a phone. Every hint in the game — menu,
-in-game and the shop — describes the buttons and touch zones instead of keys
-when you play on a touch screen.
+base, map, pause. Three more on the left: **DYNAMITE** (with a counter),
+**RADAR** and **MARKER** — the full tool set works on a phone. Every hint in the
+game — menu, in-game and the shop — describes the buttons and touch zones instead
+of keys when you play on a touch screen.
 
 Turkish interface. Made in Godot 4.7, GL Compatibility — runs on integrated
 graphics. All art and audio generated from code in this repository.
@@ -175,6 +189,17 @@ aşağıda bir sandıkta kalıyor. Git al.
   seninle geliyor; menüde bir rozet modu gösteriyor.
 - **Final aletleri elden almıyor.** Çekirdeğe dokununca tüm aletler açılır ve
   yüzeye zamanlı kaçış başlar.
+- **İşaret koy, sonra dön.** Yeraltında `R` ile tek kullanımlık bir dönüş noktası
+  bırak. Üsse ya da bir istasyona gelince yolculuk panelinde "İşarete ışınlan"
+  çıkar — bir yolculuk, sonra işaret silinir. İstasyonun ucuz, geçici kardeşi:
+  düşürdüğün sandığa ya da bırakmak zorunda kaldığın damara geri dönmek için.
+- **Araç bir makine gibi ses çıkarıyor ve kımıldıyor.** Matkap kazarken vızıldar,
+  durunca söner; depremin kendi uğultusu ve çatırtısı var, patlama sesi değil.
+  Paletler sürdüğün hızda döner, pervane alevi titrer, yüzeyde gökle birleşen
+  gerçek bir çimen kenarı var.
+- **Rekorun sayılarla.** Çekirdek ekranı bu dünyanın dökümünü — kazılan karo,
+  atlatılan deprem, yüzeye çekilme, toplam satış, süre — ve bütün dünyalardaki
+  toplamını yazar.
 
 **Kontroller**
 
@@ -184,7 +209,8 @@ aşağıda bir sandıkta kalıyor. Git al.
 | `S` / `↓` | Aşağı | Aşağı kaz |
 | `W` / `Boşluk` | A | Pervane — açık tünelde yüksel |
 | `E` | X | Üs (sat, geliştir, yakıt, müze) |
-| `T` | RB | Yolculuk (yüzey ↔ istasyon) |
+| `T` | RB | Yolculuk (yüzey ↔ istasyon ↔ işaret) |
+| `R` | B | Tek kullanımlık dönüş işareti koy (yeraltında) |
 | `Q` | LB | Maden radarı |
 | `F` | Y | Dinamit |
 | `M` | Back | Mini harita |
@@ -194,10 +220,10 @@ aşağıda bir sandıkta kalıyor. Git al.
 inerken kazdığın şeydir.
 
 Dokunmatik: ekranın alt sol / alt sağ / alt orta bölgesine dokununca o yöne kazar,
-üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Solda iki
-düğme daha: **DİNAMİT** (sayaçlı) ve **RADAR** — bütün aletler telefonda da
-çalışıyor. Oyundaki bütün ipuçları — menüde, oyun içinde ve mağazada — dokunmatik
-cihazda tuşları değil düğmeleri ve dokunma alanlarını anlatıyor.
+üst orta alan pervanedir. Sağ üstte üç düğme: üs, harita, duraklat. Solda üç
+düğme daha: **DİNAMİT** (sayaçlı), **RADAR** ve **İŞARET** — bütün aletler
+telefonda da çalışıyor. Oyundaki bütün ipuçları — menüde, oyun içinde ve mağazada —
+dokunmatik cihazda tuşları değil düğmeleri ve dokunma alanlarını anlatıyor.
 
 Godot 4.7, GL Compatibility — tümleşik ekran kartıyla çalışır. Tüm görseller ve
 sesler bu depoda kodla üretildi.
@@ -218,4 +244,4 @@ sesler bu depoda kodla üretildi.
   + `ekran-6-derin.png` (1280 × 720)
 - **Tanıtım GIF'i:** `tanitim.gif` (480 × 270, 4 sn) — sayfa metninin en üstüne,
   ilk ekran görüntüsünün yerine. itch GIF'i olduğu gibi oynatır.
-- **Sürüm:** v0.6 (butler `--userversion 0.6.0`)
+- **Sürüm:** v0.7 (butler `--userversion 0.7.0`)

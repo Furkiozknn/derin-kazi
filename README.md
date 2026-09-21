@@ -5,14 +5,14 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-> Durum: **v0.6 — derinlik ambiyansı ve Derin Mod kimliği.** v0.5'in üstüne:
-> dört derinlik bandının kendi müziği (crossfade), tozu/kıvılcımı ve arka plan
-> tonu; **Derin Mod** artık başka bir yer: dar ışık (3 karo), deprem 4 seferde
-> bir, yalnız orada bulunan 7. eser, kendi kayıt yuvası ve menüde rozet.
-> Deprem seferi sahne testinde baştan sona yaşanıyor (5 gerçek sefer, üç karar).
-> İki eski hata düzeldi: müzik v0.2'den beri hiç ilerlemiyordu (döngü sonu 0);
-> üsse ışınlanan/çekilen araç kendi şaftına düşüyordu. v0.5 kaydı gerçek dosyayla
-> test edilerek açılıyor. Windows + Web çıktısı alınıyor; yayın paketi `yayin/`
+> Durum: **v0.7 — sunum turu ve ışınlama işareti.** v0.6'nın üstüne: yüzey
+> karosunun çimenli, kırık kenarlı "üst" görünümü; araç animasyonuna palet dönüşü
+> (yolla döner) ve üç kareli pervane alevi; kazarken çalıp durunca sönen **matkap
+> döngü sesi** ve depreme özel sarsıntı + çatırtı gürültüsü (ikisi de kodla
+> sentezlendi, deterministik); bitiş ekranında **istatistik dökümü** (bu dünya +
+> bütün dünyaların `[oyuncu]` toplamı); **ışınlama işareti** — yeraltında `R` ile
+> tek kullanımlık dönüş noktası koy, üsten ışınlan. Bot hiçbirini bilmiyor: ölçümler
+> v0.6 ile birebir aynı. Windows + Web çıktısı alınıyor; yayın paketi `yayin/`
 > altında hazır (**yüklenmedi**).
 
 ## Kontroller
@@ -23,7 +23,8 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 | `S` veya `↓` | Aşağı | Aşağı kaz |
 | `W` / `Boşluk` | A | Pervane — boş tünelde yüksel |
 | `E` | X | Üs menüsü (sat, geliştir, yakıt, müze) |
-| `T` | RB | Işınlanma (yüzey ↔ istasyon) |
+| `T` | RB | Işınlanma (yüzey ↔ istasyon ↔ işaret) |
+| `R` | B | Dönüş işareti koy (yeraltında, tek kullanımlık) |
 | `Q` | LB | Maden radarı |
 | `F` | Y | Dinamit (3×3) |
 | `M` | Back | Mini harita |
@@ -31,10 +32,11 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 Dokunmatik cihazda ekranın alt sol / alt sağ / alt orta bölgesine dokunmak o yöne
 kazar, üst ortadaki alan pervanedir. Klavye olmadığı için sağ üstte üç düğme var:
-**Üs** · **Harita** · **■** (duraklat); sol ortada, ◀ alanının üstünde dikey iki
+**Üs** · **Harita** · **■** (duraklat); solda, ◀ alanının üstünde dikey üç
 alet düğmesi: **DİNAMİT n** (sayaçlı, dinamit yokken sönük) · **RADAR AÇ/KAPA**
-(radar alınmamışsa sönük). Menüdeki yardım, oyun içi ipuçları ve mağaza satırları
-dokunmatik cihazda kendiliğinden düğmeleri anlatır (`docs/oyun-telefon.png`).
+(radar alınmamışsa sönük) · **İŞARET KOY** (konunca derinliğini yazar). Menüdeki
+yardım, oyun içi ipuçları ve mağaza satırları dokunmatik cihazda kendiliğinden
+düğmeleri anlatır (`docs/oyun-telefon.png`).
 
 **Yukarı kazma yok.** Yükselmek için pervaneyle kendi açtığın tünelden çıkarsın —
 geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
@@ -93,6 +95,31 @@ sınırda gidip gelince baştan başlamaz. Parçalar açılışta belleğe alın
 sınırda `load()` takılması yok). Sığ bantlarda havada süzülen toz, derinde
 yukarı süzülen kıvılcım (araca bağlı `CPUParticles2D`, sisin altında çizilir);
 düz arka plan bandın tonuna, kaya dokusu katmanın rengine yumuşak kayar.
+
+### Sunum turu ve ışınlama işareti (v0.7)
+
+- **Yüzey karosu.** 0. satırın toprağı ayrı bir atlastan (`yuzey.png`, 4 varyant)
+  çizilir: çimen bandı, ince kum sınırı, üstte gökyüzüne açılan yaprak ve çukurlar.
+  v0.6'ya kadar yüzeyle gök arasındaki birleşim ekran boyunca dümdüz tek çizgiydi.
+  Karo türü değişmedi — üretici, kazı ve kayıt hâlâ TOPRAK görür.
+- **Araç ara kareleri.** `arac.png` 9 kare: bekle · 2 kazma · 3 **palet** · 3
+  **pervane alevi**. Palet yolla döner (hız × süre / 3 px): hızlı araçta hızlı,
+  duran araçta durur; yön aynalamadan gelir. Alev 12 kare/sn, boy ve çekirdek
+  değişir. Kare seçimi saf; bot ve ölçümler kareyi bilmez.
+- **Matkap döngü sesi.** Kazı başlayınca 0,6 sn'lik dikişsiz döngü çalar (motor 55 Hz
+  + uç takırtısı + öğütme), kesilince 0,3 sn kuyrukla söner — karo arası düşüşte
+  kesilip baştan başlamaz; perde matkap seviyesiyle tizleşir. **Deprem gürültüsü**
+  ayrı dosya: açılış vuruşu, 15-60 Hz sarsıntı, çatırtı, 2,8 sn; uyarı anında aynı
+  ses tiz ve kısık. İkisi `tools/ses_uret.gd` ile sentezlenir, aynı tohum aynı
+  baytları verir. Patlama sesi gaz, dinamit ve çekirdek için kaldı.
+- **Bitiş istatistiği.** Panel bu dünyanın dökümünü (kazılan karo, deprem, yüzeye
+  çekilme, satış toplamı, süre) ve bütün dünyaların `[oyuncu]` toplamını yazar;
+  480 px'e sarılır, 640×360'a sığar (536×296, testli). Toplam yuva silinse de kalır.
+- **Işınlama işareti.** Yeraltında `R` (gamepad B, dokunmatikte İŞARET düğmesi)
+  aracın hücresine tek kullanımlık dönüş noktası koyar; yenisi eskisini taşır.
+  Işınlanma panelinde "İşarete ışınlan — N m" satırı çıkar, asansör kuralı aynı:
+  üsten ya da bir istasyondan gidilir, gidince silinir. Deprem işaretin hücresini
+  kapatmışsa varışta açılır. Eski kayıt işaretsiz açılır; bot işareti bilmez.
 
 ### Canlı yeraltı (v0.3) ve depremin kararı (v0.4, pano v0.5)
 
@@ -269,6 +296,21 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   elle yazılmadı; v0.5 etiketi git worktree'de açılıp `tools/kayit_fikstur.gd`
   ile o sürümün kendi yazdığı dosya alındı. Elle yazılan fikstür yazanın
   varsayımını sınar, gerçek dosya sürümün gerçeğini.
+- **İşaret asansör kuralına bağlı ve tek kullanımlık (v0.7).** "Her yerden işarete
+  ışınlan" olsaydı yakıt gerilimi ve istasyon yatırımı boşa düşerdi. İşaret
+  istasyonun ucuz, geçici kardeşi: yüzeye çekildikten sonra sandığa geri dönmeyi
+  ve "bir tur daha" kararını kolaylaştırır; kalıcı ağ istasyon olmaya devam eder.
+  Bot kullanmıyor ki ölçüm (tur 106 sn, çekirdek 25 dk) değişmesin — v0.6 ile aynı.
+- **Yüzey karosu görünüm, tür değil (v0.7).** Yeni bir karo türü eklemek üreticiyi,
+  fay testini, deprem dolgusunu ve kayıt uyumunu kurcalardı. İkinci atlas kaynağı
+  yalnız `_parca_yukle`'de seçiliyor; oyunun geri kalanı için 0. satır hâlâ toprak.
+- **Palet yolla döner, alev zamanla (v0.7).** Palet animasyonu sabit kare/sn olsaydı
+  yavaş yürüyen araçta paletler "kayardı"; faz hız × süre ile ilerliyor. Yön
+  `flip_h`'ten geliyor — kare sırası aynı, ayna görüntü zaten tersini gösteriyor.
+- **[oyuncu] toplamı fark yöntemiyle (v0.7).** Her kayıtta koşunun sayaçlarını
+  toplama eklemek aynı koşuyu her kayıtta yeniden sayardı; kayıttan yüklenen değeri
+  yeniden eklemek ise oyunu her açışta. `istatistik_farki()` son aktarımdan bu yana
+  biriken farkı verir, yüklenen değer aktarılmış sayılır — iki kez sayma yok.
 
 ## Çalıştırma
 
@@ -280,8 +322,9 @@ godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış te
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması
-godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
-godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak)
+godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art (yüzey, 9 kareli araç, işaret dahil)
+godot --headless --path . --script res://tools/ses_uret.gd        # matkap döngüsü + deprem gürültüsü (deterministik)
+godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak + docs/bitis.png)
 godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # eski sürüm worktree'sinde kayıt fikstürü
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim)
 ```
@@ -318,8 +361,8 @@ scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı 
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar
-scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/ayar
-tools/                    varlık üretimi (pixel art, müzik, ekran görüntüsü), kayıt fikstürü
+scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/döngü sesi/ayar
+tools/                    varlık üretimi (pixel art, müzik, sentez efekt, ekran görüntüsü), kayıt fikstürü
 tests/bot.gd              bot simülasyonu (kusursuz · insan benzeri · sisli insan · Derin Mod)
 tests/veri/               gerçek eski sürüm kayıtları (kayit-v0.5.cfg)
 tests/                    headless testler (çıkış kodu 0 = geçti)
@@ -330,12 +373,14 @@ Kayıt dosyası: `user://kayit.cfg`
 (`%APPDATA%\Godot\app_userdata\Derin Kazı\kayit.cfg`) — `[oyun]` ana ilerleme,
 kazılan ve depremle değişen hücreler, keşif haritası (`kesif`: 17.408 bayt,
 deflate + base64) · `[gunluk]` günlük dünyanın ayrı yuvası · `[derin]` Derin
-Mod'un ayrı yuvası (v0.6) · `[ayar]` ses/tam ekran/sarsıntı tercihleri.
+Mod'un ayrı yuvası (v0.6) · `[oyuncu]` bütün yuvaların birikimli istatistiği (v0.7)
+· `[ayar]` ses/tam ekran/sarsıntı tercihleri.
 
 ## Varlıklar
 
 GUI aracı kullanılmadı. Tüm pixel art `tools/sprite_uret.gd` içinde Godot `Image`
-API'siyle üretiliyor (palet: **Endesga 32**). Ses efektleri rFXGen ön ayarlarından,
-müzik `tools/muzik_uret.gd` ile kodla üretilen chiptune: altı ruh hâli
-(hizli/neseli/sakin/gizemli/gergin/**cekirdek**), dört bandın komutları `CLAUDE.md`
-"Derinlik ambiyansı" başlığında.
+API'siyle üretiliyor (palet: **Endesga 32**). Ses efektleri rFXGen ön ayarlarından;
+rFXGen'in veremediği matkap döngüsü ve deprem gürültüsü `tools/ses_uret.gd` ile
+kodla sentezleniyor. Müzik `tools/muzik_uret.gd` ile kodla üretilen chiptune: altı
+ruh hâli (hizli/neseli/sakin/gizemli/gergin/**cekirdek**), dört bandın komutları
+`CLAUDE.md` "Derinlik ambiyansı" başlığında.

@@ -36,11 +36,11 @@ scripts/deprem.gd         deprem hesabı + oyuncunun kararı (saf sınıf; uygul
 scripts/ipucu.gd          ipucu, deprem panosu ve mağaza satırları (saf sınıf; dokunmatik/masaüstü ayrımı)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
-scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları (saf sınıf)
-scripts/arac.gd           hareket, kazma, hasar, aletler
-scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
-scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/ayar
-scripts/kayit.gd          kayıt yuvaları [oyun] · [gunluk] · [derin] (v0.6) ve ayarlar
+scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları, istatistik sayaçları, işaret (saf sınıf)
+scripts/arac.gd           hareket, kazma, hasar, aletler, animasyon kareleri (saf seçim)
+scripts/oyun.gd           HUD, üs, müze, ışınlanma + işaret, tehlikeler, oyun hissi, bitiş dökümü
+scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/döngü sesi (matkap)/ayar
+scripts/kayit.gd          kayıt yuvaları [oyun] · [gunluk] · [derin] (v0.6) · [oyuncu] toplamı (v0.7) ve ayarlar
 scripts/ayar_panel.gd     ayarlar ekranının içeriği (menü + duraklatma ortak)
 scenes/                   menu · oyun · kapak
 tools/                    varlık üretimi, ekran görüntüsü ve kayıt fikstürü betikleri
@@ -120,6 +120,37 @@ olabilir — olduğu gibi açılır, "Başla" ile sürer. Menüde sağ üstte ro
 (`$Rozet`, `_derin_yenile`). Ölçüm: `tests/test_insan.gd` Derin Mod x1'i 7 tohumda
 ilk oyunla yan yana ölçer (`Bot.INSAN_DERIN`).
 
+## Sunum ve işaret (v0.7)
+
+- **Yüzey karosu:** 0. satırdaki TOPRAK `yuzey.png`'den çizilir (`Dunya.YUZEY_KAYNAK`
+  = ikinci atlas kaynağı, `Ayarlar.YUZEY_VARYANT` sütun, seçim `yuzey_varyant(x)`).
+  Karo TÜRÜ değişmedi: üretici, kazı, deprem ve kayıt hâlâ TOPRAK görür; yalnız
+  `_parca_yukle` kaynak seçer. Yeni bir yüzey görünümü eklersen atlas türü ekleme.
+- **Araç kareleri:** `arac.png` 9 kare — 0 bekle · 1-2 kazma · 3-5 palet · 6-8 alev.
+  Düzen ÜÇ yerde aynı olmalı: `tools/sprite_uret.gd → _arac`, `Arac.KARE_*` sabitleri,
+  `scenes/oyun.tscn` `hframes`. Kare seçimi saf (`Arac.animasyon_durumu /
+  faz_ilerlet / kare_sec`), palet YOLLA döner (hız × süre / `PALET_PIKSEL`), yön
+  `flip_h`. Bot ve ölçümler kareyi bilmez — öyle kalsın.
+- **Matkap döngü sesi:** `Arac.kazma_degisti` sinyali → `Ses.dongu_baslat("matkap") /
+  dongu_durdur`. Kazı kesilince `KAZMA_KUYRUK` (0,3 sn) kadar sürer: karo arası
+  düşüşte ses kesilip baştan başlamasın. Durdurma 0,12 sn sönümle; `dongu_caliyor`
+  sönmekte olanı "durdu" sayar. Döngü sonu yine `get_length() × mix_rate`.
+- **Deprem sesi:** `deprem.wav` (uyarı `deprem_uyari`: aynı dosya tiz/kısık). Patlama
+  sesi gaz, dinamit ve çekirdek için kaldı. İki dosya `tools/ses_uret.gd` ile
+  sentezleniyor, TOHUM sabit, aynı komut aynı baytları verir (testi var).
+- **Bitiş istatistiği:** koşu sayaçları `Durum` (kazilan_karo, deprem, olum =
+  yüzeye çekilme, satis_toplam, sure); bütün yuvaların toplamı `[oyuncu]` bölümü.
+  Her `_kaydet` `Kayit.oyuncu_biriktir(durum.istatistik_farki())` çağırır — fark
+  yöntemi; kayıttan yüklenen değer aktarılmış sayılır, iki kez sayılmaz. Sayaç
+  eklersen `istatistik()` sözlüğüne de yaz. Bitiş metni `bitis_metni` saf, 480 px'e
+  sarılır; test panelin 640×360'a sığdığını ölçüyor.
+- **Işınlama işareti:** `Durum.isaret` (yok = `ISARET_YOK`). R / gamepad B / İŞARET
+  düğmesi (dokunmatik sol şerit, üçüncü) yeraltında koyar. Işınlanma panelinde
+  satır; asansör kuralı aynı (üsten ya da istasyondan), TEK kullanımlık, gidince
+  silinir. Deprem işaret hücresini kapatabilir (korunmuyor): `_isaret_isinla`
+  varışta hücreyi açar. Eski kayıt `isaret` anahtarı olmadan açılır. Bot bilmez;
+  birim test `tests/bot.gd` içinde "isaret" geçmediğini tarıyor.
+
 ## Kayıt uyumu
 
 Eski sürümün kaydı yeni sürümde açılmalı. Fikstür **gerçek dosya**:
@@ -140,7 +171,8 @@ git worktree remove ..\derin-kazi-v0X
 
 Tüm dokunma alanları 640x360 içinde ve **birbirine binmez**: kazı alanları
 `scenes/oyun.tscn` (`$Dokunmatik/*` TouchScreenButton), düğmeler
-`oyun.gd → dokunmatik_kur` (sağ üst Üs·Harita·■, sol orta dikey DİNAMİT·RADAR).
+`oyun.gd → dokunmatik_kur` (sağ üst Üs·Harita·■, sol dikey DİNAMİT·RADAR·İŞARET,
+y 100'den başlar — 148'de başlasa üçüncü düğme ◀ alanına binerdi).
 `tests/test_oynanis.gd` dikdörtgenleri **sahneden okuyup** çakışma/taşma arıyor;
 düğme ekleyeceksen önce onu çalıştır. Dinamit/radar mantığı
 `_dinamit_kullan` / `_radar_degistir` içinde — tuş da düğme de oraya bağlı,
@@ -187,6 +219,16 @@ Bilinmesi gereken bağlar:
 - Sesi duyamıyoruz: müzikle ilgili bir değişiklikte `playing` ve
   `get_playback_position()`'ı birkaç saniye örnekleyen bir sonda yaz (v0.6'da
   `loop_end = 0` hatası böyle bulundu; varlık dosyasının varlığı hiçbir şeyi kanıtlamaz).
+  `Ses.gecmis` son 32 olayı tutar: "hangi ses çaldı" sorusunu sahne testi oradan okur.
+- `_initialize` sırasında **hiçbir düğüm ağaçta değil** (autoload `_ready` bile
+  çalışmamış, `Ses.ayar` boş): `AudioStreamPlayer.play()` orada "not inside tree"
+  der. Oynatıcı sınamaları sahne testine (`await` var) — birim testi yalnız saf
+  sentez/tablo sınar (v0.7'de böyle bulundu).
+- `is_on_floor()` son fizik adımının sonucudur: `usse_don()` / `isinlan()` ile
+  havaya taşınan araç için bir kare daha "yerde" der. Yere oturmayı beklemeden
+  önce `await _kare(2)`, sonra döngü.
+- Headless'ta `ImageTexture.get_image()` boş döner; çizilen kareyi `Image` olarak
+  sakla (`oyun.gd → _harita_son`) ve testte onu oku.
 
 ## Komutlar
 
@@ -199,8 +241,9 @@ godot --headless --path . --script res://tests/test_denge.gd      # denge simül
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması (sisli insan botu dahil)
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)
-godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
-godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası
+godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art (yuzey.png, 9 kareli arac.png, isaret.png dahil)
+godot --headless --path . --script res://tools/ses_uret.gd        # matkap.wav (döngü) + deprem.wav, deterministik
+godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası + docs/v07-kareler.png
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak) + telefon/deprem denetimi (render gerekir)
 godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # kayıt fikstürü (eski sürümün worktree'sinde)
 godot --headless --path . --export-release "Windows Masaustu"
@@ -245,4 +288,6 @@ ile `tools/sprite_uret.gd` buna bağlı — birini değiştirirsen dördünü bi
 
 Ses efektleri rFXGen ön ayarlarından (`D:\Araclar\rFXGen\...\rfxgen.exe`).
 `--generate` aynı ön ayar için **hep aynı** dalgayı veriyor (denendi), bu yüzden
-çeşitlilik `scripts/ses.gd` içindeki perde eşlemesinden geliyor.
+çeşitlilik `scripts/ses.gd` içindeki perde eşlemesinden geliyor. rFXGen'in
+veremediği iki ses (`matkap.wav` döngüsü, `deprem.wav`) `tools/ses_uret.gd` ile
+kodla sentezleniyor — elle .wav düzenleme yok, betiği değiştir ve yeniden üret.
