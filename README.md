@@ -9,7 +9,8 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-> Durum: **v0.7 — sunum turu ve ışınlama işareti.** v0.6'nın üstüne: yüzey
+> Durum: **v0.7.1 — v0.7'nin oynanışı + MIT lisansı ve her push'ta CI.**
+> v0.7 sunum turu ve ışınlama işaretiydi; v0.6'nın üstüne: yüzey
 > karosunun çimenli, kırık kenarlı "üst" görünümü; araç animasyonuna palet dönüşü
 > (yolla döner) ve üç kareli pervane alevi; kazarken çalıp durunca sönen **matkap
 > döngü sesi** ve depreme özel sarsıntı + çatırtı gürültüsü (ikisi de kodla
@@ -70,8 +71,13 @@ geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
   açıkken keşif sisini 9 karo yarıçapta **geçici** seyreltir (keşif saymaz).
 - **Isı kalkanı** — lav yakınında hasar almazsın.
 - **Dinamit** (`F`) — 3×3 patlatır, sarf malzemesi.
-- **İstasyon kiti** (`T`) — 50 m aralıkla kurulur; istasyon ile yüzey arasında
+- **İstasyon kiti** (`T`) — 40 m'den derinde, 50 m aralıkla kurulur; istasyon ile yüzey arasında
   anında yolculuk.
+- **Kazı zinciri** — art arda aynı madeni toplayınca çarpan yükselir (3/5/8 adette
+  ×1,25 / ×1,6 / ×2,0; 6 sn içinde aynı madeni bulamazsan sıfırlanır), toplama
+  sesinin perdesi de tizleşir (`Ayarlar.ZINCIR_*`).
+- **Gizli oda sandıkları** — eser çıkmayan odalarda para (40–120 ₺), dinamit (2–4)
+  ya da yakıt (30–70) verir; ödül hücreden türer, aynı sandık hep aynısını verir.
 - **Eserler** — gizli odalarda bulunur, müzeye gider, kalıcı pasif bonus verir.
   Altı eserin her biri çekirdeğin sırrından bir parça anlatır; 1'den 6'ya doğru
   okununca tek bir hikâye çıkar. **7. eser** ("Uyanmış Kabuk Parçası", ışık +1)
@@ -132,16 +138,18 @@ başlar — kırmızı ekran işareti + ses, sarsıntı, ekranın üst-ortasınd
 pano: `DEPREM 7.4 sn` / `W ile YÜZEYE ÇIK → +… ₺ ikramiye` / `DERİNDE KAL → …
 hasar` (son 3 saniyede sayaç yanıp söner; dokunmatikte `▲ UÇ ile`) — sonra:
 
-- eski tünellerin ~%20'si kapanır,
+- eski tünellerin ~%22'si kapanır (`Deprem.KAPANMA_ORAN`),
 - kalan tünellerin duvarlarında **yeni gaz cepleri ve maden damarları** belirir.
 
 **Uyarı bir bahis (v0.4).** Süre derinlikle uzar (4 sn + derinlik × 0,06;
 100 m'de 10 sn, 250 m'de 19 sn, tavan 20 sn) — ki karar verilebilsin. Sonra:
 
-- **yüzeye çıkarsan** (12 m'den sığ) **kabuk nöbeti ikramiyesi** alırsın:
+- **yüzeye çıkarsan** (12 m ve daha sığ) **kabuk nöbeti ikramiyesi** alırsın:
   25 ₺ + uyarı anındaki derinliğin. 100 m'den dönene +125 ₺.
 - **derinde kalırsan** hasar yersin: 1 can, 100 m'den derinde 2. Tavan 2 —
   deprem **tek başına** bir koşuyu bitiremez.
+- **hızlı düşersen** ayrıca canından gider: 250 px/sn üstünde yere çarpmak 1 can
+  (`Ayarlar.DUSME_HASAR_HIZ`) — depremden bağımsız, her koşuda geçerli.
 - **kurduğun bir istasyondaysan** ışınlanıp ikramiyeyi bedavaya alırsın.
   İstasyonun ikinci gerekçesi bu.
 
@@ -195,7 +203,9 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   düzeltti: **fay kapalıyken de** 12 tohumun 12'sinde yüzeyden çekirdeğe
   kazılabilir bir yol vardı (BFS). Sorun yolun yokluğu değil, "aşağı kaz,
   tıkanınca yana git" diye oynayan birinin onu bulamamasıydı: aynı 12 tohumda
-  bot fay kapalıyken **8/12**, açıkken **11/12** çekirdeğe varıyor.
+  v0.3'ün kör botu fay kapalıyken **8/12**, açıkken **11/12** varıyordu; v0.4'ün
+  BFS'li botu fay açıkken **12/12** varıyor ve `tests/test_fay_olcum.gd` bunu
+  geçme koşulu olarak sınıyor.
   Dome Keeper şikâyeti ("kötü dünya üretimi oyunu bitirilemez yapıyor") bu
   oyunda dünyanın bitirilemez olmasıyla değil, geçilemeyecek kadar dolambaçlı
   olmasıyla ortaya çıkardı.

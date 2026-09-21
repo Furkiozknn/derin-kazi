@@ -59,7 +59,7 @@ static func uyari_suresi(derinlik: int) -> float:
 static func odul(uyari_derinlik: int) -> int:
 	return ODUL_TABAN + int(float(maxi(uyari_derinlik, 0)) * ODUL_METRE)
 
-## Derinde kalanın hasarı: 1 can, 100 m'de 2, 200 m'de 3.
+## Derinde kalanın hasarı: 1 can, 100 m'den derinde 2. Tavan HASAR_EN_COK = 2.
 static func hasar(patlama_derinlik: int) -> int:
 	return mini(HASAR_TABAN + int(maxi(patlama_derinlik, 0) / HASAR_METRE), HASAR_EN_COK)
 

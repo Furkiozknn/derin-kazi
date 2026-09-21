@@ -18,7 +18,7 @@ butler status <itch-kullanici>/derin-kazi
 
 ## Yükleme
 
-Proje kökünde (`D:\Repolar\derin-kazi`):
+Proje kökünde:
 
 ```powershell
 # Web (tarayıcıda oynanan sürüm)

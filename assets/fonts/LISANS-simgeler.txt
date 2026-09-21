@@ -1,6 +1,6 @@
 simgeler.ttf ("Oyun Simgeleri") — lisans
 
-Bu dosya DejaVu Sans Bold yazı tipinin alt kümesidir (34 simge: ★☆✓✔✗✘←↑→↓↔↕▲▶▼◀△▷▽◁■□●○◆◇⟲⟳₺♥♡⚙).
+Bu dosya DejaVu Sans Bold yazı tipinin alt kümesidir (32 simge: ★☆✓✔✗✘←↑→↓↔↕▲▶▼◀△▷▽◁■□●○◆◇⟲⟳₺♥♡⚙).
 Lisans gereği yeniden adlandırılmıştır: "Oyun Simgeleri".
 Kaynak: DejaVu fonts, https://dejavu-fonts.github.io/
 

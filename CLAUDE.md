@@ -75,7 +75,7 @@ açar — bunu kaldırırsan eski kayıt kapkaranlık açılır. Örtü `scripts
 karo başına `draw_rect` çizer; Light2D/occluder **kullanma** (tümleşik GPU).
 Işık **yakıt harcamaz**, geliştirilmez — sis bilgi kısıtı, kaynak değil
 (rakip analizi: "lamba yakıtı angarya"). Sayılar `Ayarlar` → keşif sisi bloğu;
-`ISIK_YARICAP`'ı değiştirirsen botun `_kesfet`'i de aynı sabiti kullanıyor.
+ışık yarıçapını `Durum.isik_yaricap()` verir, botun `_kesfet`'i de onu okur (aşağıda).
 Mini harita (`oyun.gd → _harita_boya`) keşfedilmemiş hücreyi boyamaz; radar
 sisi **geçici** seyreltir, keşif saymaz. Işık yarıçapı artık sabit değil
 **`Durum.isik_yaricap()`** (ilk oyun 5, Derin Mod 3, 7. eserle +1); sahne, `Sis`
@@ -94,7 +94,7 @@ Müzik geçişi `Ses.muzik_cal(ad, Ayarlar.MUZIK_GECIS)` ile çaprazlanır; iki
 ```powershell
 godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik.wav          --ruh gizemli  --tohum 3
 godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_derin.wav    --ruh gergin   --tohum 3   # (v0.2'den)
-godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_bazalt.wav   --ruh gergin   --tohum 5 --olcu 8
+godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_bazalt.wav   --ruh gergin   --tohum 5 --olcu 8 --bpm 160   # --bpm olmadan 140 çıkar
 godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_cekirdek.wav --ruh cekirdek --tohum 2 --olcu 4
 ```
 
@@ -163,7 +163,7 @@ olduğu gibi okumalı. Yeni etiketten fikstür üretmek için:
 git worktree add ..\derin-kazi-v0X v0.X
 copy tools\kayit_fikstur.gd ..\derin-kazi-v0X\tools\
 godot --headless --path ..\derin-kazi-v0X --import
-godot --headless --path ..\derin-kazi-v0X --script res://tools/kayit_fikstur.gd -- --cikti D:/Repolar/derin-kazi/tests/veri/kayit-v0.X.cfg
+godot --headless --path ..\derin-kazi-v0X --script res://tools/kayit_fikstur.gd -- --cikti <bu deponun kökü>/tests/veri/kayit-v0.X.cfg
 git worktree remove ..\derin-kazi-v0X
 ```
 
@@ -198,7 +198,8 @@ Bilinmesi gereken bağlar:
   bot, yol bulması yalnız keşfedileni biliyor). Ölçülen (v0.5): tur 106 sn,
   çekirdeğe 25 dk — sisli ve sissiz aynı, çünkü fay koridoru botu tıkamıyor ve
   7 tohumda hiç BFS rotası kurulmuyor (`BFS rotası kurulan` satırı bunu yazar).
-- **Bot yol bulma** `Bot._rota` (BFS, 80 karoluk pencere) tur başına **bir kez**
+- **Bot yol bulma** `Bot._rota` (BFS, 80 karoluk pencere) sissiz botta tur başına
+  **bir kez**, sisli botta en çok **üç kez** (`Bot.ROTA_EN_COK_SISLI`)
   hesaplanır; sınırı kaldırırsan ölçüm dakikalar sürer. `Bot._uretim` üreticinin
   önbelleği — üretici saf olduğu için güvenli, kaldırma.
   Testteki bantlar hedef değil **gerileme bekçisi** — denge sabitlerini
@@ -261,12 +262,14 @@ Godot yolu: PATH'teki `godot` (winget kurulumu `%LOCALAPPDATA%\Microsoft\WinGet\
 ## Godot kilidi
 
 Aynı anda birden çok oyun oturumu çalışıyor, RAM dar. Godot çalıştırmadan önce
-`D:\Repolar\.godot-kilit` dosyasını al (varsa ve 15 dk'dan yeniyse 30 sn bekle;
+depoların ortak üst klasöründe `.godot-kilit` dosyasını al (varsa ve 15 dk'dan yeniyse 30 sn bekle;
 yoksa oluştur, içine `derin-kazi` yaz), iş bitince sil. Açık süreç bırakma.
 
 ## Yayın
 
-**Push yok, GitHub deposu yok, itch.io yüklemesi yok.** Yayın paketi yalnız
+**GitHub deposu var, itch.io yüklemesi yok.** Depo 21 Eylül 2026'da GitHub'a
+taşındı (`Furkiozknn/derin-kazi`, varsayılan dal `main`); `main`'e her push'ta
+`.github/workflows/ci.yml` iki test kapısını koşuyor. Yayın paketi yalnız
 hazırlanır (`yayin/`), yükleme kararı Furki'nin. `yayin/butler-komutlari.md`
 içindeki komutlar bilerek çalıştırılmamış durumda.
 
@@ -286,7 +289,7 @@ sonra `tools/onizleme.gd` ile çıktıyı gözle denetle.
 `Ayarlar.VARYANT_SAYISI` = `Ayarlar.KATMANLAR.size()` = 5 ve `Dunya._tileset_kur()`
 ile `tools/sprite_uret.gd` buna bağlı — birini değiştirirsen dördünü birden değiştir.
 
-Ses efektleri rFXGen ön ayarlarından (`D:\Araclar\rFXGen\...\rfxgen.exe`).
+Ses efektleri rFXGen ön ayarlarından (rFXGen yerel bir kurulum, depoda değil).
 `--generate` aynı ön ayar için **hep aynı** dalgayı veriyor (denendi), bu yüzden
 çeşitlilik `scripts/ses.gd` içindeki perde eşlemesinden geliyor. rFXGen'in
 veremediği iki ses (`matkap.wav` döngüsü, `deprem.wav`) `tools/ses_uret.gd` ile

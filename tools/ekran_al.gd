@@ -1,8 +1,9 @@
-## Yayın paketi görselleri: 5 ekran görüntüsü (1280x720) + kapak (630x500)
+## Yayın paketi görselleri: 6 ekran görüntüsü (1280x720) + kapak (630x500)
 ## + menünün telefon oranındaki denetim karesi (docs/).
 ## Gerçek oyundan kare alır — montaj yok.
 ##   godot --path . --script res://tools/ekran_al.gd     (--headless ile ÇALIŞMAZ: render gerekiyor)
-## Çıktı: yayin/ekran-1..4.png, yayin/kapak.png
+## Çıktı: yayin/ekran-1..4.png, ekran-5-menu.png, ekran-6-derin.png, kapak.png
+##        + docs/bitis.png ve üç telefon karesi (menu/oyun/deprem-telefon.png)
 extends SceneTree
 
 const CIKTI := "res://yayin/"
