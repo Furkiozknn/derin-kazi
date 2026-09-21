@@ -8,7 +8,9 @@ extends SceneTree
 ## Seçenekler:
 ##   --cikti <yol>        res:// ya da mutlak yol (.wav)
 ##   --tur dongu|jingle   dongu: 8 ölçü, döngü noktalı; jingle: 2 ölçü, döngüsüz (varsayılan dongu)
-##   --ruh hizli|sakin|gizemli|neseli|gergin   (varsayılan hizli)
+##   --ruh hizli|sakin|gizemli|neseli|gergin|cekirdek   (varsayılan hizli)
+##                        cekirdek (v0.6): yeraltının ikinci ruhu — 68 bpm, frigyen,
+##                        davul yerine kalp atışı, uzun notalar, bas tek uzun dron
 ##   --tohum <sayi>       aynı tohum = aynı parça (varsayılan 1)
 ##   --bpm <sayi>         ruhun temposunu ezer
 ##   --olcu <sayi>        döngü uzunluğu (ölçü), varsayılan 8
@@ -25,6 +27,9 @@ const RUHLAR := {
 	"sakin":   {"bpm": 92,  "kok": 60, "olcek": [0, 2, 4, 7, 9],        "ilerleme": [0, 3, 1, 2], "davul": 1},
 	"gizemli": {"bpm": 108, "kok": 52, "olcek": [0, 2, 3, 5, 7, 8, 10], "ilerleme": [0, 5, 6, 4], "davul": 1},
 	"gergin":  {"bpm": 140, "kok": 50, "olcek": [0, 1, 3, 5, 7, 8, 10], "ilerleme": [0, 1, 0, 6], "davul": 2},
+	## Çekirdek: "elde tutulunca kendi ritmiyle atıyor" — davul 0 = kalp atışı (lub-dub),
+	## agir = notalar iki kat uzun, arpej seyrek, bas ölçü boyu tek dron.
+	"cekirdek": {"bpm": 68, "kok": 40, "olcek": [0, 1, 3, 5, 7, 8, 10], "ilerleme": [0, 0, 1, 0], "davul": 0, "agir": true},
 }
 
 var rng := RandomNumberGenerator.new()
@@ -95,20 +100,28 @@ func _nota(ruh: Dictionary, derece: int, oktav: int = 0) -> int:
 func _dongu(ruh: Dictionary, olcu: int) -> void:
 	var ilerleme: Array = ruh["ilerleme"]
 	var n_olcek: int = (ruh["olcek"] as Array).size()
+	var agir: bool = bool(ruh.get("agir", false))
 	# İki motif üret: A (soru) ve B (cevap). Döngü: A A' B A'' ...
-	var motif_a := _motif(n_olcek)
-	var motif_b := _motif(n_olcek)
+	var motif_a := _motif(n_olcek, agir)
+	var motif_b := _motif(n_olcek, agir)
 	for m in olcu:
 		var akor: int = ilerleme[m % ilerleme.size()]
 		var bas := m * 16
-		# Bas: sekizlik kök + beşli
-		for s in range(0, 16, 2):
-			var d := akor if (s / 2) % 4 != 3 else akor + 4
-			_ekle(bas + s, 2, _frekans(_nota(ruh, d, -2)), "ucgen", 0.24, 0.9)
-		# Arpej: onaltılık akor notaları
+		if agir:
+			# Dron: ölçü boyu kök, ikinci yarıda beşli üstüne biner.
+			_ekle(bas, 16, _frekans(_nota(ruh, akor, -2)), "ucgen", 0.26, 1.0)
+			_ekle(bas + 8, 8, _frekans(_nota(ruh, akor + 4, -2)), "ucgen", 0.12, 1.0)
+		else:
+			# Bas: sekizlik kök + beşli
+			for s in range(0, 16, 2):
+				var d := akor if (s / 2) % 4 != 3 else akor + 4
+				_ekle(bas + s, 2, _frekans(_nota(ruh, d, -2)), "ucgen", 0.24, 0.9)
+		# Arpej: onaltılık akor notaları (ağır ruhta yalnız sekizlikler, daha kısık)
 		for s in 16:
+			if agir and s % 2 == 1:
+				continue
 			var d2: int = akor + int([0, 2, 4, 2][s % 4])
-			_ekle(bas + s, 1, _frekans(_nota(ruh, d2, 0)), "kare12", 0.06, 0.6)
+			_ekle(bas + s, 1, _frekans(_nota(ruh, d2, 0)), "kare12", 0.04 if agir else 0.06, 0.6)
 		# Melodi
 		var motif: Array = motif_a if (m % 4) != 2 else motif_b
 		var degisim: int = 0 if m % 2 == 0 else int([0, 1, -1, 2][m % 4])
@@ -119,11 +132,13 @@ func _dongu(ruh: Dictionary, olcu: int) -> void:
 		_davul(bas, int(ruh["davul"]), m == olcu - 1)
 
 
-func _motif(n_olcek: int) -> Array:
+func _motif(n_olcek: int, agir := false) -> Array:
 	var olaylar := []
 	var s := 0
 	while s < 16:
 		var uzunluk: int = int([1, 2, 2, 2, 3, 4][rng.randi_range(0, 5)])
+		if agir:
+			uzunluk *= 2   ## ağır ruh: yarısı kadar nota, iki kat uzun
 		if s + uzunluk > 16:
 			uzunluk = 16 - s
 		var guclu := s % 4 == 0
@@ -147,6 +162,11 @@ func _jingle(ruh: Dictionary) -> void:
 
 
 func _davul(bas: int, yogunluk: int, dolgu: bool) -> void:
+	if yogunluk <= 0:
+		# Kalp atışı: ölçü başında "lub-dub", davul yok, gürültü yok.
+		_tekme(bas * adim_ornek, 0.55)
+		_tekme((bas + 3) * adim_ornek, 0.35)
+		return
 	for s in 16:
 		var t := (bas + s) * adim_ornek
 		if s == 0 or s == 8 or (yogunluk >= 2 and s == 10):
@@ -195,7 +215,7 @@ func _ekle(adim: int, uzunluk: int, frekans: float, dalga: String, ses: float, d
 		faz += adim_faz
 
 
-func _tekme(bas: int) -> void:
+func _tekme(bas: int, guc := 1.0) -> void:
 	var n := int(0.12 * HZ)
 	var faz := 0.0
 	for i in n:
@@ -205,7 +225,7 @@ func _tekme(bas: int) -> void:
 		var t := float(i) / n
 		var f := lerpf(140.0, 42.0, sqrt(t))
 		faz += f / HZ
-		tampon[j] += sin(TAU * faz) * 0.45 * (1.0 - t) * (1.0 - t)
+		tampon[j] += sin(TAU * faz) * 0.45 * guc * (1.0 - t) * (1.0 - t)
 
 
 func _gurultu(bas: int, sure: float, ses: float, parlaklik: float) -> void:
