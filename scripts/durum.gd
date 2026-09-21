@@ -40,10 +40,42 @@ var cekirdek_bulundu := false
 var kacis := false          ## çekirdeğe dokunuldu, yüzeye kaçış sürüyor
 var kazandi := false
 
+# --- istatistik (v0.7) ----------------------------------------------------
+## Bitiş ekranının dökümü. Bu yuvanın sayaçları burada (deprem ve sure yukarıda);
+## bütün yuvaların toplamı [oyuncu] kayıt bölümünde birikir: her kayıtta
+## istatistik_farki() son aktarımdan bu yana biriken farkı verir, Kayit.oyuncu_biriktir
+## toplama ekler — kayıttan yüklenen değerler aktarılmış sayılır, iki kez sayılmaz.
+var kazilan_karo := 0       ## oyuncunun kırdığı karo (dinamit dahil, düşen kaya hariç)
+var olum := 0               ## yüzeye çekilme sayısı — oyunda ölüm yok, "ölüm" bu
+var satis_toplam := 0       ## üste satılan toplam ₺
+var _birikmis := {}         ## [oyuncu] bölümüne en son aktarılan değerler
+
+## Işınlama işareti (v0.7): istasyon dışında TEK KULLANIMLIK dönüş noktası. Yeraltında
+## koyulur (R / İŞARET düğmesi), ışınlanma panelinden üs ya da istasyondan gidilir,
+## gidince silinir. Bot bilmez — ölçüm değişmez. Eski kayıtta yok → işaretsiz açılır.
+const ISARET_YOK := Vector2i(-1, -1)
+var isaret := ISARET_YOK
+
 func _init(p_tohum := 0) -> void:
 	tohum = p_tohum
 	yakit = yakit_kapasitesi()
 	can = can_kapasitesi()
+
+func isaret_var() -> bool:
+	return isaret != ISARET_YOK
+
+func istatistik() -> Dictionary:
+	return {"kazilan_karo": kazilan_karo, "deprem": deprem, "olum": olum,
+		"satis_toplam": satis_toplam, "sure": sure}
+
+## Son aktarımdan bu yana biriken fark; çağrıdan sonra sayaç sıfırdan başlar.
+func istatistik_farki() -> Dictionary:
+	var simdi := istatistik()
+	var fark := {}
+	for k in simdi:
+		fark[k] = simdi[k] - _birikmis.get(k, 0)
+	_birikmis = simdi
+	return fark
 
 # --- müze bonusları -------------------------------------------------------
 
@@ -222,6 +254,7 @@ func yuk_degeri() -> int:
 func sat() -> int:
 	var kazanc := yuk_degeri()
 	para += kazanc
+	satis_toplam += kazanc
 	yuk.clear()
 	yuk_bonus = 0
 	return kazanc
@@ -342,6 +375,7 @@ func cekme_ucreti(derinlik: int) -> int:
 func kosu_basarisiz(h: Vector2i) -> Dictionary:
 	var ucret := mini(cekme_ucreti(h.y), para)
 	para -= ucret
+	olum += 1
 	var birakilan := {}
 	for tur in yuk.keys():
 		var yarim := int(yuk[tur]) / 2
@@ -403,6 +437,8 @@ func sozluge() -> Dictionary:
 		"dinamit": dinamit, "istasyon_kiti": istasyon_kiti,
 		"istasyonlar": ist, "eserler": PackedInt32Array(eserler),
 		"sandiklar": sand, "cekirdek_bulundu": cekirdek_bulundu, "kazandi": kazandi,
+		"kazilan_karo": kazilan_karo, "olum": olum, "satis_toplam": satis_toplam,
+		"isaret": PackedInt32Array([isaret.x, isaret.y]),
 	}
 
 func sozlukten(d: Dictionary) -> void:
@@ -444,5 +480,11 @@ func sozlukten(d: Dictionary) -> void:
 			y[a[j]] = a[j + 1]
 			j += 2
 		dusen_sandiklar.append({"h": Vector2i(a[0], a[1]), "yuk": y, "bonus": a[2]})
+	kazilan_karo = int(d.get("kazilan_karo", 0))
+	olum = int(d.get("olum", 0))
+	satis_toplam = int(d.get("satis_toplam", 0))
+	_birikmis = istatistik()   ## yüklenen sayaçlar [oyuncu] toplamına zaten girmiş sayılır
+	var isr := PackedInt32Array(d.get("isaret", PackedInt32Array()))
+	isaret = Vector2i(isr[0], isr[1]) if isr.size() == 2 else ISARET_YOK
 	yakit = yakit_kapasitesi()
 	can = can_kapasitesi()

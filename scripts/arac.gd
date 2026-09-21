@@ -12,14 +12,26 @@ signal matkap_yetersiz(gereken: int)
 signal hasar_alindi(miktar: int, konum: Vector2)
 signal patlama(konum: Vector2, yaricap: int)
 signal sandik_acildi(tur: int, konum: Vector2)
+signal kazma_degisti(kaziyor: bool)   ## matkap sesi (v0.7): kazı başlayınca true, kısa kuyruktan sonra false
 
 const YAN_UZANIM := 9.0    ## kazma hedefi ararken merkeze eklenen piksel
 const ALT_UZANIM := 9.0
 const YOK := Vector2i(1 << 30, 1 << 30)   ## "hedef yok"
 const DOKUNULMAZ := 0.9    ## hasar sonrası saniye
+
+## Animasyon kareleri (arac.png; düzen tools/sprite_uret.gd → _arac ve oyun.tscn hframes ile aynı).
 const KARE_BEKLE := 0
-const KARE_KAZ := 1
-const KARE_UCUS := 3
+const KARE_KAZ := 1        ## 2 kare: matkap dişleri kayar
+const KARE_PALET := 3      ## 3 kare (v0.7): palet deseni yerde yürürken kayar
+const KARE_UCUS := 6       ## 3 kare (v0.7): pervane alevi
+const KARE_SAYISI := 9
+const KAZ_KARE := 2
+const PALET_KARE := 3
+const UCUS_KARE := 3
+const KAZ_HIZ := 14.0      ## kazma animasyonu, kare/sn
+const UCUS_HIZ := 12.0     ## alev, kare/sn
+const PALET_PIKSEL := 3.0  ## palet deseni bir kare kaymak için kaç px yol (desen 3 px periyotlu)
+const KAZMA_KUYRUK := 0.3  ## kazı kesilince matkap sesi bu kadar sn daha sürer: karo arası düşüşte kesilmesin
 
 var durum: Durum
 var dunya: Dunya
@@ -28,7 +40,9 @@ var kilitli := false       ## menü/duraklatma açıkken hareket yok
 var _hedef := YOK
 var _ilerleme := 0.0
 var _dokunulmaz := 0.0
-var _kaz_animasyon := 0.0
+var _kare_faz := 0.0       ## animasyon fazı (kaz/palet/uçuş ortak, 6'ya göre sarılır)
+var _kaziyor := false      ## kazma_degisti'nin son bildirdiği değer
+var _kazma_kuyruk := 0.0
 var _en_hizli_dusus := 0.0
 var _lav_birikim := 0.0
 var _uyari_bekle := 0.0
@@ -37,6 +51,7 @@ var _uyari_bekle := 0.0
 
 func _physics_process(delta: float) -> void:
 	if kilitli or durum == null or durum.bitti or durum.kazandi:
+		_kazma_bildir(false)
 		return
 
 	durum.sure += delta
@@ -83,8 +98,26 @@ func _physics_process(delta: float) -> void:
 	_lav_kontrol(delta)
 	_gorsel_yenile(yatay, itiyor, delta)
 
+	# Matkap sesi: kazarken sürer, kesilince KAZMA_KUYRUK kadar daha çalar. Karo kırılıp
+	# araç bir sonraki karoya düşerken hedef bir an YOK oluyor; kuyruk olmasa ses her
+	# karoda kesilip baştan başlardı.
+	if _hedef != YOK:
+		_kazma_kuyruk = KAZMA_KUYRUK
+	else:
+		_kazma_kuyruk = maxf(0.0, _kazma_kuyruk - delta)
+	_kazma_bildir(_kazma_kuyruk > 0.0)
+
 	if durum.bitti:
 		kosu_bitti.emit()
+
+func _kazma_bildir(kaziyor: bool) -> void:
+	if kaziyor == _kaziyor:
+		return
+	_kaziyor = kaziyor
+	kazma_degisti.emit(kaziyor)
+
+func kaziyor_mu() -> bool:
+	return _kaziyor
 
 func derinlik() -> int:
 	return maxi(0, floori(global_position.y / Ayarlar.KARO))
@@ -97,15 +130,47 @@ func hucre() -> Vector2i:
 func _gorsel_yenile(yatay: float, itiyor: bool, delta: float) -> void:
 	if absf(yatay) > 0.1:
 		_gorsel.flip_h = yatay < 0.0
-	if _hedef != YOK:
-		_kaz_animasyon += delta * 14.0
-		_gorsel.frame = KARE_KAZ + (int(_kaz_animasyon) % 2)
-	elif itiyor and not is_on_floor():
-		_gorsel.frame = KARE_UCUS
-	else:
-		_gorsel.frame = KARE_BEKLE
+	var k := animasyon_durumu(_hedef != YOK, itiyor, is_on_floor(), velocity.x)
+	_kare_faz = faz_ilerlet(_kare_faz, k, velocity.x, delta)
+	_gorsel.frame = kare_sec(k, _kare_faz)
 	# hasar sonrası yanıp sönme
 	_gorsel.modulate.a = 1.0 if _dokunulmaz <= 0.0 else (0.35 if int(_dokunulmaz * 14.0) % 2 == 0 else 1.0)
+
+## Animasyon durumu: "kaz" | "ucus" | "palet" | "bekle". Saf — girdi ve düğüm okumaz,
+## testler doğrudan sınıyor; bot bu kareleri hiç bilmez (ölçüm görsele bağlı değil).
+static func animasyon_durumu(kaziyor: bool, itiyor: bool, yerde: bool, yatay_hiz: float) -> String:
+	if kaziyor:
+		return "kaz"
+	if itiyor and not yerde:
+		return "ucus"
+	if yerde and absf(yatay_hiz) > 1.0:
+		return "palet"
+	return "bekle"
+
+## Fazı ilerletir. Palet fazı YOLLA ilerler (hız × süre / PALET_PIKSEL): hızlı araçta
+## palet hızlı döner, duran araçta durur. Yön flip_h'ten gelir — kare sırası aynı
+## kalır, ayna görüntü zaten tersini gösterir. Faz 6'ya göre sarılır (2 ve 3 karenin
+## ortak katı), uzun oturumda float büyümesin.
+static func faz_ilerlet(faz: float, durum_k: String, yatay_hiz: float, delta: float) -> float:
+	var artis := 0.0
+	match durum_k:
+		"kaz":
+			artis = delta * KAZ_HIZ
+		"ucus":
+			artis = delta * UCUS_HIZ
+		"palet":
+			artis = absf(yatay_hiz) * delta / PALET_PIKSEL
+	return fposmod(faz + artis, 6.0)
+
+static func kare_sec(durum_k: String, faz: float) -> int:
+	match durum_k:
+		"kaz":
+			return KARE_KAZ + int(faz) % KAZ_KARE
+		"ucus":
+			return KARE_UCUS + int(faz) % UCUS_KARE
+		"palet":
+			return KARE_PALET + int(faz) % PALET_KARE
+	return KARE_BEKLE
 
 # --- kazma ----------------------------------------------------------------
 
@@ -168,6 +233,7 @@ func kir(h: Vector2i) -> void:
 	if not dunya.karo_kir(h):
 		return
 	var konum := dunya.hucre_merkezi(h)
+	durum.kazilan_karo += 1   ## bitiş istatistiği (v0.7): dinamit dahil, düşen kaya hariç
 	karo_kirildi.emit(tur, konum)
 	match tur:
 		Ayarlar.GAZ:

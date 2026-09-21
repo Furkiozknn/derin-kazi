@@ -14,8 +14,20 @@ const DUGME_US := "Üs düğmesi"
 const DUGME_HARITA := "Harita düğmesi"
 const DUGME_DINAMIT := "DİNAMİT düğmesi"
 const DUGME_RADAR := "RADAR düğmesi"
+const DUGME_ISARET := "İŞARET düğmesi"
 const ALAN_KAZ := "▼ KAZ"
 const ALAN_UC := "▲ UÇ"
+
+## Işınlama işareti (v0.7). Öğretme ipucu oturumda bir kez, 30 m'yi ilk geçişte gösterilir.
+static func isaret_ogret(dokunmatik: bool) -> String:
+	if dokunmatik:
+		return "%s — buraya dönüş işareti koy; üsten tek seferlik ışınlanırsın." % DUGME_ISARET
+	return "R — buraya dönüş işareti koy; üsten T ile tek seferlik ışınlanırsın."
+
+static func isaret_kondu(derinlik: int, dokunmatik: bool) -> String:
+	if dokunmatik:
+		return "İşaret %d m'de. Üsten %s ile tek seferlik ışınlan." % [derinlik, DUGME_US]
+	return "İşaret %d m'de. Üsten T ile tek seferlik ışınlan." % derinlik
 
 ## Mağaza satırlarının tuş/düğme anlatımı: [masaüstü, dokunmatik].
 ## v0.4'te dinamit ve radar telefonda kullanılamıyordu ama mağaza onları hâlâ

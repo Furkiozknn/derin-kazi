@@ -1,13 +1,17 @@
-## Üretilen sprite'ları 6x büyütüp tek bir sayfada toplar — gözle denetim için.
+## Üretilen sprite'ları büyütüp tek bir sayfada toplar — gözle denetim için.
 ##   godot --headless --path . --script res://tools/onizleme.gd
-## Çıktı: docs/sprite-onizleme.png  (depoya girmez, sadece bakmak için)
+## Çıktı: docs/sprite-onizleme.png (hepsi, 6x) ve docs/v07-kareler.png (yüzey karosu,
+## 9 araç karesi, işaret — 10x; v0.7 raporunun görseli)
 extends SceneTree
 
-const KAT := 6
-
 func _initialize() -> void:
-	var dosyalar := ["karolar.png", "arac.png", "simgeler.png", "us.png",
-		"istasyon.png", "logo.png", "tepeler.png", "kasaba.png", "fon_kaya.png"]
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://docs/"))
+	_sayfa(["karolar.png", "yuzey.png", "arac.png", "isaret.png", "simgeler.png", "us.png",
+		"istasyon.png", "logo.png", "tepeler.png", "kasaba.png", "fon_kaya.png"], 6, "sprite-onizleme.png")
+	_sayfa(["yuzey.png", "arac.png", "isaret.png"], 10, "v07-kareler.png")
+	quit(0)
+
+func _sayfa(dosyalar: Array, kat: int, cikti: String) -> void:
 	var kok := ProjectSettings.globalize_path("res://assets/sprites/")
 	var yuklu := []
 	var g := 0
@@ -16,7 +20,7 @@ func _initialize() -> void:
 		var im := Image.load_from_file(kok + d)
 		if im == null:
 			continue
-		im.resize(im.get_width() * KAT, im.get_height() * KAT, Image.INTERPOLATE_NEAREST)
+		im.resize(im.get_width() * kat, im.get_height() * kat, Image.INTERPOLATE_NEAREST)
 		yuklu.append(im)
 		g = maxi(g, im.get_width())
 		y += im.get_height() + 8
@@ -26,7 +30,5 @@ func _initialize() -> void:
 	for im in yuklu:
 		sayfa.blit_rect(im, Rect2i(Vector2i.ZERO, im.get_size()), Vector2i(0, oy))
 		oy += im.get_height() + 8
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://docs/"))
-	sayfa.save_png(ProjectSettings.globalize_path("res://docs/sprite-onizleme.png"))
-	print("docs/sprite-onizleme.png  %dx%d" % [sayfa.get_width(), sayfa.get_height()])
-	quit(0)
+	sayfa.save_png(ProjectSettings.globalize_path("res://docs/" + cikti))
+	print("docs/%s  %dx%d" % [cikti, sayfa.get_width(), sayfa.get_height()])

@@ -1,7 +1,13 @@
 ## Ses yöneticisi (autoload "Ses"). Muzik ve Efekt veri yolları üzerinden çalar.
 ## Efektler rFXGen ön ayarlarından üretildi; çeşitlilik perde (pitch) ile sağlanıyor —
 ## rFXGen --generate aynı ön ayar için hep aynı dalgayı veriyor (denendi), bu yüzden
-## 7 ham dosya + perde eşlemesi 11 ayrı olayı karşılıyor.
+## 7 ham dosya + perde eşlemesi 11 ayrı olayı karşılıyor. v0.7'de iki dosya daha
+## kodla sentezlendi (tools/ses_uret.gd): matkap.wav (kazı DÖNGÜSÜ) ve deprem.wav
+## (depreme özel gürültü — patlama sesinden ayrı).
+##
+## Döngü sesleri (v0.7): `dongu_baslat/dongu_durdur/dongu_caliyor`. Efekt kanallarından
+## ayrı, olay başına tek oyuncu; başlat çalanı baştan almaz, durdur kısa sönümle keser.
+## `gecmis` son 32 olayı tutar — sesi duyamıyoruz, testler "hangi ses çaldı"yı buradan okur.
 ##
 ## Müzik (v0.6): İKİ oyuncu var (_muzik_a / _muzik_b). `muzik_cal(ad, gecis)` gecis > 0
 ## verilirse yeni parça öteki oyuncuda başlar ve ikisi birden sesi çaprazlar
@@ -30,9 +36,20 @@ const EFEKT := {
 	"sandik": ["powerup", 1.35, -5.0],
 	"uyari": ["blip", 0.6, -6.0],
 	"pervane": ["jump", 1.2, -18.0],
+	"deprem": ["deprem", 1.0, -2.0],          ## depremin kendisi (v0.7, patlamadan ayrı dosya)
+	"deprem_uyari": ["deprem", 1.45, -11.0],  ## uyarının başladığı an: aynı gürültü, tiz ve kısık
 }
 
+## Döngü sesleri: olay -> [dosya, perde, ses (dB)].
+const DONGU := {
+	"matkap": ["matkap", 1.0, -13.0],
+}
+const DONGU_SONUM := 0.12   ## döngü durunca sönüm (sn)
+
 var _kanallar: Array[AudioStreamPlayer] = []
+var _donguler := {}         ## olay -> AudioStreamPlayer
+var _sonenler := {}         ## olay -> Tween (sönmekte olan döngü; dongu_caliyor false sayar)
+var gecmis: Array[String] = []   ## son 32 olay (testler için)
 var _sonraki := 0
 var _muzik_a: AudioStreamPlayer
 var _muzik_b: AudioStreamPlayer
@@ -90,6 +107,59 @@ func cal(olay: String, perde_carpan := 1.0) -> void:
 	p.pitch_scale = clampf(float(e[1]) * perde_carpan, 0.05, 4.0)
 	p.volume_db = float(e[2])
 	p.play()
+	_gec(olay)
+
+func _gec(olay: String) -> void:
+	gecmis.append(olay)
+	if gecmis.size() > 32:
+		gecmis.pop_front()
+
+# --- döngü sesleri (v0.7) -------------------------------------------------
+
+## Döngüyü başlatır; zaten çalıyorsa yalnız perdeyi günceller (baştan almaz).
+## Sönmekteyse sönüm iptal edilir ve ses geri gelir — karo arası kesintide takırtı yok.
+func dongu_baslat(olay: String, perde_carpan := 1.0) -> void:
+	if not DONGU.has(olay) or not bool(ayar.get("efekt_acik", true)):
+		return
+	var e: Array = DONGU[olay]
+	var p: AudioStreamPlayer = _donguler.get(olay)
+	if p == null:
+		var akis := _akis_al(String(e[0]))
+		if akis == null:
+			return
+		if akis is AudioStreamWAV:
+			akis.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			akis.loop_begin = 0
+			akis.loop_end = int(akis.get_length() * float(akis.mix_rate))   ## 0 bırakma (v0.6 dersi)
+		p = AudioStreamPlayer.new()
+		p.bus = "Efekt"
+		p.stream = akis
+		add_child(p)
+		_donguler[olay] = p
+	if _sonenler.has(olay):
+		var t: Tween = _sonenler[olay]
+		if t != null and t.is_valid():
+			t.kill()
+		_sonenler.erase(olay)
+	p.pitch_scale = clampf(float(e[1]) * perde_carpan, 0.05, 4.0)
+	p.volume_db = float(e[2])
+	if not p.playing:
+		p.play()
+		_gec(olay)
+
+## Döngüyü kısa bir sönümle durdurur; dongu_caliyor hemen false döner.
+func dongu_durdur(olay: String) -> void:
+	var p: AudioStreamPlayer = _donguler.get(olay)
+	if p == null or not p.playing or _sonenler.has(olay):
+		return
+	var t := create_tween()
+	t.tween_property(p, "volume_db", SESSIZ_DB, DONGU_SONUM)
+	t.tween_callback(p.stop)
+	_sonenler[olay] = t
+
+func dongu_caliyor(olay: String) -> bool:
+	var p: AudioStreamPlayer = _donguler.get(olay)
+	return p != null and p.playing and not _sonenler.has(olay)
 
 ## Müzik çalar. `gecis` > 0 ise çalan parçadan yenisine o kadar saniyede çaprazlar;
 ## 0 ise anında değişir (menü → bitiş jingle'ı gibi).

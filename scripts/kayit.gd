@@ -4,6 +4,8 @@
 ##   [derin]  Derin Mod — v0.6'dan beri AYRI yuva: ana kayıt (çekirdeği çıkarmış
 ##            dünya, tünelleriyle) yerinde kalır, Derin Mod kendi dünyasında sürer
 ##   [ayar]   ses düzeyleri, tam ekran, oyun hissi
+##   [oyuncu] bütün yuvaların birikimli sayaçları (v0.7): kazılan karo, deprem,
+##            yüzeye çekilme, satış, süre — yuva silinse de kalır (bitiş ekranı okur)
 ##
 ## `aktif` hangi yuvanın oynandığını söyler; menü sahne değiştirmeden önce ayarlar.
 ## Statik değişken olduğu için sahne geçişinde korunur, uygulama kapanınca "oyun"a döner.
@@ -18,6 +20,7 @@ const YOL := "user://kayit.cfg"
 const ANA := "oyun"
 const GUNLUK := "gunluk"
 const DERIN := "derin"
+const OYUNCU := "oyuncu"
 
 static var aktif := ANA
 
@@ -122,6 +125,19 @@ static func derin_mod_hazirla() -> Dictionary:
 	var yeni := {"tohum": randi(), "eserler": eserler, "derin_seviye": seviye}
 	kaydet(yeni, DERIN)
 	return yeni
+
+# --- oyuncu istatistiği (v0.7) --------------------------------------------
+
+static func oyuncu_yukle() -> Dictionary:
+	return yukle(OYUNCU)
+
+## Farkı toplama ekler, toplamı döner (Durum.istatistik_farki ile her kayıtta çağrılır).
+static func oyuncu_biriktir(fark: Dictionary) -> Dictionary:
+	var t := yukle(OYUNCU)
+	for k in fark:
+		t[k] = t.get(k, 0) + fark[k]
+	kaydet(t, OYUNCU)
+	return t
 
 # --- ayarlar --------------------------------------------------------------
 

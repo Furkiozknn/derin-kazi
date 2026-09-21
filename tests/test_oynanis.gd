@@ -51,12 +51,76 @@ func _calis() -> void:
 	var yakit0 := durum.yakit
 	var parca0 := dunya.toplam_uretim
 
+	# --- yüzey karosu ve araç kareleri (v0.7) --------------------------------
+	Kayit.sil(Kayit.OYUNCU)
+	var gorsel: Sprite2D = arac.get_node("Gorsel")
+	dogru(gorsel.hframes == Arac.KARE_SAYISI, "araç sprite'ı %d kareli" % gorsel.hframes)
+	var yuzey_h := Vector2i(Ayarlar.US_KARO_X + 8, 0)
+	dogru(dunya.get_cell_source_id(yuzey_h) == Dunya.YUZEY_KAYNAK
+		and dunya.get_cell_source_id(yuzey_h + Vector2i(0, 3)) == 0,
+		"0. satır yüzey atlasından, altındakiler karolar.png'den çiziliyor")
+	dogru(dunya.karo_tur(yuzey_h) == Ayarlar.TOPRAK, "yüzey karosunun mantıksal türü hâlâ TOPRAK")
+	# Döngü oynatıcı API'si (v0.7): başlat → çalıyor; ikinci başlat baştan almaz; durdur →
+	# hemen "çalmıyor" sayılır (sönüm); sönerken başlat → geri gelir.
+	ses.dongu_baslat("matkap")
+	await _kare(1)
+	dogru(ses.dongu_caliyor("matkap"), "döngü başlatınca oynatıcı çalıyor")
+	var gecmis_n: int = ses.gecmis.size()
+	ses.dongu_baslat("matkap", 1.2)
+	await _kare(1)
+	dogru(ses.dongu_caliyor("matkap") and ses.gecmis.size() == gecmis_n,
+		"ikinci başlatma baştan almıyor (olay yeniden yazılmadı)")
+	ses.dongu_durdur("matkap")
+	dogru(not ses.dongu_caliyor("matkap"), "durdurunca hemen çalmıyor sayılır (sönüm başladı)")
+	ses.dongu_baslat("matkap")
+	await _kare(1)
+	dogru(ses.dongu_caliyor("matkap"), "sönerken yeniden başlatınca ses geri geldi")
+	ses.dongu_durdur("matkap")
+	await _kare(12)
+	dogru(not ses.dongu_caliyor("matkap"), "sönüm bitince oynatıcı durdu")
+	# Palet: yüzeyde sağa yürü — kare palet aralığında ve yolla değişiyor.
+	Input.action_press("sag")
+	await _kare(10)
+	var palet_kareler := {}
+	for i in 4:
+		palet_kareler[gorsel.frame] = true
+		await _kare(3)
+	Input.action_release("sag")
+	var palet_ok := true
+	for k in palet_kareler:
+		if int(k) < Arac.KARE_PALET or int(k) >= Arac.KARE_PALET + Arac.PALET_KARE:
+			palet_ok = false
+	dogru(palet_ok and palet_kareler.size() >= 2, "yürürken palet kareleri dönüyor (%s)" % [palet_kareler.keys()])
+	dogru(not gorsel.flip_h, "sağa giderken ayna yok")
+	Input.action_press("sol")
+	await _kare(30)
+	Input.action_release("sol")
+	dogru(gorsel.flip_h, "sola dönünce sprite aynalandı (yön)")
+	await _kare(5)
+	dogru(gorsel.frame == Arac.KARE_BEKLE, "durunca bekle karesi")
+	arac.usse_don()
+	# Üsse dönen araç -24'ten yere düşer; zemine oturmadan kazamaz. is_on_floor() son
+	# fizik adımının sonucunu söyler (ışınlanmadan önce yerdeydi) — önce iki kare geçsin.
+	await _kare(2)
+	for bekle0 in 120:
+		if arac.is_on_floor():
+			break
+		await physics_frame
+	await _kare(3)
+
 	# --- 25 saniye aşağı kaz --------------------------------------------
 	durum.matkap = Ayarlar.EN_YUKSEK_SEVIYE   ## kapı bu aşamada test edilmiyor
 	Input.action_press("asagi")
-	await _kare(1500)
+	await _kare(4)
+	dogru(arac.kaziyor_mu() and ses.dongu_caliyor("matkap"), "kazı başlayınca matkap döngüsü çalıyor")
+	dogru(gorsel.frame >= Arac.KARE_KAZ and gorsel.frame < Arac.KARE_KAZ + Arac.KAZ_KARE,
+		"kazarken matkap karesi (%d)" % gorsel.frame)
+	await _kare(1496)
 	Input.action_release("asagi")
 	await _kare(10)
+	await _kare(30)   ## Arac.KAZMA_KUYRUK (0,3 sn) + sönüm
+	dogru(not arac.kaziyor_mu() and not ses.dongu_caliyor("matkap"), "kazı durunca matkap sesi sustu")
+	dogru(durum.kazilan_karo >= 10, "kazılan karo sayacı arttı (%d)" % durum.kazilan_karo)
 
 	var derinlik := arac.derinlik()
 	dogru(derinlik > 15, "aşağı kazarak derinleşti (%d m)" % derinlik)
@@ -118,10 +182,20 @@ func _calis() -> void:
 	# --- pervane ---------------------------------------------------------
 	var y0 := arac.global_position.y
 	Input.action_press("yukari")
-	await _kare(90)
+	await _kare(30)
+	var alev := {}
+	for i in 3:
+		alev[gorsel.frame] = true
+		await _kare(5)
+	await _kare(45)
 	Input.action_release("yukari")
 	dogru(arac.global_position.y < y0, "pervane ile tünelde yükseldi (%.0f → %.0f px)"
 		% [y0, arac.global_position.y])
+	var alev_ok := true
+	for k in alev:
+		if int(k) < Arac.KARE_UCUS or int(k) >= Arac.KARE_UCUS + Arac.UCUS_KARE:
+			alev_ok = false
+	dogru(alev_ok and alev.size() >= 2, "uçarken alev kareleri değişiyor (%s)" % [alev.keys()])
 
 	var yuk0 := durum.yuk_toplam()
 	Input.action_press("yukari")
@@ -231,6 +305,7 @@ func _calis() -> void:
 	var uyari_a := float(sahne.get("_deprem_uyari"))
 	dogru(uyari_a > 0.0 and not durum.deprem_bekliyor,
 		"yeraltına inince uyarı kendiliğinden başladı (%.1f sn)" % uyari_a)
+	dogru(ses.gecmis.has("deprem_uyari"), "uyarı depremin kendi gürültüsüyle başladı (patlama değil)")
 	dogru(absf(uyari_a - Deprem.uyari_suresi(sefer_h.y)) < 0.25
 		and int(sahne.get("_deprem_uyari_derinlik")) == sefer_h.y,
 		"uyarı süresi ve derinliği %d m'ye göre (%.1f sn)" % [sefer_h.y, Deprem.uyari_suresi(sefer_h.y)])
@@ -342,6 +417,7 @@ func _calis() -> void:
 	sahne.set("_deprem_uyari_derinlik", arac.derinlik())
 	sahne.call("_deprem_uygula")
 	await _kare(30)
+	dogru(ses.gecmis.has("deprem"), "deprem kendi gürültüsünü çaldı (deprem.wav, patlama değil)")
 	dogru(dunya.kazilan.size() < tunel0, "deprem tünellerin bir kısmını kapattı (%d → %d)"
 		% [tunel0, dunya.kazilan.size()])
 	dogru(dunya.eklenen.size() > 0, "deprem yeni karolar ekledi (%d)" % dunya.eklenen.size())
@@ -425,7 +501,7 @@ func _calis() -> void:
 			for b in c.get_children():
 				if b is Button:
 					alanlar.append(["%s/%s" % [c.name, b.text], Rect2(b.global_position, b.size)])
-	dogru(alanlar.size() == 9, "dokunmatikte 4 kazı alanı + 5 düğme var (%d)" % alanlar.size())
+	dogru(alanlar.size() == 10, "dokunmatikte 4 kazı alanı + 6 düğme var (%d)" % alanlar.size())
 	var tasan := ""
 	var ekran := Rect2(0, 0, Ayarlar.EKRAN_G, Ayarlar.EKRAN_Y)
 	for a in alanlar:
@@ -474,6 +550,65 @@ func _calis() -> void:
 	dogru(bool(sahne.get("_radar_acik")), "radar düğmesi radarı açtı")
 	radar_dgm.pressed.emit()
 	dogru(not bool(sahne.get("_radar_acik")), "radar düğmesi radarı kapattı")
+
+	# --- ışınlama işareti (v0.7) --------------------------------------------
+	# İŞARET düğmesi yeraltında işaret koyar; işaret sahnede (sprite) ve mini haritada;
+	# üsten ışınlanma panelinden tek seferlik gidilir ve silinir; üsse ışınlanma değişmedi.
+	var isaret_dgm: Button = sahne.get("_dgm_isaret")
+	await _kare(2)   ## dinamit altı açtı; is_on_floor() bayat kalmasın
+	for bekle2 in 180:
+		if arac.is_on_floor():
+			break
+		await physics_frame
+	await _kare(3)
+	isaret_dgm.pressed.emit()
+	await _kare(2)
+	var isaret_h := arac.hucre()
+	dogru(durum.isaret_var() and durum.isaret == isaret_h,
+		"İŞARET düğmesi işareti aracın hücresine koydu (%d m)" % isaret_h.y)
+	sahne.call("_hud_yenile")
+	dogru(isaret_dgm.text.contains("%d m" % isaret_h.y), "düğme işaretin derinliğini yazıyor (%s)" % isaret_dgm.text)
+	var nesne_sayisi := sahne.get_node("Nesneler").get_child_count()
+	dogru(nesne_sayisi >= 1, "işaret sprite'ı sahnede (%d nesne)" % nesne_sayisi)
+	arac.usse_don()
+	await _kare(5)
+	sahne.call("_harita_ciz")
+	var harita_im: Image = sahne.get("_harita_son")   ## headless'ta doku okunmaz; çizilen son kare
+	dogru(harita_im != null and harita_im.get_pixelv(isaret_h).is_equal_approx(Color("b55088")),
+		"mini haritada işaret pembe")
+	sahne.call("_isinlanma_ac")
+	await _kare(2)
+	var isaret_satir: Button = null
+	var us_satir_var := false
+	for b2 in sahne.get_node("HUD/Isinlanma/M/V/Kaydir/Liste").get_children():
+		if b2 is Button and String(b2.text).contains("İşarete"):
+			isaret_satir = b2
+		if b2 is Button and String(b2.text).contains("Yüzeye dön"):
+			us_satir_var = true
+	dogru(isaret_satir != null and not isaret_satir.disabled and us_satir_var,
+		"ışınlanma panelinde işaret satırı üsten açık, üs satırı yerinde")
+	isaret_satir.pressed.emit()
+	await _kare(30)   ## 0,2 sn karartma + ışınlanma
+	dogru(arac.hucre().distance_squared_to(isaret_h) <= 2,
+		"işarete ışınlanıldı (%s → %s)" % [isaret_h, arac.hucre()])
+	dogru(not durum.isaret_var(), "işaret kullanılınca silindi (tek kullanımlık)")
+	dogru(sahne.get_node("Nesneler").get_child_count() == nesne_sayisi - 1, "işaret sprite'ı kaldırıldı")
+	sahne.call("_isinlanma_ac")
+	await _kare(2)
+	var satir_kaldi := false
+	for b3 in sahne.get_node("HUD/Isinlanma/M/V/Kaydir/Liste").get_children():
+		if b3 is Button and String(b3.text).contains("İşarete"):
+			satir_kaldi = true
+	dogru(not satir_kaldi, "panelde işaret satırı kalmadı")
+	sahne.call("_panelleri_kapat")
+	arac.isinlan(Vector2(Ayarlar.US_X, -24.0))
+	await _kare(20)
+	dogru(arac.usste_mi(), "üsse ışınlanma davranışı değişmedi")
+	sahne.call("_isaret_koy")
+	dogru(not durum.isaret_var(), "üste işaret konmaz")
+	sahne.call("_kaydet")
+	dogru(PackedInt32Array(Kayit.yukle().get("isaret", PackedInt32Array())) == PackedInt32Array([-1, -1]),
+		"işaret yokken kayıt işaretsiz yazılıyor")
 	sahne.set("_dokunmatik", false)
 
 	sahne.call("_kaydet")
@@ -530,6 +665,26 @@ func _calis() -> void:
 	dogru(varyant_sayim.size() > 1, "ekranda birden çok karo varyantı çizili (%d)"
 		% varyant_sayim.size())
 
+	# --- bitiş ekranı istatistiği (v0.7) ---------------------------------------
+	# Sayaçlar sahne testi boyunca arttı; panel bu dünyayı ve [oyuncu] toplamını
+	# yazıyor ve 640×360 temel çözünürlüğe sığıyor.
+	arac.usse_don()
+	await _kare(5)
+	var karo_n := durum.kazilan_karo
+	var deprem_n := durum.deprem
+	dogru(karo_n > 20 and deprem_n >= 5, "sahne testi boyunca sayaçlar arttı (%d karo, %d deprem)" % [karo_n, deprem_n])
+	sahne.call("_kazandi")
+	await _kare(3)
+	var bitis: PanelContainer = sahne.get_node("HUD/Bitis")
+	var bitis_metin: String = sahne.get_node("HUD/Bitis/M/V/Metin").text
+	dogru(bitis.visible and bitis_metin.contains("%d karo kazıldı" % karo_n) and bitis_metin.contains("%d deprem" % deprem_n),
+		"bitiş paneli bu dünyanın sayaçlarını yazıyor")
+	var toplam := Kayit.oyuncu_yukle()
+	dogru(int(toplam.get("kazilan_karo", 0)) >= karo_n and bitis_metin.contains("Toplam"),
+		"[oyuncu] toplamı yazıldı ve panelde (%d karo)" % int(toplam.get("kazilan_karo", 0)))
+	dogru(bitis.size.x <= Ayarlar.EKRAN_G and bitis.size.y <= Ayarlar.EKRAN_Y,
+		"bitiş paneli 640×360'a sığıyor (%.0f×%.0f)" % [bitis.size.x, bitis.size.y])
+
 	# Bellek özeti sahne SERBEST BIRAKILMADAN önce alınır: aşağıda oyun sahnesi
 	# kapatılıyor, sonrasında dunya'ya dokunmak serbest bırakılmış nesne hatası
 	# verir ve test quit() e hiç gelmez (bir kez öyle asıldı).
@@ -563,6 +718,7 @@ func _calis() -> void:
 	dogru(dunya5.kesif_sayisi() > 50 and not durum5.derin_mi() and durum5.isik_yaricap() == Ayarlar.ISIK_YARICAP,
 		"v0.5 keşfi yerinde (%d hücre), ilk oyun olarak sürüyor" % dunya5.kesif_sayisi())
 	dogru(String(sahne5.get_node("HUD/Katman").text).find("DERİN") < 0, "HUD'da Derin Mod etiketi yok")
+	dogru(not durum5.isaret_var() and durum5.kazilan_karo == 0, "v0.5 kaydı işaretsiz ve sıfır sayaçla açıldı (v0.7)")
 	dogru(sahne5.get("_ambiyans") != null and ses.calan_muzik() == "muzik",
 		"v0.6 ambiyansı eski kayıtla da kuruldu")
 	sahne5.call("_kaydet")
@@ -644,6 +800,7 @@ func _calis() -> void:
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	Kayit.sil()
 	Kayit.sil(Kayit.DERIN)
+	Kayit.sil(Kayit.OYUNCU)
 	quit(1 if _hata > 0 else 0)
 
 static func _renk_uzaklik(a: Color, b: Color) -> float:

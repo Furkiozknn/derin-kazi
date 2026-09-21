@@ -28,7 +28,9 @@ func _initialize() -> void:
 	var kok := ProjectSettings.globalize_path("res://assets/sprites/")
 	DirAccess.make_dir_recursive_absolute(kok)
 	_yaz(kok + "karolar.png", _karolar())
+	_yaz(kok + "yuzey.png", _yuzey())
 	_yaz(kok + "arac.png", _arac())
+	_yaz(kok + "isaret.png", _isaret())
 	_yaz(kok + "us.png", _us())
 	_yaz(kok + "gok.png", _gok())
 	_yaz(kok + "tepeler.png", _tepeler())
@@ -271,16 +273,58 @@ func _eser(im: Image, ox: int) -> void:
 		nokta(im, ox + 2, 3 + i * 4, c(11))
 		nokta(im, ox + 13, 5 + i * 3, c(11))
 
+# --- yüzey karosu (v0.7) --------------------------------------------------
+
+## 0. satırın toprağı için ayrı "üst" karo seti: YUZEY_VARYANT sütun, tek satır.
+## Üstte çimen, altında ince kum sınırı, gerisi toprak dokusu. İlk iki piksel
+## satırı kırık: çimen yaprakları ve çukurlar gökyüzüne açılıyor — v0.6'ya kadar
+## yüzeyle gök arasındaki birleşim ekran boyunca dümdüz tek bir çizgiydi.
+## Karo türü hâlâ TOPRAK (üretici, kazı, kayıt değişmedi); yalnız görünüm
+## (Dunya._tileset_kur ikinci atlas kaynağı olarak bağlıyor).
+func _yuzey() -> Image:
+	rng.seed = 707
+	var im := _bos(K * Ayarlar.YUZEY_VARYANT, K)
+	var tb: Array = _tabanlar()[0]
+	for v in Ayarlar.YUZEY_VARYANT:
+		var ox := v * K
+		_kaya_dokusu(im, ox, tb[0], tb[1], tb[2], EGIM[v % EGIM.size()])
+		# Çimen bandı (2-3. satır) ve kum sınırı (4. satır): sınır da düz değil.
+		kutu(im, ox, 2, K, 2, c(13))
+		for x in K:
+			if rng.randi() % 3 == 0:
+				nokta(im, ox + x, 2, c(12))
+			if rng.randi() % 4 == 0:
+				nokta(im, ox + x, 3, c(14))
+			var kum := c(31) if rng.randi() % 5 != 0 else c(3)
+			nokta(im, ox + x, 4 if rng.randi() % 6 != 0 else 5, kum)
+		# İlk iki satır: gökyüzü + yaprak/tutam. Her varyantta başka yerde.
+		kutu(im, ox, 0, K, 2, Color(0, 0, 0, 0))
+		var tutam := 3 + rng.randi() % 3
+		for i in tutam:
+			var x := rng.randi() % K
+			nokta(im, ox + x, 1, c(13))
+			if rng.randi() % 2 == 0:
+				nokta(im, ox + x, 0, c(12))
+		# Bir çukur: çimen bandının kendisi de bir yerde bir piksel çöker.
+		var cukur := 1 + rng.randi() % (K - 4)
+		kutu(im, ox + cukur, 2, 2 + rng.randi() % 2, 1, Color(0, 0, 0, 0))
+		nokta(im, ox + cukur, 3, c(14))
+	return im
+
 # --- araç -----------------------------------------------------------------
 
-## 4 kare: 0 bekle · 1-2 kazma (matkap döner) · 3 pervane (uçuş)
+## 9 kare (scripts/arac.gd KARE_* sabitleri ve oyun.tscn hframes ile aynı düzen):
+##   0     bekle
+##   1-2   kazma: matkap dişleri kayar
+##   3-5   palet dönüşü (v0.7): 3 px periyotlu desen her karede 1 px kayar, 3. kare
+##         0. kareye döner (dikişsiz); bekle/kazma karelerinde desen 0. konumda
+##   6-8   uçuş (v0.7): pervane alevi boy ve çekirdek değiştirir, gövde 1 px yukarıda
 func _arac() -> Image:
-	var im := _bos(K * 4, K)
-	for k in 4:
+	var im := _bos(K * 9, K)
+	for k in 9:
 		var ox := k * K
-		var yy := 0
-		if k == 3:
-			yy = -1                       # uçarken hafif yukarı kayar
+		var ucus := k >= 6
+		var yy := -1 if ucus else 0     # uçarken hafif yukarı kayar
 		# gövde
 		kutu(im, ox + 2, 4 + yy, 12, 7, c(6))
 		kutu(im, ox + 3, 5 + yy, 10, 5, c(10))
@@ -289,27 +333,64 @@ func _arac() -> Image:
 		kutu(im, ox + 4, 3 + yy, 6, 3, c(6))
 		kutu(im, ox + 5, 4 + yy, 4, 2, c(17))
 		nokta(im, ox + 5, 4 + yy, c(18))
-		# paletler
+		# paletler: desen 3 px periyotlu, palet karelerinde kayar
+		var kayma := (k - 3) if k >= 3 and k <= 5 else 0
 		kutu(im, ox + 2, 11 + yy, 12, 3, c(24))
 		kutu(im, ox + 3, 12 + yy, 10, 1, c(22))
-		for i in 5:
-			nokta(im, ox + 3 + i * 2 + (k % 2), 12 + yy, c(20))
+		for i in 4:
+			nokta(im, ox + 2 + (i * 3 + kayma) % 12, 12 + yy, c(20))
+			nokta(im, ox + 2 + (i * 3 + kayma + 1) % 12, 11 + yy, c(23))
 		# matkap (aşağı bakar): koyu dış hat + parlak dişler, kazma karelerinde kayar
+		var kaziyor := k == 1 or k == 2
 		kutu(im, ox + 5, 10 + yy, 6, 5, c(25))
 		kutu(im, ox + 6, 10 + yy, 4, 4, c(21))
 		kutu(im, ox + 6, 10 + yy, 1, 4, c(20))
-		var d := c(19) if k == 1 or k == 2 else c(20)
+		var d := c(19) if kaziyor else c(20)
+		var dis := k if kaziyor else 0
 		for i in 4:
-			if (i + k) % 2 == 0:
+			if (i + dis) % 2 == 0:
 				nokta(im, ox + 6 + i, 14 + yy, d)
 			else:
 				nokta(im, ox + 6 + i, 13 + yy, d)
-		# egzoz / pervane alevi
-		if k == 3:
-			kutu(im, ox + 4, 14, 2, 2, c(9))
-			kutu(im, ox + 10, 14, 2, 2, c(9))
-			nokta(im, ox + 5, 15, c(11))
-			nokta(im, ox + 10, 15, c(11))
+		# pervane alevi: matkabın iki yanındaki egzozdan aşağı, üç ayrı kare
+		if ucus:
+			_alev(im, ox + 3, k - 6)
+			_alev(im, ox + 11, k - 6)
+	return im
+
+## Egzoz alevi (2 px geniş, 13-15. satırlar). 0: kısa · 1: uzun, parlak çekirdek · 2: alçak, kıvılcımlı
+func _alev(im: Image, x: int, kare: int) -> void:
+	match kare:
+		0:
+			kutu(im, x, 13, 2, 2, c(9))
+			nokta(im, x, 13, c(10))
+		1:
+			kutu(im, x, 13, 2, 3, c(9))
+			nokta(im, x + 1, 13, c(11))
+			nokta(im, x, 14, c(10))
+			nokta(im, x + 1, 15, c(8))
+		2:
+			kutu(im, x, 14, 2, 2, c(9))
+			nokta(im, x + 1, 13, c(11))
+			nokta(im, x, 15, c(8))
+
+## Işınlama işareti (v0.7): direk + pembe flama, dibi ışıklı. Işınlanma panelinden
+## tek seferlik dönüş noktası; istasyondan ayrı okunmalı (istasyon mavi, bu pembe).
+func _isaret() -> Image:
+	var im := _bos(K, K)
+	kutu(im, 7, 2, 2, 13, c(21))
+	kutu(im, 8, 2, 1, 13, c(23))
+	nokta(im, 7, 1, c(19))
+	# flama: sağa açılan üçgen
+	for i in 4:
+		kutu(im, 9, 3 + i, 5 - i, 1, c(28))
+	nokta(im, 9, 3, c(29))
+	nokta(im, 10, 4, c(29))
+	# taban ve ışık
+	kutu(im, 5, 14, 6, 2, c(24))
+	kutu(im, 6, 14, 4, 1, c(22))
+	nokta(im, 4, 15, c(28))
+	nokta(im, 11, 15, c(28))
 	return im
 
 # --- yüzey kasabası -------------------------------------------------------

@@ -98,7 +98,7 @@ shape = SubResource("Sekil_1")
 
 [node name="Gorsel" type="Sprite2D" parent="Arac"]
 texture = ExtResource("9_arac")
-hframes = 4
+hframes = 9
 
 [node name="Kamera" type="Camera2D" parent="Arac"]
 zoom = Vector2(2, 2)
@@ -520,10 +520,13 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="Metin" type="Label" parent="HUD/Bitis/M/V"]
+custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+theme_override_font_sizes/font_size = 12
 text = "..."
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Menu" type="Button" parent="HUD/Bitis/M/V"]
 layout_mode = 2

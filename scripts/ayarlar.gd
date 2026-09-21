@@ -43,6 +43,14 @@ const VARYANT_SAYISI := 5
 ## Taban kayaları: varyant konumdan gelir.
 const VARYANTLI := [TOPRAK, TAS, SERT, BAZALT, OBSIDYEN]
 
+## Yüzey karosu (v0.7): 0. satırdaki toprak ayrı bir atlastan (yuzey.png, çimen üstü
+## kırık kenarlı) çizilir; YUZEY_VARYANT sütunu var, seçim sütundan belirlenimci.
+## Karo türü hâlâ TOPRAK — üretici, kazı ve kayıt bilmez; Dunya._parca_yukle seçer.
+const YUZEY_VARYANT := 4
+
+static func yuzey_varyant(x: int) -> int:
+	return absi(hash(x * 13 + 5)) % YUZEY_VARYANT
+
 ## Karonun atlastaki satırı. Tehlike karolarının (gaz, gevşek, lav, sandık, eser)
 ## varyantı YOK — deseni bir bakışta tanınmalı.
 static func varyant(x: int, y: int, t: int) -> int:

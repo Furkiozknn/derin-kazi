@@ -24,7 +24,8 @@ func _kare(n: int) -> void:
 func _yaz(ad: String) -> void:
 	await _kare(3)
 	var im := root.get_texture().get_image()
-	im.save_png(ProjectSettings.globalize_path(CIKTI + ad))
+	var yol := ad if ad.begins_with("res://") else CIKTI + ad
+	im.save_png(ProjectSettings.globalize_path(yol))
 	print("  %s  %dx%d" % [ad, im.get_width(), im.get_height()])
 
 ## Aracın çevresini oyar: derine ışınlanınca kayanın içinde gömülü görünmesin.
@@ -75,7 +76,8 @@ func _calis() -> void:
 	sahne.call("_panelleri_kapat")
 	await _kare(10)
 
-	# 4 — derin katman: bazalt, mini harita, radar, istasyon
+	# 4 — derin katman: bazalt, mini harita, radar, istasyon, ışınlama işareti (v0.7),
+	#     pervane alevi (araç uçarken), deprem panosu
 	durum.matkap = Ayarlar.EN_YUKSEK_SEVIYE
 	durum.depo = 3
 	durum.govde = 2
@@ -95,15 +97,21 @@ func _calis() -> void:
 	for i in 30:
 		sahne.call("_harita_ac", derin + Vector2i(randi_range(-8, 8), randi_range(-30, 6)))
 	await _kare(40)
+	sahne.call("_isaret_koy")   ## işaret aracın durduğu hücreye; araç sağa yürüyünce görünür
 	Input.action_press("sag")
 	await _kare(40)
 	Input.action_release("sag")
+	# Pervane: alev kareleri (v0.7) — araç odanın içinde birkaç kare yükselir.
+	Input.action_press("yukari")
+	await _kare(14)
 	# Deprem panosu: kararın iki ucu ekranda (v0.5'in okunurluk işi).
 	sahne.set("_deprem_uyari_derinlik", arac.derinlik())
 	sahne.set("_deprem_uyari", 7.4)
 	sahne.call("_hud_yenile")
 	await _yaz("ekran-4.png")
+	Input.action_release("yukari")
 	sahne.set("_deprem_uyari", 0.0)
+	await _kare(30)
 
 	# 6 — Derin Mod (v0.6): dar ışık (3 karo), HUD etiketi, taş bandında toz.
 	# Aynı sahnede seviye geçici olarak 1 yapılıyor; kaydedilmiyor.
@@ -123,8 +131,18 @@ func _calis() -> void:
 	sahne.call("_kesif_yenile", true)
 
 	await _telefon()
+	await _bitis()
 	await _kapak()
 	quit(0)
+
+## Bitiş ekranı istatistiği (v0.7): panel 640x360'a sığıyor mu, döküm okunuyor mu — gözle.
+func _bitis() -> void:
+	arac.usse_don()
+	durum.kazilan_karo = maxi(durum.kazilan_karo, 1)
+	await _kare(20)
+	sahne.call("_kazandi")
+	await _kare(10)
+	await _yaz("res://docs/bitis.png")
 
 ## Telefon oranında oyun karesi: dokunmatik düğme şeridi 640x360'a sığıyor mu,
 ## alet düğmeleri (DİNAMİT · RADAR) kazı alanlarının üstüne biniyor mu — gözle

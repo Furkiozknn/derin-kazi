@@ -55,6 +55,7 @@ var _titreyen := []     ## {"h": Vector2i, "t": float, "s": Sprite2D}
 var _dusenler := []     ## {"s": Sprite2D, "hiz": float}
 var _harita_img: Image
 var _harita_doku: ImageTexture
+var _harita_son: Image        ## son çizilen harita karesi (işaret/istasyon katmanıyla; test okur)
 var _harita_zaman := 0.0
 var _ipucu_sabit := ""
 var _ipucu_sure := 0.0
@@ -67,6 +68,8 @@ var _cekiliyor := false
 var _son_hucre := Vector2i(1 << 30, 1 << 30)   ## keşif sisi bu değişince yenilenir
 var _dgm_dinamit: Button                       ## dokunmatik alet düğmeleri (yoksa null)
 var _dgm_radar: Button
+var _dgm_isaret: Button
+var _isaret_ogretildi := false                 ## işaret ipucu oturumda bir kez (30 m'yi ilk geçişte)
 var _ambiyans: CPUParticles2D                  ## banda göre toz / kıvılcım (araca bağlı)
 var _bant := -1                                ## şu anki ambiyans bandı (Ayarlar.AMBIYANS)
 
@@ -93,6 +96,7 @@ func _ready() -> void:
 	arac.hasar_alindi.connect(_hasar_alindi)
 	arac.patlama.connect(_patlama)
 	arac.sandik_acildi.connect(_sandik_acildi)
+	arac.kazma_degisti.connect(_kazma_degisti)
 
 	$HUD/Duraklat/M/V/Devam.pressed.connect(_duraklat_kapat)
 	$HUD/Duraklat/M/V/Ayar.pressed.connect(_ayar_ac)
@@ -125,6 +129,7 @@ func _process(delta: float) -> void:
 	_tehlike_isle(delta)
 	_sandik_kontrol()
 	_kacis_kontrol()
+	_isaret_ogret()
 	if _ipucu_sure > 0.0:
 		_ipucu_sure -= delta
 	_harita_zaman -= delta
@@ -157,6 +162,9 @@ func _unhandled_input(olay: InputEvent) -> void:
 	elif olay.is_action_pressed("isinlan") and not _panel_acik():
 		_isinlanma_ac()
 		get_viewport().set_input_as_handled()
+	elif olay.is_action_pressed("isaret") and not _panel_acik():
+		_isaret_koy()
+		get_viewport().set_input_as_handled()
 	elif olay.is_action_pressed("harita") and not _panel_acik():
 		_harita.visible = not _harita.visible
 		_harita_zaman = 0.0
@@ -182,6 +190,48 @@ func _radar_degistir() -> void:
 	_radar_acik = not _radar_acik
 	Ses.cal("menu")
 	_kesif_yenile(true)   ## radar sisi geçici açar / kapatır
+
+# --- ışınlama işareti (v0.7) ----------------------------------------------
+## İstasyon dışında tek kullanımlık dönüş noktası: yeraltında R (ya da İŞARET düğmesi)
+## işareti aracın hücresine koyar, yenisi eskisini taşır. Işınlanma panelinde
+## "İşarete ışınlan" satırı çıkar — asansör kuralı aynı: üsten ya da bir istasyondan
+## gidilir, gidince işaret silinir. Bot bunu bilmez; ölçüm değişmez.
+
+func _isaret_koy() -> void:
+	if arac.usste_mi():
+		_ipucu_goster("İşaret üste konmaz — yeraltında koy.", 1.5)
+		return
+	durum.isaret = arac.hucre()
+	Ses.cal("menu")
+	_nesne_yenile()
+	_ipucu_goster(Ipucu.isaret_kondu(durum.isaret.y, _dokunmatik), 2.5)
+
+func _isaret_isinla() -> void:
+	if not durum.isaret_var():
+		return
+	var h := durum.isaret
+	durum.isaret = Durum.ISARET_YOK
+	# Deprem işaretin hücresini doldurmuş olabilir (istasyon gibi korunmuyor; kapanan
+	# hücre hep kazılabilir): varışta açılır, araç kayanın içinde kalmaz.
+	if dunya.karo_tur(h) != Ayarlar.BOS:
+		dunya.karo_kir(h)
+	_nesne_yenile()
+	_isinla(dunya.hucre_merkezi(h))
+
+func _isaret_ogret() -> void:
+	if _isaret_ogretildi or durum.isaret_var() or durum.kazandi or arac.derinlik() < 30:
+		return
+	_isaret_ogretildi = true
+	_ipucu_goster(Ipucu.isaret_ogret(_dokunmatik), 4.0)
+
+## Matkap döngü sesi (v0.7): kazı başlayınca çalar, kesilince kısa kuyrukla söner
+## (kuyruk Arac.KAZMA_KUYRUK). Perde matkap seviyesiyle tizleşir — geliştirme kulakla da
+## fark edilsin.
+func _kazma_degisti(kaziyor: bool) -> void:
+	if kaziyor:
+		Ses.dongu_baslat("matkap", 0.9 + 0.08 * float(durum.matkap))
+	else:
+		Ses.dongu_durdur("matkap")
 
 # --- keşif sisi -----------------------------------------------------------
 
@@ -267,6 +317,7 @@ func _alet_dugmeleri() -> void:
 	else:
 		_dgm_radar.text = "RADAR KAPA" if _radar_acik else "RADAR AÇ"
 	_dgm_radar.disabled = not radar_var
+	_dgm_isaret.text = ("İŞARET %d m" % durum.isaret.y) if durum.isaret_var() else "İŞARET KOY"
 
 ## Ana oyun dışındaki modun HUD etiketi (günlük dünya / Derin Mod).
 func _mod_etiketi() -> String:
@@ -600,10 +651,20 @@ func _kazandi() -> void:
 	if durum.derin_mi():
 		sonraki_mod = "Derin Mod x%d tamamlandı. Menüde x%d açıldı — eserlerin seninle gelir." % [
 			durum.derin_seviye, durum.derin_seviye + 1]
-	$HUD/Bitis/M/V/Metin.text = "ÇEKİRDEK ÇIKARILDI!\n\nSüre: %s\nEn derin: %d m\nPara: %d ₺\nEser: %d/%d\nTohum kodu: %s\n\n%s\n\n%s" % [
-		_sure_metni(durum.sure), durum.en_derin, durum.para,
-		durum.eser_toplanan(), durum.eser_sayisi(), TohumKodu.kodla(durum.tohum), son, sonraki_mod]
+	$HUD/Bitis/M/V/Metin.text = bitis_metni(durum, Kayit.oyuncu_yukle(), son, sonraki_mod)
 	_bitis.visible = true
+
+## Bitiş ekranının dökümü (v0.7): bu dünyanın sayaçları + [oyuncu] toplamı. Saf —
+## test sahne kurmadan metni sınıyor. `toplam` _kaydet'ten SONRA okunmalı ki bu koşu
+## toplama girmiş olsun. Satırlar 480 px'e sarılır (oyun.tscn autowrap), 640×360'a sığar.
+static func bitis_metni(d: Durum, toplam: Dictionary, son: String, sonraki_mod: String) -> String:
+	var s := d.istatistik()
+	return "ÇEKİRDEK ÇIKARILDI!\n\nSüre %s  •  En derin %d m  •  Para %d ₺  •  Eser %d/%d  •  Tohum %s\n\nBu dünya:  %d karo kazıldı  •  %d deprem  •  %d yüzeye çekilme  •  %d ₺ satış\nToplam (bütün dünyalar):  %d karo  •  %d deprem  •  %d çekilme  •  %d ₺ satış  •  %s oyun\n\n%s\n\n%s" % [
+		_sure_metni(d.sure), d.en_derin, d.para, d.eser_toplanan(), d.eser_sayisi(), TohumKodu.kodla(d.tohum),
+		int(s["kazilan_karo"]), int(s["deprem"]), int(s["olum"]), int(s["satis_toplam"]),
+		int(toplam.get("kazilan_karo", 0)), int(toplam.get("deprem", 0)), int(toplam.get("olum", 0)),
+		int(toplam.get("satis_toplam", 0)), _sure_metni(float(toplam.get("sure", 0.0))),
+		son, sonraki_mod]
 
 static func _sure_metni(s: float) -> String:
 	return "%d:%02d" % [int(s) / 60, int(s) % 60]
@@ -645,7 +706,7 @@ func _deprem_isle(delta: float) -> void:
 ## Oyuncu kazmaya bakarken HUD'ın alt şeridini görmüyor; işaret bakışı kaldırıyor.
 func _deprem_isareti() -> void:
 	Ses.cal("uyari", 0.45)
-	Ses.cal("patlama", 0.35)
+	Ses.cal("deprem_uyari")   ## v0.7: depremin kendi gürültüsü (tiz, kısık), patlama sesi değil
 	sars(4.0)
 	_isaret.color.a = 0.32
 	create_tween().tween_property(_isaret, "color:a", 0.0, 0.5)
@@ -667,7 +728,7 @@ func _deprem_uygula() -> void:
 	_harita_guncelle(kapanan)
 	_harita_guncelle(yeni.keys())
 	sars(12.0)
-	Ses.cal("patlama")
+	Ses.cal("deprem")   ## v0.7: düşük frekanslı sarsıntı + çatırtı (tools/ses_uret.gd), patlama değil
 	_toz(arac.global_position, _karo_renk(Ayarlar.TOPRAK), 30, 160.0)
 	# Oyuncunun kararının karşılığı: yüzeye çıktıysa ikramiye, derinde kaldıysa hasar.
 	var k := Deprem.karar(_deprem_uyari_derinlik, arac.derinlik())
@@ -911,6 +972,9 @@ func _isinlanma_yenile() -> void:
 		var hedef: Vector2i = i
 		_dugme(liste, "İstasyon — %d m" % hedef.y, not hub or absi(hedef.y - h.y) < 2,
 			_isinla.bind(dunya.hucre_merkezi(hedef)))
+	if durum.isaret_var():
+		_dugme(liste, "İşarete ışınlan — %d m  (tek kullanımlık, sonra silinir)" % durum.isaret.y,
+			not hub or durum.isaret.distance_squared_to(h) <= 2, _isaret_isinla)
 	if durum.istasyon_kiti <= 0:
 		_dugme(liste, "İstasyon kiti yok — üsten al", true, _bos_islem)
 	elif durum.istasyon_kurulabilir(h):
@@ -955,6 +1019,11 @@ func _nesne_yenile() -> void:
 		s2.region_rect = Rect2(Ayarlar.SANDIK * Ayarlar.KARO, 0, Ayarlar.KARO, Ayarlar.KARO)
 		s2.global_position = dunya.hucre_merkezi(Vector2i(sd["h"]))
 		_nesneler.add_child(s2)
+	if durum.isaret_var():
+		var s3 := Sprite2D.new()
+		s3.texture = load("res://assets/sprites/isaret.png")
+		s3.global_position = dunya.hucre_merkezi(durum.isaret)
+		_nesneler.add_child(s3)
 
 # --- mini harita ----------------------------------------------------------
 
@@ -1010,11 +1079,14 @@ func _harita_ciz() -> void:
 	for sd in durum.dusen_sandiklar:
 		if dunya.kesfedildi_mi(Vector2i(sd["h"])):
 			im.set_pixelv(Vector2i(sd["h"]), Color("63c74d"))
+	if durum.isaret_var() and dunya.kesfedildi_mi(durum.isaret):
+		im.set_pixelv(durum.isaret, Color("b55088"))   ## işaret: pembe (istasyon camgöbeği)
 	var m := arac.hucre()
 	for d: Vector2i in [Vector2i.ZERO, Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 		var p := m + d
 		if p.x >= 0 and p.y >= 0 and p.x < Ayarlar.GENISLIK and p.y < Ayarlar.DERINLIK:
 			im.set_pixelv(p, Color.WHITE)
+	_harita_son = im
 	_harita_doku.update(im)
 
 # --- paneller, ayarlar, kayıt ---------------------------------------------
@@ -1045,12 +1117,15 @@ func _ayar_ac() -> void:
 ## alıyor, sabit listeden değil).
 ##
 ## Yerleşim:
-##   sağ üst      Üs · Harita · ■            (y 4..26,  boş şerit)
-##   sol orta     DİNAMİT · RADAR (dikey)    (y 148..242, ◀ alanının üstünde)
-##   alt/orta     ◀ ▼KAZ ▶ ve ▲UÇ            (scenes/oyun.tscn, değişmedi)
+##   sağ üst      Üs · Harita · ■                    (y 4..26,  boş şerit)
+##   sol orta     DİNAMİT · RADAR · İŞARET (dikey)   (y 100..244, ◀ alanının üstünde,
+##                                                    Katman etiketinin (y 21..44) altında)
+##   alt/orta     ◀ ▼KAZ ▶ ve ▲UÇ                    (scenes/oyun.tscn, değişmedi)
 ## v0.4'te alet düğmeleri hiç yoktu: sağ üstteki şeride üç düğme daha 640 px'e
 ## sığmıyordu, çözüm yatay şeridi büyütmek değil ikinci bir DİKEY şerit açmak.
-const ALET_KONUM := Vector2(8, 148)
+## v0.7'de üçüncü düğme (İŞARET) için şerit 48 px yukarı alındı: 148'de başlasa
+## 250'deki ◀ alanına binerdi.
+const ALET_KONUM := Vector2(8, 100)
 const ALET_BOYUT := Vector2(92, 44)
 
 func dokunmatik_kur() -> void:
@@ -1076,6 +1151,7 @@ func dokunmatik_kur() -> void:
 	$Dokunmatik.add_child(alet)
 	_dgm_dinamit = _alet_dugme(alet, "DİNAMİT 0", _dinamit_kullan)
 	_dgm_radar = _alet_dugme(alet, "RADAR AÇ", _radar_degistir)
+	_dgm_isaret = _alet_dugme(alet, "İŞARET KOY", _isaret_koy)
 	for veri in [[Vector2(0, 250), Vector2(150, 110), "◀"], [Vector2(490, 250), Vector2(150, 110), "▶"],
 			[Vector2(150, 250), Vector2(150, 110), "▼ KAZ"], [Vector2(150, 120), Vector2(150, 110), "▲ UÇ"]]:
 		var p := Panel.new()
@@ -1138,3 +1214,4 @@ func _kaydet() -> void:
 	d["eklenen"] = dunya.eklenen_dizi()
 	d["kesif"] = dunya.kesif_dizi()   ## keşif sisi kayda giriyor (sıkıştırılmış)
 	Kayit.kaydet(d)
+	Kayit.oyuncu_biriktir(durum.istatistik_farki())   ## [oyuncu] toplamı (v0.7), yuvadan bağımsız

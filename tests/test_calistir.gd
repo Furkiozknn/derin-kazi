@@ -34,6 +34,11 @@ func _initialize() -> void:
 	_derin_mod_testleri()
 	_ambiyans_testleri()
 	_simge_testleri()
+	_yuzey_testleri()
+	_animasyon_testleri()
+	_ses_uretici_testleri()
+	_istatistik_testleri()
+	_isaret_testleri()
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	quit(1 if _hata > 0 else 0)
 
@@ -1025,6 +1030,256 @@ func _simge_testleri() -> void:
 	dogru(eksik == "", "oyunda geçen bütün simgeler yazı tipi zincirinde (eksik: '%s')" % eksik)
 	dogru(ThemeDB.fallback_font.has_char(0x20BA), "₺ (U+20BA) çiziliyor")
 	dogru(ThemeDB.fallback_font.has_char(0x25A0), "■ (U+25A0) çiziliyor")
+
+# --- yüzey karosu (v0.7) --------------------------------------------------
+
+func _yuzey_testleri() -> void:
+	print("- yüzey karosu")
+	dogru(Ayarlar.YUZEY_VARYANT >= 3, "en az 3 yüzey varyantı (%d)" % Ayarlar.YUZEY_VARYANT)
+	var dagilim := {}
+	for x in Ayarlar.GENISLIK:
+		dagilim[Ayarlar.yuzey_varyant(x)] = true
+	dogru(dagilim.size() == Ayarlar.YUZEY_VARYANT
+		and Ayarlar.yuzey_varyant(9) == Ayarlar.yuzey_varyant(9),
+		"yüzey varyantı sütundan belirlenimci, hepsi kullanılıyor (%d)" % dagilim.size())
+	var im := Image.load_from_file(ProjectSettings.globalize_path("res://assets/sprites/yuzey.png"))
+	dogru(im != null and im.get_width() == Ayarlar.KARO * Ayarlar.YUZEY_VARYANT
+		and im.get_height() == Ayarlar.KARO, "yuzey.png %d sütun × 1 satır" % Ayarlar.YUZEY_VARYANT)
+	if im == null:
+		return
+	# Kenar kırığı: ilk üç piksel satırında hem saydam (gökyüzü) hem dolu (yaprak/çimen)
+	# piksel var ve her varyantın üst kenarı farklı — birleşim ekran boyunca düz çizgi değil.
+	var kenarlar := {}
+	var saydam_var := true
+	var dolu_var := true
+	for v in Ayarlar.YUZEY_VARYANT:
+		var saydam := 0
+		var dolu := 0
+		var imza := ""
+		for y in 3:
+			for x in Ayarlar.KARO:
+				var a := im.get_pixel(v * Ayarlar.KARO + x, y).a
+				imza += "1" if a > 0.5 else "0"
+				if a > 0.5:
+					dolu += 1
+				else:
+					saydam += 1
+		kenarlar[imza] = true
+		if saydam == 0:
+			saydam_var = false
+		if dolu == 0:
+			dolu_var = false
+	dogru(saydam_var and dolu_var, "üst kenar kırık: her varyantta gökyüzüne açılan ve dolu pikseller var")
+	dogru(kenarlar.size() == Ayarlar.YUZEY_VARYANT, "her varyantın üst kenarı farklı (%d ayrı)" % kenarlar.size())
+	var alt_saydam := 0
+	for v in Ayarlar.YUZEY_VARYANT:
+		for y in range(6, Ayarlar.KARO):
+			for x in Ayarlar.KARO:
+				if im.get_pixel(v * Ayarlar.KARO + x, y).a < 0.5:
+					alt_saydam += 1
+	dogru(alt_saydam == 0, "karonun alt yarısı dolu toprak (saydam %d)" % alt_saydam)
+	var yesil := 0
+	for x in Ayarlar.KARO:
+		var c := im.get_pixel(x, 2)
+		if c.a > 0.5 and c.g > c.r and c.g > c.b:
+			yesil += 1
+	dogru(yesil >= Ayarlar.KARO - 4, "çimen bandı yeşil (%d/%d)" % [yesil, Ayarlar.KARO])
+
+# --- araç ara kareleri (v0.7) ---------------------------------------------
+
+func _animasyon_testleri() -> void:
+	print("- araç ara kareleri")
+	var im := Image.load_from_file(ProjectSettings.globalize_path("res://assets/sprites/arac.png"))
+	dogru(im != null and im.get_width() == Ayarlar.KARO * Arac.KARE_SAYISI,
+		"arac.png %d kare (%d px)" % [Arac.KARE_SAYISI, 0 if im == null else im.get_width()])
+	dogru(Arac.KARE_KAZ + Arac.KAZ_KARE == Arac.KARE_PALET and Arac.KARE_PALET + Arac.PALET_KARE == Arac.KARE_UCUS
+		and Arac.KARE_UCUS + Arac.UCUS_KARE == Arac.KARE_SAYISI, "kare aralıkları ardışık, örtüşmüyor")
+	if im != null:
+		var imza := []
+		for k in Arac.KARE_SAYISI:
+			imza.append(im.get_region(Rect2i(k * Ayarlar.KARO, 0, Ayarlar.KARO, Ayarlar.KARO)).get_data().hex_encode())
+		# Her grubun kareleri kendi içinde farklı (ara kare gerçekten çizilmiş). Paletin
+		# ilk karesi bekleme karesiyle AYNI — tasarım gereği: 3 px'lik desen 3 karede
+		# başa döner ve duran araç dinlenme konumunda kalır, geçişte sıçrama olmaz.
+		var ayni := ""
+		for grup in [[Arac.KARE_KAZ, Arac.KAZ_KARE], [Arac.KARE_PALET, Arac.PALET_KARE], [Arac.KARE_UCUS, Arac.UCUS_KARE]]:
+			for i in int(grup[1]):
+				for j in range(i + 1, int(grup[1])):
+					if imza[int(grup[0]) + i] == imza[int(grup[0]) + j]:
+						ayni += "%d=%d " % [int(grup[0]) + i, int(grup[0]) + j]
+		dogru(ayni == "", "her grubun ara kareleri birbirinden farklı (%s)" % ayni)
+		dogru(imza[Arac.KARE_BEKLE] != imza[Arac.KARE_KAZ] and imza[Arac.KARE_BEKLE] != imza[Arac.KARE_UCUS],
+			"bekleme karesi kazma ve uçuştan farklı")
+		dogru(imza[Arac.KARE_BEKLE] == imza[Arac.KARE_PALET], "paletin ilk karesi dinlenme konumu (bekleme karesiyle aynı)")
+	dogru(Arac.animasyon_durumu(true, true, true, 0.0) == "kaz", "kazma her şeyden önce")
+	dogru(Arac.animasyon_durumu(false, true, false, 0.0) == "ucus", "havada pervane → uçuş")
+	dogru(Arac.animasyon_durumu(false, false, true, 74.0) == "palet", "yerde yürüyünce palet")
+	dogru(Arac.animasyon_durumu(false, false, true, 0.0) == "bekle"
+		and Arac.animasyon_durumu(false, false, false, 30.0) == "bekle", "duran ve düşen araç bekler")
+	# Zamanlayıcı: alev ve matkap sabit kare/sn; palet YOLLA ilerler (hız × süre / PALET_PIKSEL).
+	var alev := _kare_degisim("ucus", 0.0, 60)
+	dogru(alev >= 11 and alev <= 13, "alev 1 sn'de ~%d kez değişti (%d)" % [int(Arac.UCUS_HIZ), alev])
+	var kaz := _kare_degisim("kaz", 0.0, 60)
+	dogru(kaz >= 13 and kaz <= 15, "matkap 1 sn'de ~%d kez değişti (%d)" % [int(Arac.KAZ_HIZ), kaz])
+	var yuruyen := _kare_degisim("palet", Ayarlar.YATAY_HIZ, 60)
+	var beklenen := int(Ayarlar.YATAY_HIZ / Arac.PALET_PIKSEL)
+	dogru(absi(yuruyen - beklenen) <= 2, "palet 1 sn'de yol/%d px kadar kare değiştirdi (%d ≈ %d)"
+		% [int(Arac.PALET_PIKSEL), yuruyen, beklenen])
+	dogru(_kare_degisim("palet", 0.0, 60) == 0, "duran araçta palet dönmüyor")
+	dogru(_kare_degisim("palet", Ayarlar.YATAY_HIZ * 0.5, 60) < yuruyen, "yavaş araçta palet yavaş döner")
+	var tasan := ""
+	for k in [["kaz", Arac.KARE_KAZ, Arac.KAZ_KARE], ["ucus", Arac.KARE_UCUS, Arac.UCUS_KARE],
+			["palet", Arac.KARE_PALET, Arac.PALET_KARE]]:
+		for f in 12:
+			var kare := Arac.kare_sec(String(k[0]), float(f) * 0.5)
+			if kare < int(k[1]) or kare >= int(k[1]) + int(k[2]):
+				tasan += "%s:%d " % [k[0], kare]
+	dogru(tasan == "", "kareler kendi aralığında (%s)" % tasan)
+	dogru(Arac.kare_sec("bekle", 3.7) == Arac.KARE_BEKLE, "bekle tek kare")
+	dogru(absf(Arac.faz_ilerlet(5.9, "kaz", 0.0, 0.1) - 1.3) < 0.01, "faz 6'ya göre sarılıyor (5,9 + 1,4 → 1,3)")
+
+## 60 Hz'de `adim` kare boyunca kaç kez sprite karesi değişti.
+func _kare_degisim(durum_k: String, hiz: float, adim: int) -> int:
+	var faz := 0.0
+	var son := Arac.kare_sec(durum_k, faz)
+	var n := 0
+	for i in adim:
+		faz = Arac.faz_ilerlet(faz, durum_k, hiz, 1.0 / 60.0)
+		var k := Arac.kare_sec(durum_k, faz)
+		if k != son:
+			n += 1
+			son = k
+	return n
+
+# --- ses üreteci (v0.7) ---------------------------------------------------
+
+func _ses_uretici_testleri() -> void:
+	print("- ses üreteci (matkap döngüsü, deprem gürültüsü)")
+	var S: GDScript = load("res://tools/ses_uret.gd")
+	var hz := int(S.HZ)
+	var a: PackedFloat32Array = S.matkap(7)
+	var b: PackedFloat32Array = S.matkap(7)
+	var c: PackedFloat32Array = S.matkap(8)
+	dogru(a == b, "aynı tohum → aynı matkap örnekleri (deterministik)")
+	dogru(a != c, "farklı tohum → farklı örnekler")
+	dogru(a.size() == int(S.MATKAP_SN * hz), "matkap döngüsü %.1f sn (%d örnek)" % [S.MATKAP_SN, a.size()])
+	dogru(absf(S.tepe(a) - 0.8) < 0.01, "matkap tepesi 0,8 (kırpma yok)")
+	# Dikiş: son örnekten ilke sıçrama, dalganın kendi en büyük adımını (testere dişinin
+	# sıfırlanması, saniyede 55 kez) aşmamalı — dikiş sıradan bir periyot sınırı gibi.
+	var en_buyuk_adim := 0.0
+	for i in range(1, a.size()):
+		en_buyuk_adim = maxf(en_buyuk_adim, absf(a[i] - a[i - 1]))
+	var dikis := absf(a[0] - a[a.size() - 1])
+	dogru(dikis <= en_buyuk_adim * 1.05, "döngü dikişi dalganın kendi adımını aşmıyor (%.2f ≤ %.2f)" % [dikis, en_buyuk_adim])
+	var d: PackedFloat32Array = S.deprem(7)
+	dogru(d == S.deprem(7) and d != S.deprem(9), "deprem gürültüsü deterministik")
+	dogru(d.size() == int(S.DEPREM_SN * hz), "deprem %.1f sn" % S.DEPREM_SN)
+	var bas := _rms(d, 0, int(0.6 * hz))
+	var son := _rms(d, d.size() - int(0.3 * hz), d.size())
+	dogru(son < bas * 0.35, "deprem sönüyor (rms %.3f → %.3f)" % [bas, son])
+	# Sarsıntı düşük frekanslı: 70 Hz alçak geçirenden geçen enerji toplamın büyük kısmı.
+	# Patlama sesi gibi beyaz gürültü olsaydı bu oran yüzde birkaç olurdu.
+	var lp := 0.0
+	var e_lp := 0.0
+	var e := 0.0
+	for i in range(int(0.4 * hz), int(1.4 * hz)):
+		lp = lerpf(lp, d[i], 0.02)
+		e_lp += lp * lp
+		e += d[i] * d[i]
+	dogru(e_lp / e > 0.3, "sarsıntı enerjisi alçak frekansta (%%%.0f)" % (100.0 * e_lp / e))
+	var ses = root.get_node("Ses")
+	dogru(ResourceLoader.exists("res://assets/audio/matkap.wav")
+		and ResourceLoader.exists("res://assets/audio/deprem.wav"), "matkap.wav ve deprem.wav projede")
+	dogru(ses.EFEKT.has("deprem") and ses.EFEKT["deprem"][0] != ses.EFEKT["patlama"][0],
+		"deprem olayı patlamadan AYRI dosya çalıyor (%s ≠ %s)" % [ses.EFEKT["deprem"][0], ses.EFEKT["patlama"][0]])
+	dogru(ses.EFEKT["deprem_uyari"][0] == ses.EFEKT["deprem"][0], "uyarı katmanı da deprem gürültüsü")
+	dogru(ses.DONGU.has("matkap") and ResourceLoader.exists("res://assets/audio/%s.wav" % ses.DONGU["matkap"][0]),
+		"matkap döngü olayı tanımlı ve dosyası var")
+	# Oynatıcının kendisi (başlat → çalıyor, durdur → sustu) sahne testinde: _initialize
+	# sırasında düğümler henüz ağaçta değil, AudioStreamPlayer.play() burada çalışmaz.
+
+func _rms(x: PackedFloat32Array, bas: int, son: int) -> float:
+	var t := 0.0
+	for i in range(bas, son):
+		t += x[i] * x[i]
+	return sqrt(t / float(maxi(son - bas, 1)))
+
+# --- bitiş istatistiği ve [oyuncu] birikimi (v0.7) ------------------------
+
+func _istatistik_testleri() -> void:
+	print("- bitiş istatistiği ve [oyuncu] birikimi")
+	Kayit.sil(Kayit.OYUNCU)
+	var d := Durum.new(5)
+	d.maden_ekle(Ayarlar.BAKIR)
+	d.maden_ekle(Ayarlar.BAKIR)
+	var kazanc := d.sat()
+	d.kazilan_karo += 40
+	d.deprem = 2
+	d.sure = 90.0
+	d.kosu_basarisiz(Vector2i(10, 50))
+	dogru(d.satis_toplam == kazanc and d.olum == 1,
+		"satış toplamı ve yüzeye çekilme sayılıyor (%d ₺, %d çekilme)" % [d.satis_toplam, d.olum])
+	var y := Durum.new(0)
+	y.sozlukten(d.sozluge())
+	dogru(y.kazilan_karo == 40 and y.olum == 1 and y.satis_toplam == kazanc, "sayaçlar kayıtta gidip geliyor")
+	dogru(Durum.new(0).kazilan_karo == 0 and int(Durum.new(0).istatistik()["deprem"]) == 0, "yeni koşu sıfırdan sayar")
+	var t1 := Kayit.oyuncu_biriktir(d.istatistik_farki())
+	dogru(int(t1["kazilan_karo"]) == 40 and int(t1["olum"]) == 1 and absf(float(t1["sure"]) - 90.0) < 0.01,
+		"ilk kayıtta koşunun tamamı [oyuncu] toplamına girdi")
+	d.kazilan_karo += 5
+	var t2 := Kayit.oyuncu_biriktir(d.istatistik_farki())
+	dogru(int(t2["kazilan_karo"]) == 45, "ikinci kayıtta yalnız fark eklendi (%d)" % int(t2["kazilan_karo"]))
+	var t3 := Kayit.oyuncu_biriktir(d.istatistik_farki())
+	dogru(int(t3["kazilan_karo"]) == 45, "değişiklik yoksa toplam aynı kalıyor")
+	var z := Durum.new(0)
+	z.sozlukten(d.sozluge())
+	var fark := z.istatistik_farki()
+	dogru(int(fark["kazilan_karo"]) == 0 and int(fark["olum"]) == 0,
+		"kayıttan yüklenen sayaçlar aktarılmış sayılıyor (fark 0 — iki kez sayma yok)")
+	z.kazilan_karo += 3
+	var t4 := Kayit.oyuncu_biriktir(z.istatistik_farki())
+	dogru(int(t4["kazilan_karo"]) == 48, "başka oturumdan gelen fark da aynı toplama (48)")
+	dogru(int(Kayit.oyuncu_yukle().get("kazilan_karo", 0)) == 48, "[oyuncu] bölümü okunuyor")
+	var Oyun: GDScript = load("res://scripts/oyun.gd")
+	var metin: String = Oyun.bitis_metni(d, t4, "son", "mod")
+	dogru(metin.contains("45 karo kazıldı") and metin.contains("2 deprem") and metin.contains("1 yüzeye çekilme")
+		and metin.contains("%d ₺ satış" % kazanc) and metin.contains("48 karo") and metin.contains("1:30"),
+		"bitiş metni bu dünyayı ve toplamı yazıyor")
+	Kayit.sil(Kayit.OYUNCU)
+
+# --- ışınlama işareti (v0.7) ----------------------------------------------
+
+func _isaret_testleri() -> void:
+	print("- ışınlama işareti")
+	var d := Durum.new(3)
+	dogru(not d.isaret_var() and d.isaret == Durum.ISARET_YOK, "yeni koşuda işaret yok")
+	d.isaret = Vector2i(20, 77)
+	var y := Durum.new(0)
+	y.sozlukten(d.sozluge())
+	dogru(y.isaret_var() and y.isaret == Vector2i(20, 77), "işaret kayıtta gidip geliyor")
+	var eski := d.sozluge()
+	eski.erase("isaret")
+	var e := Durum.new(0)
+	e.sozlukten(eski)
+	dogru(not e.isaret_var(), "işaretsiz (eski) kayıt işaretsiz açılıyor")
+	var cfg := ConfigFile.new()
+	cfg.load("res://tests/veri/kayit-v0.5.cfg")
+	var v5 := {}
+	for k in cfg.get_section_keys(Kayit.ANA):
+		v5[k] = cfg.get_value(Kayit.ANA, k)
+	var d5 := Durum.new(0)
+	d5.sozlukten(v5)
+	dogru(not d5.isaret_var() and d5.kazilan_karo == 0 and d5.olum == 0 and d5.satis_toplam == 0,
+		"v0.5 kaydı: işaret yok, yeni sayaçlar sıfır")
+	var dokun := Ipucu.isaret_ogret(true) + " " + Ipucu.isaret_kondu(40, true)
+	var masa := Ipucu.isaret_ogret(false) + " " + Ipucu.isaret_kondu(40, false)
+	dogru(not dokun.contains("R —") and not dokun.contains("T ile") and dokun.contains(Ipucu.DUGME_ISARET)
+		and dokun.contains(Ipucu.DUGME_US), "dokunmatik işaret ipuçları düğme anlatıyor")
+	dogru(masa.contains("R —") and masa.contains("T ile") and masa.contains("40 m"),
+		"masaüstü işaret ipuçları tuş anlatıyor")
+	dogru(InputMap.has_action("isaret"), "isaret eylemi girdi haritasında")
+	dogru(FileAccess.get_file_as_string("res://tests/bot.gd").find("isaret") < 0,
+		"bot işareti bilmiyor (ölçüm değişmedi)")
 
 ## Yüzeyden başlayıp kazılabilir/boş hücreler üzerinden genişleyen erişim kümesi.
 func _ulasilabilir(u: DunyaUretici) -> Dictionary:

@@ -6,6 +6,7 @@ class_name Dunya
 extends TileMapLayer
 
 const YARICAP := 1          ## kaç chunk uzaklığa kadar yüklü kalsın
+const YUZEY_KAYNAK := 1     ## TileSet'te yüzey atlasının (yuzey.png) kaynak numarası; 0 = karolar.png
 
 var uretici: DunyaUretici
 var kazilan := {}           ## Vector2i -> true (kırılmış hücre)
@@ -54,6 +55,19 @@ func _tileset_kur() -> TileSet:
 			var veri := kaynak.get_tile_data(koord, 0)
 			veri.add_collision_polygon(0)
 			veri.set_collision_polygon_points(0, 0, kare)
+	# Yüzey (v0.7): 0. satırın toprağı ikinci bir atlastan (yuzey.png) çizilir — çimen
+	# üstü kırık kenarlı, gökyüzüyle birleşim düz çizgi değil. Çarpışma aynı tam kare;
+	# mantıksal karo türü değişmedi (karo_tur hâlâ TOPRAK der).
+	var yuzey := TileSetAtlasSource.new()
+	yuzey.texture = load("res://assets/sprites/yuzey.png")
+	yuzey.texture_region_size = Vector2i(Ayarlar.KARO, Ayarlar.KARO)
+	ts.add_source(yuzey, YUZEY_KAYNAK)
+	for v in Ayarlar.YUZEY_VARYANT:
+		var koord := Vector2i(v, 0)
+		yuzey.create_tile(koord)
+		var veri := yuzey.get_tile_data(koord, 0)
+		veri.add_collision_polygon(0)
+		veri.set_collision_polygon_points(0, 0, kare)
 	return ts
 
 # --- chunk yönetimi -------------------------------------------------------
@@ -84,9 +98,13 @@ func _parca_yukle(p: Vector2i) -> void:
 		for x in range(p.x * Ayarlar.PARCA, mini((p.x + 1) * Ayarlar.PARCA, Ayarlar.GENISLIK)):
 			var h := Vector2i(x, y)
 			var t := karo_tur(h)
-			if t != Ayarlar.BOS:
+			if t == Ayarlar.BOS:
+				continue
+			if y == 0 and t == Ayarlar.TOPRAK:
+				set_cell(h, YUZEY_KAYNAK, Vector2i(Ayarlar.yuzey_varyant(x), 0))
+			else:
 				set_cell(h, 0, Vector2i(t, Ayarlar.varyant(x, y, t)))
-				toplam_uretim += 1
+			toplam_uretim += 1
 
 func _parca_bosalt(p: Vector2i) -> void:
 	_yuklu.erase(p)

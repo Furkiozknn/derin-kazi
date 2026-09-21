@@ -16,12 +16,12 @@ extends Control
 @onready var _kod_durum: Label = $TohumPanel/M/V/Durum
 
 const YARDIM_TUS := "A/D veya ←/→: yürü ve yana kaz  •  S veya ↓: aşağı kaz  •  W/Boşluk: pervane
-E: üs  •  T: ışınlanma  •  Q: radar  •  F: dinamit  •  M: harita  •  Esc: duraklat
-Gamepad: sol çubuk, A pervane, X üs, LB radar, RB ışınlanma, Y dinamit, Start duraklat"
+E: üs  •  T: ışınlanma  •  R: dönüş işareti  •  Q: radar  •  F: dinamit  •  M: harita  •  Esc: duraklat
+Gamepad: sol çubuk, A pervane, X üs, LB radar, RB ışınlanma, B işaret, Y dinamit, Start duraklat"
 
 const YARDIM_DOKUNMA := "Alt sol / alt sağ köşeye dokun: o yöne yürü ve yana kaz
 Alt ortaya dokun: aşağı kaz  •  ▲ alanına (üst orta) dokun: pervaneyle yüksel
-Sağ üstteki düğmeler: Üs • Harita • ■ duraklat"
+Sağ üst: Üs • Harita • ■ duraklat   •   Sol: DİNAMİT • RADAR • İŞARET"
 
 func _ready() -> void:
 	$M/V/Basla.pressed.connect(_basla)
