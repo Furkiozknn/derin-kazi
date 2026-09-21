@@ -105,6 +105,23 @@ func _calis() -> void:
 	await _yaz("ekran-4.png")
 	sahne.set("_deprem_uyari", 0.0)
 
+	# 6 — Derin Mod (v0.6): dar ışık (3 karo), HUD etiketi, taş bandında toz.
+	# Aynı sahnede seviye geçici olarak 1 yapılıyor; kaydedilmiyor.
+	sahne.get_node("HUD/Harita").visible = false
+	sahne.set("_radar_acik", false)
+	durum.derin_seviye = 1
+	var derin_oda := Vector2i(Ayarlar.US_KARO_X + 6, 62)
+	_oda_ac(derin_oda, 4, 2)
+	arac.isinlan(dunya.hucre_merkezi(derin_oda))
+	sahne.call("_kesif_yenile", true)
+	await _kare(30)
+	Input.action_press("sol")
+	await _kare(30)
+	Input.action_release("sol")
+	await _yaz("ekran-6-derin.png")
+	durum.derin_seviye = 0
+	sahne.call("_kesif_yenile", true)
+
 	await _telefon()
 	await _kapak()
 	quit(0)
@@ -143,6 +160,12 @@ func _telefon() -> void:
 ## Menü: masaüstü oranı (yayın görseli) + telefon oranı (arka planın ekranın
 ## altını doldurduğunu gözle denetlemek için; hata v0.2'de burada çıkmıştı).
 func _menu() -> void:
+	# v0.6: Derin Mod rozeti ve düğmesi görünsün — çekirdeği çıkarmış bir ana kayıt
+	# + süren bir Derin Mod yuvası. Kareler alınınca ikisi de siliniyor.
+	Kayit.kaydet({"tohum": 4242, "kazandi": true, "en_derin": 250, "para": 1240,
+		"eserler": PackedInt32Array([0, 1, 2, 3, 4, 5])}, Kayit.ANA)
+	Kayit.kaydet({"tohum": 90210, "derin_seviye": 1, "en_derin": 96, "para": 410,
+		"eserler": PackedInt32Array([0, 1, 2, 3, 4, 5])}, Kayit.DERIN)
 	var m: Node = load("res://scenes/menu.tscn").instantiate()
 	root.add_child(m)
 	await _kare(30)
@@ -155,6 +178,9 @@ func _menu() -> void:
 	print("  docs/menu-telefon.png  %dx%d" % [im.get_width(), im.get_height()])
 	root.size = eski
 	m.queue_free()
+	Kayit.sil(Kayit.ANA)
+	Kayit.sil(Kayit.DERIN)
+	Kayit.aktif = Kayit.ANA
 	await _kare(5)
 
 ## Kapak: gerçek oyundan bir kare + logo + başlık, 630x500.

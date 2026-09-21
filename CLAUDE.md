@@ -15,7 +15,10 @@ Arayüz, kod ve belgeler **Türkçe**. Değişken/fonksiyon adları da Türkçe.
 - Tüm `.gd` / `.tscn` / `.cfg` / `.md` dosyaları **BOM'suz UTF-8**.
 - Ses veri yolları: `Master > Muzik`, `Master > Efekt` (`default_bus_layout.tres`).
 - `Ses` autoload'u (`scripts/ses.gd`) efekt ve müziği yönetir; doğrudan
-  `AudioStreamPlayer` eklemek yerine `Ses.cal("olay")` kullan.
+  `AudioStreamPlayer` eklemek yerine `Ses.cal("olay")` kullan. Müzik için
+  `Ses.muzik_cal(ad, gecis)`: `gecis > 0` iki oyuncuyla crossfade (v0.6),
+  0 anında değişim. Yeni bir parça eklersen `Ses.MUZIKLER` listesine de yaz —
+  açılışta önyükleniyor ki web'de bant sınırında `load()` takılması olmasın.
 - **Simge yazı tipi:** Godot'nun gömülü yazı tipinde `₺ ← ↑ → ↓ ▲ ▶ ▼ ◀ ✔ ■`
   yok; masaüstü sistem yazı tipiyle örter, **web örtmez** (kutu çıkar).
   `Ses._ready()` içindeki `Simgeler.kur()` bunu çözüyor — kaldırma.
@@ -36,11 +39,13 @@ scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları (saf sınıf)
 scripts/arac.gd           hareket, kazma, hasar, aletler
 scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
-scripts/ses.gd            autoload: efekt/müzik/ayar
+scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/ayar
+scripts/kayit.gd          kayıt yuvaları [oyun] · [gunluk] · [derin] (v0.6) ve ayarlar
 scripts/ayar_panel.gd     ayarlar ekranının içeriği (menü + duraklatma ortak)
 scenes/                   menu · oyun · kapak
-tools/                    varlık üretimi ve ekran görüntüsü betikleri
-tests/bot.gd              bot simülasyonu (Bot.MUKEMMEL / Bot.INSAN / Bot.INSAN_SISLI)
+tools/                    varlık üretimi, ekran görüntüsü ve kayıt fikstürü betikleri
+tests/bot.gd              bot simülasyonu (Bot.MUKEMMEL / INSAN / INSAN_SISLI / INSAN_DERIN)
+tests/veri/               gerçek eski sürüm kayıtları (kayit-v0.5.cfg) — uyumluluk testleri okur
 tests/                    headless testler (çıkış kodu 0 = geçti)
 yayin/                    itch sayfası, ekran görüntüleri, kapak, butler komutları
 _eski/                    kullanımdan kalkmış dosyalar (silme yok, buraya taşı)
@@ -55,6 +60,11 @@ uyarı süresi derinlikle uzar (`uyari_suresi`), yüzeye çıkan ikramiye alır
 değiştirirsen `tests/test_calistir.gd` → `_deprem_testleri` ve
 `tests/test_insan.gd` birlikte çalıştır. Üç sıkışma güvencesi (araç/üs/istasyon
 çevresi, kapanan hücre hep kazılabilir, ilk 10 m sabit) dokunulmaz.
+Aralık `Deprem.aralik(derin)` / `Durum.deprem_araligi()` (5, Derin Mod 4).
+`tests/test_oynanis.gd` v0.6'dan beri depremi elle tetiklemekle kalmıyor,
+**beş gerçek sefer** yaptırıp uyarının kendiliğinden başlamasını ve kararın üç
+ucunu (yüzeye çık / derinde kal / istasyondan ışınlan) sahnede sınıyor —
+sefer sayacına ya da uyarıya dokunursan önce onu çalıştır.
 
 ## Keşif sisi (v0.5)
 
@@ -67,7 +77,64 @@ Işık **yakıt harcamaz**, geliştirilmez — sis bilgi kısıtı, kaynak deği
 (rakip analizi: "lamba yakıtı angarya"). Sayılar `Ayarlar` → keşif sisi bloğu;
 `ISIK_YARICAP`'ı değiştirirsen botun `_kesfet`'i de aynı sabiti kullanıyor.
 Mini harita (`oyun.gd → _harita_boya`) keşfedilmemiş hücreyi boyamaz; radar
-sisi **geçici** seyreltir, keşif saymaz.
+sisi **geçici** seyreltir, keşif saymaz. Işık yarıçapı artık sabit değil
+**`Durum.isik_yaricap()`** (ilk oyun 5, Derin Mod 3, 7. eserle +1); sahne, `Sis`
+ve bot hep bunu okur — `Ayarlar.ISIK_YARICAP`'ı doğrudan kullanma.
+
+## Derinlik ambiyansı (v0.6)
+
+`Ayarlar.AMBIYANS` dört bant: toprak (0) → kaya (40) → bazalt (150) → çekirdek
+(210). Bant = müzik parçası + arka plan tonu (`$Arkaplan/Renk`) + parçacık
+(sığda toz, derinde kıvılcım; `oyun.gd → _ambiyans_yenile`). Bant sınırı katman
+sınırı DEĞİL (taş + sert taş tek bant): 4 parça yeter, 5. yalnız pck'yi büyütürdü.
+Müzik geçişi `Ses.muzik_cal(ad, Ayarlar.MUZIK_GECIS)` ile çaprazlanır; iki
+`AudioStreamPlayer` var, geçiş sırasında ikisi birlikte çalar
+(`Ses.calan_muzik_sayisi()` testte 2 → 1). Parçalar `tools/muzik_uret.gd` ile:
+
+```powershell
+godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik.wav          --ruh gizemli  --tohum 3
+godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_derin.wav    --ruh gergin   --tohum 3   # (v0.2'den)
+godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_bazalt.wav   --ruh gergin   --tohum 5 --olcu 8
+godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik_cekirdek.wav --ruh cekirdek --tohum 2 --olcu 4
+```
+
+`cekirdek` ruhu v0.6'da eklendi (68 bpm, frigyen, davul yerine kalp atışı, ağır
+notalar) — yeraltının ikinci ruhu. Parçacık sisin altında (z 5 < 15) çizilir ki
+karanlıkta o da sönsün; Light2D yine yok.
+
+## Derin Mod kimliği (v0.6)
+
+Derin Mod artık yalnız çarpan değil. Üç fark tek yerden okunur (`scripts/durum.gd`):
+- **`isik_yaricap()`** 3 karo (`Ayarlar.ISIK_YARICAP_DERIN`), 7. eserle 4.
+- **`deprem_araligi()`** 4 sefer (`Deprem.ARALIK_DERIN`), ilk oyunda 5.
+- **7. eser** (`Ayarlar.ESERLER[6]`, `derin: true`) yalnız Derin Mod'da bulunur ve
+  **ilk gizli odada** gelir (`Durum.sonraki_eser`); ilk oyunda müzede bile
+  görünmez. Eser sayıları `eser_sayisi()` / `eser_toplanan()` — `ESERLER.size()`
+  yazma. Yeni eser eklersen `derin` bayrağına karar ver.
+
+Kayıt: Derin Mod **kendi yuvasında** (`Kayit.DERIN`, `[derin]`); ana kayıt
+(çekirdeği çıkarmış dünya, tünelleri) yerinde kalır. Giriş
+`Kayit.derin_mod_hazirla()`: süren tur varsa ona döner, yoksa iki yuvanın eser
+birleşimiyle bir üst seviyeyi kurar. v0.5 kaydı Derin Mod'u ana yuvada taşıyor
+olabilir — olduğu gibi açılır, "Başla" ile sürer. Menüde sağ üstte rozet
+(`$Rozet`, `_derin_yenile`). Ölçüm: `tests/test_insan.gd` Derin Mod x1'i 7 tohumda
+ilk oyunla yan yana ölçer (`Bot.INSAN_DERIN`).
+
+## Kayıt uyumu
+
+Eski sürümün kaydı yeni sürümde açılmalı. Fikstür **gerçek dosya**:
+`tests/veri/kayit-v0.5.cfg`, v0.5 etiketinde `tools/kayit_fikstur.gd` ile üretildi
+(git worktree → eski sürüm → betik). Kayıt biçimini değiştirirsen o dosyayı
+elle düzenleme; testler (`_kayit_testleri`, oynanış testinin v0.5 bölümü) onu
+olduğu gibi okumalı. Yeni etiketten fikstür üretmek için:
+
+```powershell
+git worktree add ..\derin-kazi-v0X v0.X
+copy tools\kayit_fikstur.gd ..\derin-kazi-v0X\tools\
+godot --headless --path ..\derin-kazi-v0X --import
+godot --headless --path ..\derin-kazi-v0X --script res://tools/kayit_fikstur.gd -- --cikti D:/Repolar/derin-kazi/tests/veri/kayit-v0.X.cfg
+git worktree remove ..\derin-kazi-v0X
+```
 
 ## Dokunmatik düzen
 
@@ -105,6 +172,22 @@ Bilinmesi gereken bağlar:
   Testteki bantlar hedef değil **gerileme bekçisi** — denge sabitlerini
   değiştirince ikisini birlikte çalıştır.
 
+## Test yazarken
+
+- `--script` ile koşan SceneTree testlerinde autoload'a **adıyla** erişme
+  (`Ses.x` → "Identifier not found: Ses" derleme hatası; tests/test_oynanis.gd'de
+  başımıza geldi). `var ses = root.get_node("Ses")` (dinamik tip) kullan;
+  `_ready` ilk kareden sonra koşuyor, önce `await process_frame`.
+- Testte hata olursa `quit()` hiç çağrılmaz ve Godot **sonsuza kadar açık kalır**
+  (kilit rejimi için önemli): süreci `Stop-Process` ile kapat, çıktıyı dosyaya
+  yönlendir (`grep`'e borulanan çıktı süreç bitmeden görünmez).
+- Sahne testinde ışınlanacağın hücreyi **o anda** hesapla; depremler arada
+  hücreleri kapatıyor, bayat bir `Vector2i` seni kayanın içine koyar
+  (`is_on_floor()` hep false, dinamit atılmaz).
+- Sesi duyamıyoruz: müzikle ilgili bir değişiklikte `playing` ve
+  `get_playback_position()`'ı birkaç saniye örnekleyen bir sonda yaz (v0.6'da
+  `loop_end = 0` hatası böyle bulundu; varlık dosyasının varlığı hiçbir şeyi kanıtlamaz).
+
 ## Komutlar
 
 ```powershell
@@ -118,12 +201,14 @@ godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçüm
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
 godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası
-godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri + telefon/deprem denetimi (render gerekir)
+godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak) + telefon/deprem denetimi (render gerekir)
+godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # kayıt fikstürü (eski sürümün worktree'sinde)
 godot --headless --path . --export-release "Windows Masaustu"
 godot --headless --path . --export-release "Web (HTML5)"
 ```
 
-Müzik (ön ayarlar: hizli/neseli/sakin/gizemli/gergin):
+Müzik (ön ayarlar: hizli/neseli/sakin/gizemli/gergin/cekirdek; dört bandın komutları
+"Derinlik ambiyansı" başlığında):
 ```powershell
 godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik.wav --ruh gizemli --tohum 3
 ```

@@ -5,12 +5,15 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-> Durum: **v0.5 — keşif sisi.** v0.4'ün üstüne: keşfedilmemiş yeraltı karanlık
-> (aracın ışığı kalıcı açar, radar geçici, mini harita yalnız gezileni gösterir,
-> kayda yazılır), telefonda **tam alet seti** (DİNAMİT · RADAR düğmeleri),
-> deprem kararı ekranın ortasında üç satırlık pano + kırmızı işaret.
-> Windows + Web çıktısı alınıyor; yayın paketi `yayin/` altında hazır
-> (**yüklenmedi**).
+> Durum: **v0.6 — derinlik ambiyansı ve Derin Mod kimliği.** v0.5'in üstüne:
+> dört derinlik bandının kendi müziği (crossfade), tozu/kıvılcımı ve arka plan
+> tonu; **Derin Mod** artık başka bir yer: dar ışık (3 karo), deprem 4 seferde
+> bir, yalnız orada bulunan 7. eser, kendi kayıt yuvası ve menüde rozet.
+> Deprem seferi sahne testinde baştan sona yaşanıyor (5 gerçek sefer, üç karar).
+> İki eski hata düzeldi: müzik v0.2'den beri hiç ilerlemiyordu (döngü sonu 0);
+> üsse ışınlanan/çekilen araç kendi şaftına düşüyordu. v0.5 kaydı gerçek dosyayla
+> test edilerek açılıyor. Windows + Web çıktısı alınıyor; yayın paketi `yayin/`
+> altında hazır (**yüklenmedi**).
 
 ## Kontroller
 
@@ -65,7 +68,8 @@ geri dönüş yolunu düşünerek kazmak oyunun ana gerilimi.
   anında yolculuk.
 - **Eserler** — gizli odalarda bulunur, müzeye gider, kalıcı pasif bonus verir.
   Altı eserin her biri çekirdeğin sırrından bir parça anlatır; 1'den 6'ya doğru
-  okununca tek bir hikâye çıkar.
+  okununca tek bir hikâye çıkar. **7. eser** ("Uyanmış Kabuk Parçası", ışık +1)
+  yalnız Derin Mod'da, ilk gizli odada bulunur — hikâyenin sonrası.
 
 ### Keşif sisi (v0.5)
 
@@ -78,9 +82,21 @@ sıkıştırılmış yazılır, v0.4 kaydı açılınca kazılmış tünellerin 
 keşfedilmiş sayılır (kapkaranlık başlamaz). Madenler ve gaz cebi deseni ışığın
 içinde olduğu gibi görünür: örtü ışığın içinde sıfır.
 
+### Derinlik ambiyansı (v0.6)
+
+Dört bant: **toprak** (0–40 m) → **kaya** (40–150) → **bazalt** (150–210) →
+**çekirdek kabuğu** (210+). Her bandın kendi parçası var (`muzik` gizemli,
+`muzik_derin` gergin, `muzik_bazalt` gergin/160 bpm, `muzik_cekirdek` — v0.6'da
+müzik üreticiye eklenen ikinci yeraltı ruhu: 68 bpm, frigyen, davul yerine kalp
+atışı) ve sınırı geçince iki oyuncu 1,6 sn çaprazlanır; parça hiç kesilmez,
+sınırda gidip gelince baştan başlamaz. Parçalar açılışta belleğe alınır (web'de
+sınırda `load()` takılması yok). Sığ bantlarda havada süzülen toz, derinde
+yukarı süzülen kıvılcım (araca bağlı `CPUParticles2D`, sisin altında çizilir);
+düz arka plan bandın tonuna, kaya dokusu katmanın rengine yumuşak kayar.
+
 ### Canlı yeraltı (v0.3) ve depremin kararı (v0.4, pano v0.5)
 
-Her **5 seferde** (in-çık) bir deprem olur. Yeraltındayken önce **geri sayım**
+Her **5 seferde** (in-çık; Derin Mod'da **4**) bir deprem olur. Yeraltındayken önce **geri sayım**
 başlar — kırmızı ekran işareti + ses, sarsıntı, ekranın üst-ortasında üç satırlık
 pano: `DEPREM 7.4 sn` / `W ile YÜZEYE ÇIK → +… ₺ ikramiye` / `DERİNDE KAL → …
 hasar` (son 3 saniyede sayaç yanıp söner; dokunmatikte `▲ UÇ ile`) — sonra:
@@ -121,6 +137,14 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 - **Derin Mod** — çekirdeği bir kez çıkardıktan sonra menüde açılır. Yeni tohum,
   sıfırlanan geliştirmeler, **korunan eser bonusları** ve her turda artan zorluk:
   kaya %15 daha sert, yakıt %12 daha hızlı biter, maden %25 daha değerli.
+  **v0.6'dan beri başka bir yer:** ışık 3 karo (ilk oyunda 5), deprem 4 seferde
+  bir, ilk gizli odada yalnız burada bulunan **7. eser** (ışığa bir karo geri
+  verir), sağ üstte **rozet**. **Kendi kayıt yuvası** (`[derin]`): ana dünya
+  (çekirdeği çıkarılmış, tünelleriyle) yerinde kalır; süren tur "devam et",
+  biten tur bir üst seviyeyi yeni tohumla kurar. v0.5'te Derin Mod ana yuvanın
+  üstüne yazıyordu — öyle bir kayıt olduğu gibi açılır ve "Başla" ile sürer.
+  İnsan benzeri bot Derin Mod x1'i 7 tohumda ölçtü: tur 122 sn (+16), çekirdek
+  24 dk, 7/7 varış, 18 deprem.
 
 ## Verilen kararlar
 
@@ -216,6 +240,35 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   veri olarak iki yere yazılmıyor.
 - **Web çıktısı `thread_support` kapalı derlendi.** Prototip turunda itch'te
   "SharedArrayBuffer" kutusu gerekiyordu; artık düz bir statik sunucuda açılıyor.
+- **Dört ambiyans bandı, beş katman değil (v0.6).** Taş ve sert taş tek "kaya"
+  bandı: beşinci bir parça müziği daha iyi yapmazdı, yalnız pck'yi 600 KB
+  büyütürdü. Geçiş iki `AudioStreamPlayer` ile çapraz (1,6 sn); tek oyuncuyla
+  "durdur-başlat" web'de duyulur bir boşluk bırakıyordu.
+- **Müzik v0.2'den beri hiç ilerlemiyordu (v0.6'da bulundu).** `muzik_cal`
+  parçayı `LOOP_FORWARD` + `loop_end = 0` ile açıyordu; Godot bu değeri "döngü
+  sonu 0. örnek" okuyor, oyuncu ilk karede duruyor, `finished` yeniden başlatıyor,
+  yine duruyor. Headless sondayla ölçüldü: 6 saniye boyunca `playing=false,
+  pos=0.000`; döngü sonu açıkça son örnek verilince `pos` 1 → 2 → 3 sn akıyor.
+  Dört turdur "3 müzik döngüsü" yazan raporlar headless testlere dayanıyordu;
+  kimse dinlememişti. Ders: sesi bir sonda betiğiyle ölç, varlık listesine bakma.
+- **Üsse dönen araç kendi şaftına düşüyordu (v0.6'da bulundu).** Oyuncu şaftı
+  üssün tam altına kazıyor; ışınlanma ve yüzeye çekilme aracı (520, −24)'e
+  koyuyordu, araç şafta düşüyor, mağaza açılamıyordu. v0.6'nın "istasyondan
+  bedava kaçış" sahne senaryosu ikramiyeyi alamayınca ortaya çıktı: araç
+  depremin patladığı anda 24 m'deydi. Şimdi `Arac.yuzey_konumu()` şaftın
+  yanındaki ilk dolu sütuna iniyor (üs yarıçapı ±3 karo).
+- **Derin Mod'un kendi yuvası var (v0.6).** v0.5'te Derin Mod'a girmek ana
+  kaydı siliyordu: çekirdeği çıkarılmış dünya, tünelleri, tohum kodu gidiyordu.
+  Şimdi `[derin]` ayrı; ana dünya "Başla" ile hep açılabilir. Eski (v0.5)
+  kayıt ana yuvada Derin Mod taşıyorsa olduğu gibi açılır — `derin_seviye`
+  alanı zaten oradaydı, hiçbir taşıma gerekmedi.
+- **7. eser Derin Mod'da ilk odada gelir, sırada değil.** Modun kimliği ilk
+  gizli odada belli olsun; ilk oyunda müzede bile görünmez (6 satır), yani
+  "7. eser var" bilgisi Derin Mod'un sürprizi.
+- **Eski kayıt uyumluluğu gerçek dosyayla sınanıyor.** `tests/veri/kayit-v0.5.cfg`
+  elle yazılmadı; v0.5 etiketi git worktree'de açılıp `tools/kayit_fikstur.gd`
+  ile o sürümün kendi yazdığı dosya alındı. Elle yazılan fikstür yazanın
+  varsayımını sınar, gerçek dosya sürümün gerçeğini.
 
 ## Çalıştırma
 
@@ -228,7 +281,8 @@ godot --headless --path . --script res://tests/test_denge.gd      # denge simül
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art
-godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri
+godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak)
+godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # eski sürüm worktree'sinde kayıt fikstürü
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim)
 ```
 
@@ -263,22 +317,25 @@ scripts/deprem.gd         deprem hesabı ve oyuncunun kararı (saf sınıf)
 scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı (saf sınıf)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
-scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk]) ve ayarlar
-scripts/ses.gd            autoload: efekt/müzik/ayar
-tools/                    varlık üretimi (pixel art, müzik, ekran görüntüsü)
-tests/bot.gd              bot simülasyonu (kusursuz · insan benzeri · sisli insan)
+scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar
+scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/ayar
+tools/                    varlık üretimi (pixel art, müzik, ekran görüntüsü), kayıt fikstürü
+tests/bot.gd              bot simülasyonu (kusursuz · insan benzeri · sisli insan · Derin Mod)
+tests/veri/               gerçek eski sürüm kayıtları (kayit-v0.5.cfg)
 tests/                    headless testler (çıkış kodu 0 = geçti)
-yayin/                    itch sayfası, 5 ekran görüntüsü, kapak, tanıtım GIF'i, butler komutları
+yayin/                    itch sayfası, 6 ekran görüntüsü, kapak, tanıtım GIF'i, butler komutları
 ```
 
 Kayıt dosyası: `user://kayit.cfg`
 (`%APPDATA%\Godot\app_userdata\Derin Kazı\kayit.cfg`) — `[oyun]` ana ilerleme,
 kazılan ve depremle değişen hücreler, keşif haritası (`kesif`: 17.408 bayt,
-deflate + base64) · `[gunluk]` günlük dünyanın ayrı yuvası · `[ayar]`
-ses/tam ekran/sarsıntı tercihleri.
+deflate + base64) · `[gunluk]` günlük dünyanın ayrı yuvası · `[derin]` Derin
+Mod'un ayrı yuvası (v0.6) · `[ayar]` ses/tam ekran/sarsıntı tercihleri.
 
 ## Varlıklar
 
 GUI aracı kullanılmadı. Tüm pixel art `tools/sprite_uret.gd` içinde Godot `Image`
 API'siyle üretiliyor (palet: **Endesga 32**). Ses efektleri rFXGen ön ayarlarından,
-müzik `tools/muzik_uret.gd` ile kodla üretilen chiptune.
+müzik `tools/muzik_uret.gd` ile kodla üretilen chiptune: altı ruh hâli
+(hizli/neseli/sakin/gizemli/gergin/**cekirdek**), dört bandın komutları `CLAUDE.md`
+"Derinlik ambiyansı" başlığında.

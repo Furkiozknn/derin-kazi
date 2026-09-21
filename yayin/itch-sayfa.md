@@ -5,7 +5,8 @@
 >
 > Görseller: `yayin/tanitim.gif` (480×270, 4 sn — kazı, maden, deprem uyarısı;
 > sayfanın en üstüne, kapak görselinin hemen altına), `yayin/kapak.png`
-> (630×500, kapak), `yayin/ekran-1..5-*.png` (1280×720, ekran görüntüleri).
+> (630×500, kapak), `yayin/ekran-1..6-*.png` (1280×720, ekran görüntüleri;
+> 6. kare Derin Mod'un dar ışığı).
 
 ---
 
@@ -58,13 +59,24 @@ half your hold stays down there in a crate with your name on it. Go get it.
   alone can never end a run.
 - **Six relics, one story.** Each relic is a permanent bonus and a piece of what
   is actually down there. Read them in order in your museum.
+- **The deep sounds different.** Four depth bands — soil, rock, basalt, core
+  crust — each with its own track, cross-faded as you pass 40, 150 and 210 m so
+  the music never cuts. Dust drifts through the shallow tunnels; sparks rise in
+  the basalt; the background warms from brown to ember-red. The deepest track has
+  no drums, only a heartbeat.
 - **Share a world.** Every world has a seven-letter seed code. Hand it to someone
   and they dig the same ground. No confusable letters, and a checksum so a typo
   says "invalid" instead of quietly opening a different world.
 - **A daily world** generated from the date, on its own save slot, with the day's
   deepest point on the menu.
-- **Deep Mode.** Pull the core out and a harder run unlocks: new seed, upgrades
-  reset, harder rock, thirstier engine, richer ore — and your relic bonuses stay.
+- **Deep Mode is a different place, not just a harder number.** Pull the core out
+  and it unlocks on its own save slot — your finished world stays where it is.
+  New seed, upgrades reset, harder rock, thirstier engine, richer ore, and three
+  things the first run never had: your lamp only reaches three tiles, the crust
+  shifts every four runs instead of five, and a seventh relic waits in the first
+  hidden room — the one that tells you what happened after the core woke up. It
+  gives one tile of light back. Your relic bonuses carry over; a badge on the
+  menu marks the mode.
 - **The finale gives, it does not take.** Touch the core and every tool unlocks
   for the timed escape to the surface.
 
@@ -144,13 +156,23 @@ aşağıda bir sandıkta kalıyor. Git al.
   deprem tek başına bir koşuyu bitiremiyor.
 - **Altı eser, tek hikâye.** Her eser hem kalıcı bir bonus hem de aşağıda gerçekte
   ne olduğunun bir parçası. Müzede sırayla okunuyor.
+- **Derinin sesi başka.** Dört derinlik bandı — toprak, kaya, bazalt, çekirdek
+  kabuğu — her birinin kendi parçası var; 40, 150 ve 210 m'yi geçerken parçalar
+  birbirine çaprazlanıyor, müzik hiç kesilmiyor. Sığ tünellerde toz süzülüyor,
+  bazaltta kıvılcım yükseliyor, arka plan kahverengiden kor kızılına ısınıyor.
+  En derin parçada davul yok, yalnız bir kalp atışı var.
 - **Dünyanı paylaş.** Her dünyanın 7 harflik bir tohum kodu var. Kodu verdiğin
   kişi aynı yeri kazıyor. Karışan harf yok, sağlaması var: yanlış yazarsan
   "geçersiz" der, sessizce başka bir dünya açmaz.
 - **Günlük dünya**, tarihten üretiliyor, ayrı kayıt yuvasında; menüde o günün
   en derin noktası yazıyor.
-- **Derin Mod.** Çekirdeği çıkarınca açılıyor: yeni tohum, sıfırlanan geliştirme,
-  sert kaya, susamış motor, değerli maden — eser bonusların kalıyor.
+- **Derin Mod başka bir yer, sadece daha zor bir sayı değil.** Çekirdeği çıkarınca
+  kendi kayıt yuvasında açılıyor — bitirdiğin dünya yerinde kalıyor. Yeni tohum,
+  sıfırlanan geliştirme, sert kaya, susamış motor, değerli maden ve ilk oyunda
+  olmayan üç şey: ışığın yalnız üç karoya yetiyor, kabuk beş yerine dört seferde
+  bir kımıldıyor ve ilk gizli odada yedinci eser bekliyor — çekirdek uyandıktan
+  sonra ne olduğunu anlatan parça; ışığa bir karo geri veriyor. Eser bonusların
+  seninle geliyor; menüde bir rozet modu gösteriyor.
 - **Final aletleri elden almıyor.** Çekirdeğe dokununca tüm aletler açılır ve
   yüzeye zamanlı kaçış başlar.
 
@@ -193,7 +215,7 @@ sesler bu depoda kodla üretildi.
   `thread_support` kapalı derlendi, özel COOP/COEP başlığı istemiyor.
 - **Kapak:** `kapak.png` (630 × 500)
 - **Ekran görüntüleri:** `ekran-1.png` … `ekran-4.png` + `ekran-5-menu.png`
-  (1280 × 720)
+  + `ekran-6-derin.png` (1280 × 720)
 - **Tanıtım GIF'i:** `tanitim.gif` (480 × 270, 4 sn) — sayfa metninin en üstüne,
   ilk ekran görüntüsünün yerine. itch GIF'i olduğu gibi oynatır.
-- **Sürüm:** v0.5 (butler `--userversion 0.5.0`)
+- **Sürüm:** v0.6 (butler `--userversion 0.6.0`)

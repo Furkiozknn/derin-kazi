@@ -180,6 +180,58 @@
 - [x] Windows + Web dışa aktarımı, 5 ekran görüntüsü + kapak + GIF yenilendi
       (GIF sisle 1,6 MB → 0,9 MB), `yayin/` sürüm 0.5.0
 
+## Geliştirme turu 5 — v0.6 "Derinliğin sesi, Derin Mod'un yüzü" (2026-09-21)
+
+### Deprem seferi sahnede baştan sona
+- [x] **Beş gerçek sefer** (12 m'den derine in, üsse dön) sayacı dolduruyor; uyarı
+      yeraltına inince kendiliğinden başlıyor, pano ikramiyeyi yazıyor, geri sayım
+      gerçekten akıyor (322 kare). Üç ayrı senaryo: **(a)** pervaneyle yüzeye çık →
+      +49 ₺, hasar yok · **(b)** derinde kal → −1 can, ikramiye yok · **(c)**
+      istasyondan ışınlan → +49 ₺, hasar yok, yalnız 5 yakıt
+- [x] **(c) gerçek bir hata buldu:** üsse ışınlanan/çekilen araç (520, −24)'e
+      konup kendi şaftına düşüyordu (v0.2'den beri; mağaza açılamıyor, deprem
+      hasarı yiyor). `Arac.yuzey_konumu()` şaftın yanındaki ilk dolu sütuna iniyor
+
+### Derinlik ambiyansı
+- [x] **Dört bant** (`Ayarlar.AMBIYANS`): toprak → kaya → bazalt → çekirdek;
+      bant = müzik + arka plan tonu + parçacık (toz / kıvılcım, araca bağlı,
+      sisin altında). Kaya dokusu katman sınırında artık yumuşak geçiyor
+- [x] **Müzik üreticiye 2. yeraltı ruhu `cekirdek`**: 68 bpm, frigyen, davul
+      yerine kalp atışı, iki kat uzun notalar, dron bas. `muzik_bazalt` (gergin,
+      160 bpm) ve `muzik_cekirdek` üretildi; toplam 4 bant parçası
+- [x] **Crossfade**: `Ses` iki `AudioStreamPlayer`; `muzik_cal(ad, 1.6)` yeni
+      parçayı ötekinde başlatıp ikisini çaprazlıyor, sınırda gidip gelince
+      baştan başlamıyor; parçalar açılışta önyükleniyor (web'de takılma yok).
+      Sahne testi geçiş sırasında 2, sonunda 1 oyuncu çaldığını sınıyor
+- [x] **Müzik v0.2'den beri hiç ilerlemiyordu**: `loop_end = 0` ile oyuncu ilk
+      karede duruyordu (sondayla ölçüldü: 6 sn `playing=false, pos=0.000`). Döngü
+      sonu açıkça son örnek; artık akıyor
+
+### Derin Mod kimliği
+- [x] **Işık 3 karo** (`ISIK_YARICAP_DERIN`), **deprem 4 seferde bir**
+      (`Deprem.ARALIK_DERIN`), **7. eser** "Uyanmış Kabuk Parçası" (ışık +1)
+      yalnız Derin Mod'da ve ilk gizli odada; ilk oyunda müzede bile görünmez.
+      Üçü `Durum.isik_yaricap / deprem_araligi / sonraki_eser` — sahne ve bot
+      aynı yerden okuyor
+- [x] **Kendi kayıt yuvası** `[derin]` (`Kayit.derin_mod_hazirla`): süren tur devam,
+      biten tur x+1 yeni tohumla; ana dünya silinmiyor. Menüde sağ üstte rozet
+      (`▼ DERİN MOD x1 ▼  7. eser yalnız burada / bulundu`), düğme "devam et"
+      ya da "x2 — yeni tohum"
+- [x] **Derin Mod x1 ölçümü** (`Bot.INSAN_DERIN`, 7 tohum, altı eserle): tur
+      122 sn (ilk oyun 106), 10. dk 94 m, çekirdek 24 dk (ilk oyun 25), 7/7 varış,
+      18 deprem; bant bekçileri eklendi
+
+### Kayıt uyumu
+- [x] **Gerçek v0.5 fikstürü** `tests/veri/kayit-v0.5.cfg`: v0.5 etiketi git
+      worktree'de açılıp `tools/kayit_fikstur.gd` ile o sürümün kendisi yazdı.
+      Birim testi Durum/Dunya'ya, oynanış testi gerçek sahneye yüklüyor:
+      tüneller, keşif, para yerinde; ışık 5, deprem 5, 7. eser yok
+
+### Doğrulama ve paket
+- [x] 249 birim + 120 oynanış sınaması, denge/insan (Derin Mod dahil)/fay yeşil
+- [x] Windows + Web dışa aktarımı, 6 ekran görüntüsü (yeni: Derin Mod dar ışık)
+      + kapak, `yayin/` sürüm 0.6.0
+
 ## Sonraki tur
 
 ### Oynanış
@@ -192,8 +244,12 @@
 - [ ] **Sisin oyuncuya bedeli.** Bot ölçümünde 0 çıktı (rota kurulmuyor); insan
       denemesinde "yolu bulamadım" olup olmadığı asıl soru. Gerekirse radar
       menzili ya da hatıra örtüsü (`SIS_HATIRA`) ayarlanır
-- [ ] **Derin Mod'da yeni içerik**, yalnız çarpan değil: 6. katman, yeni tehlike
-      ya da eser seti
+- [x] **Derin Mod'da yeni içerik**, yalnız çarpan değil (v0.6: dar ışık, sık
+      deprem, 7. eser, ayrı yuva). Sıradaki: 6. katman ya da Derin Mod'a özel
+      tehlike
+- [ ] **Müzik gerçekten dinlenmeli.** v0.6'da döngü hatası ölçümle bulundu ama
+      parçaların kulağa nasıl geldiği (özellikle `cekirdek` ruhu ve 160 bpm bazalt)
+      hâlâ dinlenmedi; tohum değiştirmek bir komut
 - [ ] Işınlama işareti (istasyon dışı, tek kullanımlık dönüş noktası)
 - [ ] Günlük dünyada skor tablosu — çevrimdışı olduğu için yalnız kendi rekorun
 
@@ -206,7 +262,12 @@
 ### Dağıtım
 - [x] Web çıktısı v0.4 ile tarayıcıda doğrulandı (yönetici: menü, kazı, dokunmatik
       ipucu, konsolda hata yok)
-- [ ] Web çıktısını v0.5 ile tarayıcıda doğrula: alet düğmeleri, keşif sisi
+- [x] Web çıktısı v0.5 ile tarayıcıda doğrulandı (yönetici: sis, alet düğmeleri,
+      deprem panosu; deprem 5. sefere kadar beklenmedi — v0.6 sahne testi kapattı)
+- [ ] Web çıktısını v0.6 ile tarayıcıda doğrula, **sesi açık**: 40/150/210 m'de
+      müzik geçişi kesintisiz mi, rozet ve Derin Mod yuvası, eski tarayıcı kaydı —
+      `yayin/butler-komutlari.md` altı maddeyi yazıyor
+- [ ] (eski) Web çıktısını v0.5 ile tarayıcıda doğrula: alet düğmeleri, keşif sisi
       (özellikle `draw_rect` örtüsünün web'de hızı), deprem panosu —
       `yayin/butler-komutlari.md` beş maddeyi yazıyor
 - [ ] itch.io sayfası ve yükleme — **Furki'nin onayı gerekiyor**
