@@ -13,7 +13,7 @@
 Kullanıcı adını doğrula:
 
 ```powershell
-butler status furkiozknn/derin-kazi
+butler status <itch-kullanici>/derin-kazi
 ```
 
 ## Yükleme
@@ -22,16 +22,16 @@ Proje kökünde (`D:\Repolar\derin-kazi`):
 
 ```powershell
 # Web (tarayıcıda oynanan sürüm)
-butler push build\web furkiozknn/derin-kazi:web --userversion 0.7.0
+butler push build\web <itch-kullanici>/derin-kazi:html5 --userversion 0.7.0
 
 # Windows masaüstü
-butler push build\windows furkiozknn/derin-kazi:windows --userversion 0.7.0
+butler push build\windows <itch-kullanici>/derin-kazi:windows --userversion 0.7.0
 ```
 
 Yükleme sonrası durum:
 
 ```powershell
-butler status furkiozknn/derin-kazi
+butler status <itch-kullanici>/derin-kazi
 ```
 
 ## Sayfa ayarları (elle, butler yapamaz)
@@ -51,8 +51,8 @@ butler status furkiozknn/derin-kazi
 Yanlış sürüm gittiyse kanalı bir öncekine döndür:
 
 ```powershell
-butler status furkiozknn/derin-kazi          # build numaralarını gör
-butler wipe furkiozknn/derin-kazi:web        # son yüklemeyi kaldır
+butler status <itch-kullanici>/derin-kazi          # build numaralarını gör
+butler wipe <itch-kullanici>/derin-kazi:html5        # son yüklemeyi kaldır
 ```
 
 ## Yerel deneme (yüklemeden önce)

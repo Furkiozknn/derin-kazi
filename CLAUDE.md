@@ -256,7 +256,7 @@ Müzik (ön ayarlar: hizli/neseli/sakin/gizemli/gergin/cekirdek; dört bandın k
 godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik.wav --ruh gizemli --tohum 3
 ```
 
-Godot yolu: `C:\Users\furki\AppData\Local\Microsoft\WinGet\Links\godot.exe`
+Godot yolu: PATH'teki `godot` (winget kurulumu `%LOCALAPPDATA%\Microsoft\WinGet\Links` altina ekler).
 
 ## Godot kilidi
 

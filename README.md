@@ -1,5 +1,9 @@
 # Derin Kazı
 
+*Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough checks.*
+
+[![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
+
 Yandan kesit görünümlü kazı + gelişim oyunu: matkaplı araçla yeraltına in, maden
 topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekirdeğe ulaş.
 
@@ -384,3 +388,9 @@ rFXGen'in veremediği matkap döngüsü ve deprem gürültüsü `tools/ses_uret.
 kodla sentezleniyor. Müzik `tools/muzik_uret.gd` ile kodla üretilen chiptune: altı
 ruh hâli (hizli/neseli/sakin/gizemli/gergin/**cekirdek**), dört bandın komutları
 `CLAUDE.md` "Derinlik ambiyansı" başlığında.
+
+## Lisans
+
+[MIT](LICENSE) — Furki Özkan, 2026. Görseller, sesler ve müzik depodaki üreteclerle koddan
+üretilir; MIT onları da kapsar. Tek istisna `assets/fonts/simgeler.ttf`: DejaVu Sans Bold'un simge
+alt kümesi, **Bitstream Vera** lisansı altında dağıtılır — bildirim `assets/fonts/LISANS-simgeler.txt`.

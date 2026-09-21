@@ -1,0 +1,64 @@
+name: CI
+
+# Depo 21 Eylul 2026'da GitHub'a tasindi; o zamana kadar 304 birim + 156 oynanis kontrolu yalniz elle
+# kosuyordu.
+#
+# Yeni test komutu UYDURULMUYOR: README.md "Testler" bolumunde yazan kapinin aynisi kosuluyor.
+# Test betigi `quit(1 if hata > 0 else 0)` ile bitiyor -- cikis kodu 0 = gecti.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # project.godot: config/features = "4.7". Surum SABIT tutuluyor --
+  # "latest" kullanmak, motor guncellenince testlerin bizden habersiz
+  # kirmizi yanmasi demek olurdu.
+  GODOT_SURUM: 4.7.2-stable
+
+jobs:
+  testler:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # PNG/WAV/TTF Git LFS'te (.gitattributes). LFS cekilmezse
+          # checkout yalnizca ~130 baytlik isaretci dosyalari getirir ve
+          # ice aktarma bozuk varlik uretir.
+          lfs: true
+
+      - name: Godot ${{ env.GODOT_SURUM }} indir
+        run: |
+          set -euo pipefail
+          ad="Godot_v${GODOT_SURUM}_linux.x86_64"
+          curl -fsSL -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_SURUM}/${ad}.zip"
+          unzip -q godot.zip
+          chmod +x "$ad"
+          sudo mv "$ad" /usr/local/bin/godot
+          godot --version
+
+      # Ice aktarma AYRI adim: taze checkout'ta .godot onbellegi hic yok,
+      # eksik onbellek testin icerigiyle ilgisi olmayan ayristirma
+      # hatalari uretiyor.
+      - name: Projeyi ice aktar
+        run: godot --headless --path . --import
+
+      - name: Birim testleri (304)
+        run: godot --headless --path . --script res://tests/test_calistir.gd
+
+      - name: Oynanis testi (156)
+        run: godot --headless --path . --script res://tests/test_oynanis.gd
+
+      # NOT: test_denge.gd / test_insan.gd / test_fay_olcum.gd CI'da
+      # kosmuyor -- bunlar dakikalarca suren denge simulasyonlari ve
+      # gelistirme turu basina bir kez YERELDE kosuluyor. Kapi iki hizli
+      # paket; digerleri olcum araci.
