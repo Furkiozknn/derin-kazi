@@ -9,16 +9,20 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-> Durum: **v0.7.1 — v0.7'nin oynanışı + MIT lisansı ve her push'ta CI.**
-> v0.7 sunum turu ve ışınlama işaretiydi; v0.6'nın üstüne: yüzey
-> karosunun çimenli, kırık kenarlı "üst" görünümü; araç animasyonuna palet dönüşü
-> (yolla döner) ve üç kareli pervane alevi; kazarken çalıp durunca sönen **matkap
-> döngü sesi** ve depreme özel sarsıntı + çatırtı gürültüsü (ikisi de kodla
-> sentezlendi, deterministik); bitiş ekranında **istatistik dökümü** (bu dünya +
-> bütün dünyaların `[oyuncu]` toplamı); **ışınlama işareti** — yeraltında `R` ile
-> tek kullanımlık dönüş noktası koy, üsten ışınlan. Bot hiçbirini bilmiyor: ölçümler
-> v0.6 ile birebir aynı. Windows + Web çıktısı alınıyor; yayın paketi `yayin/`
-> altında hazır (**yüklenmedi**).
+Durum: **v0.7.2** — MIT lisansı, her push'ta **304 birim + 156 oynanış** testinin
+koştuğu CI, ve oyuncuya inen web paketinin **1.782.396 → 968.680 bayta** inmesi (iç
+klasörler dışa aktarmadan çıkarıldı). Oynanış v0.7 ile aynı.
+
+**Oyunda ne var:** beş katmanlı kazı-sat-geliştir döngüsü ve 250 m'deki çekirdek,
+yakıtın sayaç olduğu iniş-çıkış kararı, keşif sisi, okunabilen depremler, tohum
+kodundan kurulan günlük dünya ve Derin Mod, tek kullanımlık ışınlama işareti,
+bitiş ekranında istatistik dökümü.
+
+Windows + Web çıktısı alınıyor; yayın paketi `yayin/` altında hazır
+(**yüklenmedi**).
+
+Sürüm sürüm ne değiştiği: **[SURUM-GECMISI.md](SURUM-GECMISI.md)** · güncel sürümün
+notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasında.
 
 ## Kontroller
 
