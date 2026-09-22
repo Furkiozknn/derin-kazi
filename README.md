@@ -2,7 +2,7 @@
 
 # Derin Kazı
 
-*Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough checks.*
+*Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
 [![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
 
@@ -11,8 +11,8 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-Durum: **v0.7.2** — MIT lisansı, her push'ta **304 birim + 156 oynanış** testinin
-koştuğu CI, ve oyuncuya inen web paketinin **1.782.396 → 968.680 bayta** inmesi (iç
+Durum: **v0.7.2** — MIT lisansı, her push'ta **304 birim + 156 oynanış + 17 ölçüm**
+testinin ve fay hattı kapısının koştuğu CI, ve oyuncuya inen web paketinin **1.782.396 → 968.680 bayta** inmesi (iç
 klasörler dışa aktarmadan çıkarıldı). Oynanış v0.7 ile aynı.
 
 **Oyunda ne var:** beş katmanlı kazı-sat-geliştir döngüsü ve 250 m'deki çekirdek,

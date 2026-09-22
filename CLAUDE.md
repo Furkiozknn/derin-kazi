@@ -185,6 +185,9 @@ ikisine ayrı kod yazma. Mağaza/ipucu metinleri dokunmatikte tuş anlatmaz
 Bütün sayılar `scripts/ayarlar.gd` içinde. Değiştirdikten sonra **mutlaka**
 `tests/test_denge.gd` çalıştır: gerçek üretici ve ekonomiyle bir bot simüle edip
 tur süresini, tur başına geliştirmeyi, 10. dakikayı ve katman başına geliri ölçer.
+Unutursan CI söyler — 22 Eylül 2026'dan beri `test_denge`, `test_insan` ve
+`test_fay_olcum` her push'ta koşuyor. Daha önce "dakikalarca sürüyor" diye
+dışarıda bırakılmışlardı; ölçüldü: 0 sn, 1 sn ve 6 sn.
 
 Bilinmesi gereken bağlar:
 - **Maden ağırlığı** (`MADEN_AGIRLIK`) katman başına geliri ~x1,5'te tutan ayardır.

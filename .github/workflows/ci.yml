@@ -58,10 +58,24 @@ jobs:
       - name: Oynanis testi (156)
         run: godot --headless --path . --script res://tests/test_oynanis.gd
 
-      # NOT: test_denge.gd / test_insan.gd / test_fay_olcum.gd CI'da
-      # kosmuyor -- bunlar dakikalarca suren denge simulasyonlari ve
-      # gelistirme turu basina bir kez YERELDE kosuluyor. Kapi iki hizli
-      # paket; digerleri olcum araci.
+      # Bu uc paket "dakikalarca suren denge simulasyonlari" diye CI disinda
+      # birakilmisti ve gelistirme turu basina bir kez YERELDE kosuluyordu.
+      # 22 Eylul 2026'da olculdu: 0 sn, 1 sn ve 6 sn. Gerekce iki buyukluk
+      # mertebesi yanlisti, ve bu arada deponun en yuklu iddialari --
+      # "cekirdege 25 dakikada varilir", "fay acikken 12 tohumun 12'si",
+      # "2-4 dakikalik turda bir gelistirme" -- hicbir otomatik kapinin
+      # arkasinda degildi. Dunya ureticisinde bir degisiklik bunlari sessizce
+      # bozabilirdi.
+      - name: Denge simulasyonu (kusursuz bot, 7 sinama)
+        run: godot --headless --path . --script res://tests/test_denge.gd
+
+      - name: Insan benzeri olcum (10 sinama)
+        run: godot --headless --path . --script res://tests/test_insan.gd
+
+      # Bu bir sayi degil bir kapi: fay acikken 12 tohumun 12'sinde bot
+      # cekirdege varmali, varamazsa cikis 1.
+      - name: Fay hatti - bot 12/12 cekirdege variyor mu
+        run: godot --headless --path . --script res://tests/test_fay_olcum.gd
 
   referanslar:
     name: Kaynak referanslari saglam mi
