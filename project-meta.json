@@ -48,7 +48,8 @@
   },
   "ci": {
     "workflows": [
-      "ci.yml"
+      "ci.yml",
+      "yapi.yml"
     ],
     "badge": "https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg"
   },
