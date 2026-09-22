@@ -305,6 +305,11 @@
 - [ ] Yüzeyde araç için ayrı "yürüme tozu" ve pervane rüzgârı parçacığı (palet
       artık dönüyor, altındaki toprak hâlâ hareketsiz)
 - [ ] Menüde `[oyuncu]` toplamı (bitiş ekranı dışında da görünsün)
+- [ ] **Derin Mod'a özel tehlike — gaz cebi:** yalnız Derin Mod'da, 3. bandın altında
+      kazınca açılan cep; 2 sn içinde uzaklaşılmazsa 1 can, radar gösterir, dinamit patlatır
+- [ ] **Sisli bot koridoru kendi bulsun:** `cekirdek_x` bilgisini sisli bottan kaldır; 7
+      tohumda varış süresi ve "yolu bulamadı" sayısı ölçülsün (sisin ölçüme bedeli bugün 0)
+- [ ] Günlük dünyada günlük rekor (bitiş panelinde "bugünün rekoru" satırı)
 
 ### Dağıtım
 - [x] Web çıktısı v0.4 ile tarayıcıda doğrulandı (yönetici: menü, kazı, dokunmatik
@@ -320,16 +325,6 @@
 - [ ] itch.io sayfası ve yükleme — **Furki'nin onayı gerekiyor**
 - [x] GitHub deposu ve push (21 Eylül 2026: `Furkiozknn/derin-kazi`, public, `main`,
       MIT lisans, her push'ta CI, v0.7.2 Release)
-
-## v0.8 adayları (dondurulan tur dosyasından taşındı)
-
-- [ ] **Derin Mod'a özel tehlike — gaz cebi:** yalnız Derin Mod'da, 3. bandın altında
-      kazınca açılan cep; 2 sn içinde uzaklaşılmazsa 1 can, radar gösterir, dinamit patlatır
-- [ ] **Sisli bot koridoru kendi bulsun:** `cekirdek_x` bilgisi kaldırılsın, 7 tohumda varış
-      süresi ve "yolu bulamadı" sayısı ölçülsün (sisin ölçüme bedeli bugün 0)
-- [ ] Yüzeyde araç için palet tozu ve pervane rüzgârı parçacığı
-- [ ] Menüde `[oyuncu]` toplamı (kazılan karo / deprem / satış)
-- [ ] Günlük dünyada günlük rekor (bitiş panelinde "bugünün rekoru")
 
 ## Bitti — v0.7.1 / v0.7.2: depo hijyeni ve yayın paketi (2026-09-21/22)
 
