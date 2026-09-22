@@ -247,9 +247,17 @@ godot --headless --path . --script res://tools/ses_uret.gd        # matkap.wav (
 godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası + docs/v07-kareler.png
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak) + telefon/deprem denetimi (render gerekir)
 godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # kayıt fikstürü (eski sürümün worktree'sinde)
+mkdir build\web, build\windows -Force   # hedef klasor yoksa Godot hata verir
 godot --headless --path . --export-release "Windows Masaustu"
 godot --headless --path . --export-release "Web (HTML5)"
 ```
+
+**`export_presets.cfg` → `exclude_filter` boş bırakılmaz.** İki ön ayarda da
+`tests/*, tools/*, docs/*, yayin/*` dışarıda; yoksa oyuncuya inen pakete ekran
+görüntüleri, kapak, tanıtım GIF'i, itch sayfa metni, butler komutları ve test
+dosyaları giriyor (ölçüldü: web pck 1.782.396 → 968.680 bayt). `.gdignore`
+kullanılmıyor: `scripts/kapak.gd` çalışma anında `yayin/kapak-fon.png` okuyor,
+`.gdignore` kapak üreticisini bozar; `exclude_filter` yalnız dışa aktarımı etkiler.
 
 Müzik (ön ayarlar: hizli/neseli/sakin/gizemli/gergin/cekirdek; dört bandın komutları
 "Derinlik ambiyansı" başlığında):

@@ -351,10 +351,15 @@ ffmpeg -y -framerate 12 -i build/tanitim/kare-%02d.png ^
   -loop 0 yayin/tanitim.gif
 ```
 
-Dışa aktarma:
+Dışa aktarma. **Yapı dosyaları depoda yok** (`.gitignore`) ve hedef klasörler önceden
+var olmalı, yoksa Godot "The given export path doesn't exist" der. `export_presets.cfg`
+iki ön ayarda da `tests/`, `tools/`, `docs/` ve `yayin/` klasörlerini dışa aktarmaya
+**almıyor** — oyuncuya inen pakette ekran görüntüleri, tanıtım GIF'i ve test dosyaları
+olmasın diye:
 
 ```powershell
-godot --headless --path . --export-release "Windows Masaustu"   # build/windows/derin-kazi.exe
+mkdir build\web, build\windows -Force
+godot --headless --path . --export-release "Windows Masaustu"   # build/windows/derin-kazi.exe (+ .pck)
 godot --headless --path . --export-release "Web (HTML5)"        # build/web/index.html
 ```
 
