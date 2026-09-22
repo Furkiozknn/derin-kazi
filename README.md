@@ -342,8 +342,10 @@ kurmak, dışa aktarma şablonu indirmek gerekmiyor.
 Son koşuda ölçülen: web `index.pck` **970.144 bayt**, web paketi ~10 MB,
 Windows paketi ~38 MB.
 
-İş akışı hiçbir şey yayımlamaz: ne release varlığı ekler, ne Pages'e
-gönderir. Yayın kararı paket oynandıktan sonra verilir.
+Varsayılanı hiçbir şey yayımlamamaktır. Oynayıp "yayınlanabilir" dediğinde
+aynı pencerede **`sayfaya_yayinla`** kutusunu işaretlemen yeterli: o zaman
+web paketi GitHub Pages'e gider ve oyun tarayıcıdan oynanır hâle gelir.
+Kutu işaretlenmedikçe Pages'e dokunulmaz.
 
 ```powershell
 godot --headless --path . --import                                # içe aktar (CI de bunu koşar)

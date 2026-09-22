@@ -2,16 +2,26 @@ name: Yapi
 
 # Oynanabilir bir derleme uretir ve CI artifact'i olarak birakir.
 #
-# Bilerek SADECE elle tetiklenir ve HICBIR SEYI YAYIMLAMAZ: ne release
-# varligi ekler, ne Pages'e gonderir. Amaci tek: oyunu oynayip
-# dogrulamak isteyen kisinin Godot kurmadan bir paket indirebilmesi --
-# yayin karari oynandiktan sonra verilir.
+# Bilerek SADECE elle tetiklenir. Varsayilan davranisi HICBIR SEY
+# YAYIMLAMAMAKTIR: amaci, oyunu oynayip dogrulamak isteyen kisinin Godot
+# kurmadan bir paket indirebilmesi -- yayin karari oynandiktan sonra
+# verilir.
+#
+# Oynadiktan sonra yayinlamak icin: Run workflow penceresinde
+# "sayfaya_yayinla" kutusunu isaretle. O zaman ayni web paketi GitHub
+# Pages'e gider ve oyun tarayicidan oynanabilir olur. Kutu
+# isaretlenmedikce Pages'e dokunulmaz.
 #
 # Paket boyutlari adimda yazdiriliyor; disa aktarma suzgecinin oyuncuya
 # inen pakete ne koydugu boylece olculuyor, tahmin edilmiyor.
 
 on:
   workflow_dispatch:
+    inputs:
+      sayfaya_yayinla:
+        description: "Web paketini GitHub Pages'e yayinla (varsayilan: yalniz artifact)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,3 +97,34 @@ jobs:
           name: derin-kazi-windows
           path: build/windows
           if-no-files-found: error
+
+  sayfa:
+    name: GitHub Pages'e yayinla
+    needs: yapi
+    # Kutu isaretlenmedikce bu is hic kosmaz; varsayilan yayimlamamaktir.
+    if: ${{ inputs.sayfaya_yayinla }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.dagit.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: derin-kazi-web
+          path: web
+
+      # enablement: true -- depoda Pages hic acilmamissa bu adim aciyor,
+      # yani ayarlara elle girmek gerekmiyor.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - id: dagit
+        uses: actions/deploy-pages@v4
