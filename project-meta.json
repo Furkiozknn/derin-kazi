@@ -21,10 +21,15 @@
   "license": "MIT",
   "topics": [
     "2d-game",
+    "exploration",
     "game-development",
     "gdscript",
     "godot",
-    "godot4"
+    "godot4",
+    "indie-game",
+    "mining-game",
+    "resource-management",
+    "turkce"
   ],
   "summary": "Side-view digging and upgrade loop in Godot 4: mine ore, watch the fuel, sell, upgrade the rig, reach the core at 250 m. Turkish UI.",
   "key_features": [
