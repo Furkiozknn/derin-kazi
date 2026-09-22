@@ -1,3 +1,5 @@
+![Derin Kazi - side-view digging and upgrade loop in Godot 4, five layers down to the core at 250 m](yayin/banner.svg)
+
 # Derin Kazı
 
 *Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough checks.*
