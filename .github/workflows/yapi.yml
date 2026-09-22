@@ -1,0 +1,89 @@
+name: Yapi
+
+# Oynanabilir bir derleme uretir ve CI artifact'i olarak birakir.
+#
+# Bilerek SADECE elle tetiklenir ve HICBIR SEYI YAYIMLAMAZ: ne release
+# varligi ekler, ne Pages'e gonderir. Amaci tek: oyunu oynayip
+# dogrulamak isteyen kisinin Godot kurmadan bir paket indirebilmesi --
+# yayin karari oynandiktan sonra verilir.
+#
+# Paket boyutlari adimda yazdiriliyor; disa aktarma suzgecinin oyuncuya
+# inen pakete ne koydugu boylece olculuyor, tahmin edilmiyor.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yapi-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # CI testleriyle ayni sabit surum. "latest", motor guncellenince
+  # depodan bagimsiz bir kirmizi uretirdi.
+  GODOT_SURUM: 4.7.2-stable
+  GODOT_SABLON: 4.7.2.stable
+
+jobs:
+  yapi:
+    name: Windows + Web disa aktar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Varliklar Git LFS'te; cekilmezse sahneler "bozuk kaynak" duser.
+          lfs: true
+
+      - name: Godot ve disa aktarma sablonlari
+        run: |
+          set -euo pipefail
+          ad="Godot_v${GODOT_SURUM}_linux.x86_64"
+          curl -fsSL -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_SURUM}/${ad}.zip"
+          unzip -q godot.zip
+          chmod +x "$ad"
+          sudo mv "$ad" /usr/local/bin/godot
+          curl -fsSL -o sablon.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_SURUM}/Godot_v${GODOT_SURUM}_export_templates.tpz"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_SABLON}"
+          unzip -q sablon.tpz -d sablon
+          mv sablon/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_SABLON}/"
+          godot --version
+
+      # Ice aktarma ayri adim: taze checkout'ta .godot yok ve eksik
+      # onbellek, disa aktarmayi ilgisiz hatalarla dusuruyor.
+      - name: Projeyi ice aktar
+        run: godot --headless --path . --import
+
+      - name: Disa aktar
+        run: |
+          set -euo pipefail
+          mkdir -p build/windows build/web
+          godot --headless --path . --export-release "Windows Masaustu" "build/windows/derin-kazi.exe"
+          godot --headless --path . --export-release "Web (HTML5)" "build/web/index.html"
+
+      - name: Paket boyutlari
+        run: |
+          set -euo pipefail
+          echo "--- web ---"
+          ls -l build/web
+          if [ -f build/web/index.pck ]; then
+            echo "web pck: $(stat -c%s build/web/index.pck) bayt"
+          fi
+          echo "--- windows ---"
+          ls -l build/windows
+          du -sh build/web build/windows
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: derin-kazi-web
+          path: build/web
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: derin-kazi-windows
+          path: build/windows
+          if-no-files-found: error
