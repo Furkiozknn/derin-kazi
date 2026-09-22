@@ -318,7 +318,34 @@
       kazarken çalıp durunca sönüyor mu (web'de loop), deprem gürültüsü, R/İŞARET
       akışı, bitiş paneli, eski tarayıcı kaydı — `yayin/butler-komutlari.md`
 - [ ] itch.io sayfası ve yükleme — **Furki'nin onayı gerekiyor**
-- [ ] GitHub deposu ve push — **Furki'nin onayı gerekiyor**
+- [x] GitHub deposu ve push (21 Eylül 2026: `Furkiozknn/derin-kazi`, public, `main`,
+      MIT lisans, her push'ta CI, v0.7.2 Release)
+
+## v0.8 adayları (dondurulan tur dosyasından taşındı)
+
+- [ ] **Derin Mod'a özel tehlike — gaz cebi:** yalnız Derin Mod'da, 3. bandın altında
+      kazınca açılan cep; 2 sn içinde uzaklaşılmazsa 1 can, radar gösterir, dinamit patlatır
+- [ ] **Sisli bot koridoru kendi bulsun:** `cekirdek_x` bilgisi kaldırılsın, 7 tohumda varış
+      süresi ve "yolu bulamadı" sayısı ölçülsün (sisin ölçüme bedeli bugün 0)
+- [ ] Yüzeyde araç için palet tozu ve pervane rüzgârı parçacığı
+- [ ] Menüde `[oyuncu]` toplamı (kazılan karo / deprem / satış)
+- [ ] Günlük dünyada günlük rekor (bitiş panelinde "bugünün rekoru")
+
+## Bitti — v0.7.1 / v0.7.2: depo hijyeni ve yayın paketi (2026-09-21/22)
+
+- [x] MIT `LICENSE`
+- [x] GitHub deposu **public** (`Furkiozknn/derin-kazi`, dal `main`), `v0.7.2` etiketi ve Release
+- [x] GitHub Actions: 304 birim + 156 oynanış testi her `main` push'unda ve her PR'da (Godot 4.7.2 sabit,
+      Git LFS çekilerek); README'de rozet
+- [x] `*.gif` Git LFS'e alındı (`.gitattributes` kuralı artık gerçekten tutuyor)
+- [x] Makineye özel yollar belgelerden ve betiklerden çıkarıldı
+- [x] İki tur bağımsız belge denetimi: bazalt müziğinin üretim komutu (`--bpm 160`), deprem oranı %22,
+      sisli botun BFS hakkı, fay ölçümü 12/12, istasyonun 40 m sınırı; kazı zinciri,
+      sandık ödülleri ve düşme hasarı ilk kez belgelendi
+- [x] **Yayın paketi %46 küçüldü**: `exclude_filter` boştu, oyuncuya inen pakete `yayin/`,
+      `docs/`, `tests/`, `tools/` ve `_eski/` giriyordu. Web pck 1.782.396 → 968.680 bayt;
+      paket dosya tablosu okunarak doğrulandı
+- [x] `LISANS-simgeler.txt` README'de atıf alıyor
 
 ## Bilinen sınırlar
 
@@ -339,8 +366,4 @@
   botun oynayışını değiştirmiyor; oyuncununkini değiştirip değiştirmediği insan
   denemesine kaldı.
 - Düşen kaya yere çarpınca yok oluyor, yeni karo bırakmıyor (bilerek).
-- Web çıktısı v0.5 ile tarayıcıda denenmedi (bu oturumda sunucu kurulmadı);
-  sis, alet düğmeleri ve pano headless test + sahne sınaması + motor içi ekran
-  görüntüsüyle doğrulandı.
-- **Deprem yalnız ilk 15 m'nin altında tetikleniyor**, yani hiç derine inmeyen
-  bir oyuncu ikramiyeyi de riski de görmez (bilerek).
+

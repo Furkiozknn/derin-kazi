@@ -329,7 +329,7 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 ## Çalıştırma
 
 ```powershell
-godot --path . --import                                           # içe aktar
+godot --headless --path . --import                                # içe aktar (CI de bunu koşar)
 godot --path .                                                    # oyna
 godot --headless --path . --script res://tests/test_calistir.gd   # birim testleri
 godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış testi

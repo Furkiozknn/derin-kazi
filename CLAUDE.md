@@ -79,7 +79,8 @@ Işık **yakıt harcamaz**, geliştirilmez — sis bilgi kısıtı, kaynak deği
 Mini harita (`oyun.gd → _harita_boya`) keşfedilmemiş hücreyi boyamaz; radar
 sisi **geçici** seyreltir, keşif saymaz. Işık yarıçapı artık sabit değil
 **`Durum.isik_yaricap()`** (ilk oyun 5, Derin Mod 3, 7. eserle +1); sahne, `Sis`
-ve bot hep bunu okur — `Ayarlar.ISIK_YARICAP`'ı doğrudan kullanma.
+ve bot hep bunu okur. `Ayarlar.ISIK_YARICAP` yalnız varsayılan parametre ve eski kayıt
+dolgusunda (`dunya.gd`, `sis.gd`) kalır — yeni okuma ekleme.
 
 ## Derinlik ambiyansı (v0.6)
 
@@ -253,17 +254,17 @@ godot --headless --path . --export-release "Web (HTML5)"
 ```
 
 **`export_presets.cfg` → `exclude_filter` boş bırakılmaz.** İki ön ayarda da
-`tests/*, tools/*, docs/*, yayin/*` dışarıda; yoksa oyuncuya inen pakete ekran
-görüntüleri, kapak, tanıtım GIF'i, itch sayfa metni, butler komutları ve test
-dosyaları giriyor (ölçüldü: web pck 1.782.396 → 968.680 bayt). `.gdignore`
-kullanılmıyor: `scripts/kapak.gd` çalışma anında `yayin/kapak-fon.png` okuyor,
-`.gdignore` kapak üreticisini bozar; `exclude_filter` yalnız dışa aktarımı etkiler.
+`tests/*, tools/*, docs/*, yayin/*, _eski/*` dışarıda; yoksa oyuncuya inen pakete ekran
+görüntüleri, kapak, tanıtım GIF'i, itch sayfa metni, butler komutları, test dosyaları ve
+`_eski/` altındaki ölü betikler giriyor (ölçüldü: web pck 1.782.396 → 968.680 bayt).
+`yayin/` klasörüne **`.gdignore` koyma**: `scripts/kapak.gd` çalışma anında
+`yayin/kapak-fon.png` okuyor, `.gdignore` kapak üreticisini bozar — dışa aktarımı
+`exclude_filter` hallediyor. (`build/.gdignore` ayrı iş: depoda kalmalı, `.gitignore`
+onu bilerek koruyor, yoksa Godot dışa aktarma çıktısını yeniden içe aktarır.)
+`_eski/.gdignore` de durur: oraya taşınan betik ne parse edilsin ne pakete girsin.
 
-Müzik (ön ayarlar: hizli/neseli/sakin/gizemli/gergin/cekirdek; dört bandın komutları
-"Derinlik ambiyansı" başlığında):
-```powershell
-godot --headless --path . -s res://tools/muzik_uret.gd -- --cikti res://assets/audio/muzik.wav --ruh gizemli --tohum 3
-```
+Müzik: dört bandın tam komutu "Derinlik ambiyansı" başlığında; ön ayarlar
+`tools/muzik_uret.gd` başlığında listeli.
 
 Godot yolu: PATH'teki `godot` (winget kurulumu `%LOCALAPPDATA%\Microsoft\WinGet\Links` altina ekler).
 
@@ -271,7 +272,8 @@ Godot yolu: PATH'teki `godot` (winget kurulumu `%LOCALAPPDATA%\Microsoft\WinGet\
 
 Aynı anda birden çok oyun oturumu çalışıyor, RAM dar. Godot çalıştırmadan önce
 depoların ortak üst klasöründe `.godot-kilit` dosyasını al (varsa ve 15 dk'dan yeniyse 30 sn bekle;
-yoksa oluştur, içine `derin-kazi` yaz), iş bitince sil. Açık süreç bırakma.
+30 sn sonra hâlâ duruyorsa kilidi bayat say ve üzerine yaz; yoksa oluştur, içine `derin-kazi`
+yaz), iş bitince sil. Açık süreç bırakma.
 
 ## Yayın
 
