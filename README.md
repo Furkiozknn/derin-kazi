@@ -430,3 +430,14 @@ ruh hâli (hizli/neseli/sakin/gizemli/gergin/**cekirdek**), dört bandın komutl
 [MIT](LICENSE) — Furki Özkan, 2026. Görseller, sesler ve müzik depodaki üreteclerle koddan
 üretilir; MIT onları da kapsar. Tek istisna `assets/fonts/simgeler.ttf`: DejaVu Sans Bold'un simge
 alt kümesi, **Bitstream Vera** lisansı altında dağıtılır — bildirim `assets/fonts/LISANS-simgeler.txt`.
+
+---
+
+## Bu ekosistemden başka projeler
+
+- **[tek-tus-kosu](https://github.com/Furkiozknn/tek-tus-kosu)** — tek tuş, müziğin vuruş ızgarasına dizilmiş engeller
+- **[yercekimi-cevir](https://github.com/Furkiozknn/yercekimi-cevir)** — zıplama yok — tek tuş yerçekimini çevirir
+- **[kanca](https://github.com/Furkiozknn/kanca)** — tavana kanca at, salın, tam zamanında bırak
+- **[godot-refcheck](https://github.com/Furkiozknn/godot-refcheck)** — Godot projelerindeki kırık referansları ve ölü sinyalleri bulur, onarır
+
+<sub>Hepsi tek bir aranabilir sayfada: **[furkiozknn.github.io](https://furkiozknn.github.io/)** — her kart, o deponun kendi <code>project-meta.json</code> dosyasından üretiliyor.</sub>
