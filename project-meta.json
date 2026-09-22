@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "id": "derin-kazi",
+  "owner": "Furkiozknn",
+  "repository": "https://github.com/Furkiozknn/derin-kazi",
+  "homepage": null,
+  "releases": "https://github.com/Furkiozknn/derin-kazi/releases",
+  "status": "active",
+  "category": "game",
+  "platform": [
+    "windows",
+    "web"
+  ],
+  "primary_language": "GDScript",
+  "technologies": [
+    "Godot 4.7",
+    "GDScript",
+    "GL Compatibility renderer"
+  ],
+  "version": "0.7.2",
+  "license": "MIT",
+  "topics": [
+    "2d-game",
+    "game-development",
+    "gdscript",
+    "godot",
+    "godot4"
+  ],
+  "summary": "Side-view digging and upgrade loop in Godot 4: mine ore, watch the fuel, sell, upgrade the rig, reach the core at 250 m. Turkish UI.",
+  "key_features": [
+    "Dig-sell-upgrade loop across five underground layers down to the core at 250 m",
+    "Fuel is the timer: every descent is a bet on getting back up before it runs out",
+    "Seeded worlds - a daily world and a Deep Mode built from the same seed code",
+    "Earthquakes, exploration fog and depth ambience that change how the layers read"
+  ],
+  "media": {
+    "hero": "yayin/ekran-2.png",
+    "screenshots": [
+      "yayin/ekran-2.png"
+    ],
+    "gifs": [],
+    "videos": []
+  },
+  "tests": {
+    "count": 460,
+    "source": "CI log: 304 unit (`== 304 sinama, 0 hata ==`) + 156 gameplay (`== 156 sinama, 0 hata ==`)",
+    "measured": "2026-09-22"
+  },
+  "ci": {
+    "workflows": [
+      "ci.yml"
+    ],
+    "badge": "https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg"
+  },
+  "docs": {
+    "readme": "README.md",
+    "changelog": null,
+    "roadmap": "YOL-HARITASI.md",
+    "security": null,
+    "contributing": null,
+    "license_file": "LICENSE"
+  },
+  "social": {
+    "headline": "Mine deeper, or make it back up. The fuel gauge decides.",
+    "hashtags": [
+      "godot",
+      "godot4",
+      "indiedev",
+      "gamedev",
+      "miningame"
+    ],
+    "primary_link": "https://github.com/Furkiozknn/derin-kazi"
+  },
+  "provenance": {
+    "generated_at": "2026-09-22",
+    "generator": "ghcc/gen_meta.py",
+    "rule": "mechanical fields read from the repository and the GitHub API; editorial fields hand-written and reviewed; no field is generated from a guess"
+  }
+}
