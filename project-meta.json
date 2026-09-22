@@ -55,6 +55,7 @@
   "docs": {
     "readme": "README.md",
     "changelog": null,
+    "version_history": "SURUM-GECMISI.md",
     "roadmap": "YOL-HARITASI.md",
     "security": null,
     "contributing": null,
