@@ -26,6 +26,49 @@ Windows + Web çıktısı alınıyor; yayın paketi `yayin/` altında hazır
 Sürüm sürüm ne değiştiği: **[SURUM-GECMISI.md](SURUM-GECMISI.md)** · güncel sürümün
 notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasında.
 
+## Hızlı başlangıç
+
+![Dört saniyelik oynanış: kazı, maden toplama, kazı zinciri, deprem uyarısı](yayin/tanitim.gif)
+
+<sub>4 sn, 12 kare/sn — gerçek oyundan `tools/tanitim_al.gd` ile alınan kareler, montaj yok.</sub>
+
+**Hedef:** 250 m'deki çekirdeğe dokunup yüzeye geri dönmek. Yakıt sayaçtır:
+her iniş, yakıt bitmeden yükü üsse taşıyıp taşıyamayacağına dair bir bahis.
+İnsan benzeri bot çekirdeğe ~25 dakikada varıyor (`tests/test_insan.gd`).
+
+**Platform:** Windows masaüstü ve Web (HTML5; thread'siz derleme, düz bir
+statik sunucuda açılır). Klavye, gamepad ve dokunmatik. Tarayıcıda oynanan
+bir sürüm **henüz yayında değil** — GitHub Pages bu depoda açılmadı.
+
+**1. Godot kurmadan oyna.** [Actions → Yapi](https://github.com/Furkiozknn/derin-kazi/actions/workflows/yapi.yml)
+→ son başarılı koşu → *Artifacts* (indirmek için GitHub hesabıyla giriş
+gerekir; artifact'ler 90 gün tutulur, yeni koşuyu *Run workflow* ile depo
+sahibi başlatır):
+
+- `derin-kazi-windows` — zip'i aç, `derin-kazi.exe`'yi çalıştır
+  (`derin-kazi.pck` aynı klasörde kalmalı).
+- `derin-kazi-web` — zip'i aç, klasörde `python -m http.server 8000`, tarayıcıda
+  `http://localhost:8000`. `index.html`'e çift tıklamak çalışmaz: tarayıcı
+  `file://` altında `.wasm`/`.pck` yüklemez.
+
+**2. Kaynaktan oyna.** Gerekenler: **Godot 4.7.2-stable** (standart sürüm,
+.NET değil) ve **Git LFS** — bütün PNG/WAV/TTF/GIF varlıkları LFS'te.
+
+```sh
+git lfs install
+git clone https://github.com/Furkiozknn/derin-kazi
+cd derin-kazi
+godot --headless --path . --import   # ilk açılışta içe aktarma
+godot --path .                       # oyna
+```
+
+LFS olmadan klonlarsan (ya da GitHub'ın *Download ZIP* düğmesini kullanırsan)
+varlıklar ~130 baytlık metin işaretçileri olarak iner ve içe aktarma bozuk
+kaynak hatalarıyla durur. `file assets/sprites/arac.png` "ASCII text" diyorsa
+sebep budur; çözüm `git lfs install && git lfs pull`.
+
+Testler ve dışa aktarma: [Çalıştırma](#çalıştırma).
+
 ## Kontroller
 
 | Tuş | Gamepad | İş |
