@@ -24,11 +24,18 @@ env:
   # kirmizi yanmasi demek olurdu.
   GODOT_SURUM: 4.7.2-stable
 
+# Isletici imaji da ayni gerekceyle sabit: "ubuntu-latest" 19 Ekim 2026'dan
+# itibaren Ubuntu 26'ya kayiyor (runner-images#14748). Motor surumunu sabit
+# tutup altindaki isletim sistemini habersiz degistirmek ayni riski geri
+# getirirdi. Eylem surumleri Node 24 calisma zamanli ana surumlerde
+# (checkout@v7, upload-sarif@v4): v4/v3 her kosuda "Node.js 20 is deprecated"
+# ve "CodeQL Action v3 will be deprecated in December 2026" uyarisi veriyordu.
+
 jobs:
   testler:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # PNG/WAV/TTF Git LFS'te (.gitattributes). LFS cekilmezse
           # checkout yalnizca ~130 baytlik isaretci dosyalari getirir ve
@@ -79,12 +86,12 @@ jobs:
 
   referanslar:
     name: Kaynak referanslari saglam mi
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Kirik bir kaynak referansi motoru her zaman durdurmuyor: eksik bir
       # .tscn ya da silinmis bir .png, sahne o kod yolu calisana kadar
@@ -101,7 +108,7 @@ jobs:
 
       - name: SARIF raporunu kod taramaya yukle
         if: always() && hashFiles('refcheck.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: refcheck.sarif
           category: godot-refcheck
