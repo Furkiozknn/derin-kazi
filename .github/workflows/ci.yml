@@ -23,12 +23,32 @@ env:
   # "latest" kullanmak, motor guncellenince testlerin bizden habersiz
   # kirmizi yanmasi demek olurdu.
   GODOT_SURUM: 4.7.2-stable
+  # Test kapisinin tabanlari (toplam 477): bir paketin gecen sinama sayisi
+  # kendi tabaninin altina duserse CI kirmizi. Test EKLEYINCE ilgili tabani
+  # yukselt (README ile birlikte); dusurmek, bir bolumun sessizce
+  # kayboldugunu kabul etmek demek.
+  TEST_TABANI_BIRIM: 304
+  TEST_TABANI_OYNANIS: 156
+  TEST_TABANI_DENGE: 7
+  TEST_TABANI_INSAN: 10
+  # Fay kapisinin en az kac tohumda 12/12 demesi gerektigi.
+  FAY_TOHUM_TABANI: 12
+
+# Isletici imaji da ayni gerekceyle sabit: "ubuntu-latest" 19 Ekim 2026'dan
+# itibaren Ubuntu 26'ya kayiyor (runner-images#14748). Motor surumunu sabit
+# tutup altindaki isletim sistemini habersiz degistirmek ayni riski geri
+# getirirdi. Eylem surumleri Node 24 calisma zamanli ana surumlerde
+# (checkout@v7, upload-sarif@v4): v4/v3 her kosuda "Node.js 20 is deprecated"
+# ve "CodeQL Action v3 will be deprecated in December 2026" uyarisi veriyordu.
 
 jobs:
   testler:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    # Normal kosu ~1,5 dk. Bir sinama hic donmezse (takili bir await, sonsuz
+    # dongu) 6 saatlik varsayilan yerine 15 dakikada kirmizi.
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # PNG/WAV/TTF Git LFS'te (.gitattributes). LFS cekilmezse
           # checkout yalnizca ~130 baytlik isaretci dosyalari getirir ve
@@ -52,11 +72,23 @@ jobs:
       - name: Projeyi ice aktar
         run: godot --headless --path . --import
 
-      - name: Birim testleri (304)
-        run: godot --headless --path . --script res://tests/test_calistir.gd
+      # Cikis kodu tek basina yetmiyor: bir test fonksiyonundaki calisma
+      # zamani hatasi yalnizca o fonksiyonu keser, kalan sinamalar sayilmaz
+      # ve paket yine "N sınama, 0 hata" ile 0 doner (25 Eylul 2026'da gercek
+      # motorla denendi: _deprem_testleri'nde bir null erisimi -> "282 sınama,
+      # 0 hata", cikis 0). tests/kapi.sh her paketin gunlugunu okuyup sonuc
+      # satirini, tabani ve "SCRIPT ERROR" yoklugunu zorunlu kiliyor.
+      - name: Birim testleri (en az ${{ env.TEST_TABANI_BIRIM }})
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_calistir.gd 2>&1 | tee "$RUNNER_TEMP/birim.log"
+          bash tests/kapi.sh "$RUNNER_TEMP/birim.log" "$TEST_TABANI_BIRIM"
 
-      - name: Oynanis testi (156)
-        run: godot --headless --path . --script res://tests/test_oynanis.gd
+      - name: Oynanis testi (en az ${{ env.TEST_TABANI_OYNANIS }})
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_oynanis.gd 2>&1 | tee "$RUNNER_TEMP/oynanis.log"
+          bash tests/kapi.sh "$RUNNER_TEMP/oynanis.log" "$TEST_TABANI_OYNANIS"
 
       # Bu uc paket "dakikalarca suren denge simulasyonlari" diye CI disinda
       # birakilmisti ve gelistirme turu basina bir kez YERELDE kosuluyordu.
@@ -66,25 +98,41 @@ jobs:
       # "2-4 dakikalik turda bir gelistirme" -- hicbir otomatik kapinin
       # arkasinda degildi. Dunya ureticisinde bir degisiklik bunlari sessizce
       # bozabilirdi.
-      - name: Denge simulasyonu (kusursuz bot, 7 sinama)
-        run: godot --headless --path . --script res://tests/test_denge.gd
+      - name: Denge simulasyonu (kusursuz bot, en az ${{ env.TEST_TABANI_DENGE }} sinama)
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_denge.gd 2>&1 | tee "$RUNNER_TEMP/denge.log"
+          bash tests/kapi.sh "$RUNNER_TEMP/denge.log" "$TEST_TABANI_DENGE"
 
-      - name: Insan benzeri olcum (10 sinama)
-        run: godot --headless --path . --script res://tests/test_insan.gd
+      - name: Insan benzeri olcum (en az ${{ env.TEST_TABANI_INSAN }} sinama)
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_insan.gd 2>&1 | tee "$RUNNER_TEMP/insan.log"
+          bash tests/kapi.sh "$RUNNER_TEMP/insan.log" "$TEST_TABANI_INSAN"
 
       # Bu bir sayi degil bir kapi: fay acikken 12 tohumun 12'sinde bot
       # cekirdege varmali, varamazsa cikis 1.
       - name: Fay hatti - bot 12/12 cekirdege variyor mu
-        run: godot --headless --path . --script res://tests/test_fay_olcum.gd
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_fay_olcum.gd 2>&1 | tee "$RUNNER_TEMP/fay.log"
+          bash tests/kapi.sh --fay "$RUNNER_TEMP/fay.log" "$FAY_TOHUM_TABANI"
 
   referanslar:
     name: Kaynak referanslari saglam mi
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      # Test kapisinin kendi sinamasi: Godot gerektirmez, bu yuzden motoru
+      # indirmeyen bu iste. Kapi bozulursa (ornegin SCRIPT ERROR aramasi
+      # silinirse) burada kirmizi yanar.
+      - name: Test kapisi sinamasi
+        run: bash tests/kapi_sinama.sh
 
       # Kirik bir kaynak referansi motoru her zaman durdurmuyor: eksik bir
       # .tscn ya da silinmis bir .png, sahne o kod yolu calisana kadar
@@ -101,7 +149,7 @@ jobs:
 
       - name: SARIF raporunu kod taramaya yukle
         if: always() && hashFiles('refcheck.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: refcheck.sarif
           category: godot-refcheck

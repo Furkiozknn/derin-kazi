@@ -36,12 +36,16 @@ env:
   GODOT_SURUM: 4.7.2-stable
   GODOT_SABLON: 4.7.2.stable
 
+# Isletici imaji ve eylem surumleri ci.yml ile ayni gerekceyle secildi
+# (sabit ubuntu-24.04; Node 24 calisma zamanli ana surumler).
+
 jobs:
   yapi:
     name: Windows + Web disa aktar
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Varliklar Git LFS'te; cekilmezse sahneler "bozuk kaynak" duser.
           lfs: true
@@ -86,13 +90,13 @@ jobs:
           ls -l build/windows
           du -sh build/web build/windows
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: derin-kazi-web
           path: build/web
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: derin-kazi-windows
           path: build/windows
@@ -103,7 +107,8 @@ jobs:
     needs: yapi
     # Kutu isaretlenmedikce bu is hic kosmaz; varsayilan yayimlamamaktir.
     if: ${{ inputs.sayfaya_yayinla }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write
@@ -111,20 +116,24 @@ jobs:
       name: github-pages
       url: ${{ steps.dagit.outputs.page_url }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: derin-kazi-web
           path: web
 
-      # enablement: true -- depoda Pages hic acilmamissa bu adim aciyor,
-      # yani ayarlara elle girmek gerekmiyor.
-      - uses: actions/configure-pages@v5
+      # Pages depoda BIR KEZ elle acilmali: Settings -> Pages -> Source:
+      # "GitHub Actions". `enablement: true` bunu yapamiyor -- is akisinin
+      # GITHUB_TOKEN'i Pages sitesi olusturamaz ve adim "Resource not
+      # accessible by integration" ile duser (ayni is akisi tek-tus-kosu'da
+      # 25 Eylul 2026'da tam burada dustu). Bir kez acildiktan sonra bu adim
+      # yalnizca dogrular.
+      - uses: actions/configure-pages@v6
         with:
           enablement: true
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: web
 
       - id: dagit
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

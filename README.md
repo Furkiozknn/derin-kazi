@@ -26,6 +26,49 @@ Windows + Web çıktısı alınıyor; yayın paketi `yayin/` altında hazır
 Sürüm sürüm ne değiştiği: **[SURUM-GECMISI.md](SURUM-GECMISI.md)** · güncel sürümün
 notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasında.
 
+## Hızlı başlangıç
+
+![Dört saniyelik oynanış: kazı, maden toplama, kazı zinciri, deprem uyarısı](yayin/tanitim.gif)
+
+<sub>4 sn, 12 kare/sn — gerçek oyundan `tools/tanitim_al.gd` ile alınan kareler, montaj yok.</sub>
+
+**Hedef:** 250 m'deki çekirdeğe dokunup yüzeye geri dönmek. Yakıt sayaçtır:
+her iniş, yakıt bitmeden yükü üsse taşıyıp taşıyamayacağına dair bir bahis.
+İnsan benzeri bot çekirdeğe ~25 dakikada varıyor (`tests/test_insan.gd`).
+
+**Platform:** Windows masaüstü ve Web (HTML5; thread'siz derleme, düz bir
+statik sunucuda açılır). Klavye, gamepad ve dokunmatik. Tarayıcıda oynanan
+bir sürüm **henüz yayında değil** — GitHub Pages bu depoda açılmadı.
+
+**1. Godot kurmadan oyna.** [Actions → Yapi](https://github.com/Furkiozknn/derin-kazi/actions/workflows/yapi.yml)
+→ son başarılı koşu → *Artifacts* (indirmek için GitHub hesabıyla giriş
+gerekir; artifact'ler 90 gün tutulur, yeni koşuyu *Run workflow* ile depo
+sahibi başlatır):
+
+- `derin-kazi-windows` — zip'i aç, `derin-kazi.exe`'yi çalıştır
+  (`derin-kazi.pck` aynı klasörde kalmalı).
+- `derin-kazi-web` — zip'i aç, klasörde `python -m http.server 8000`, tarayıcıda
+  `http://localhost:8000`. `index.html`'e çift tıklamak çalışmaz: tarayıcı
+  `file://` altında `.wasm`/`.pck` yüklemez.
+
+**2. Kaynaktan oyna.** Gerekenler: **Godot 4.7.2-stable** (standart sürüm,
+.NET değil) ve **Git LFS** — bütün PNG/WAV/TTF/GIF varlıkları LFS'te.
+
+```sh
+git lfs install
+git clone https://github.com/Furkiozknn/derin-kazi
+cd derin-kazi
+godot --headless --path . --import   # ilk açılışta içe aktarma
+godot --path .                       # oyna
+```
+
+LFS olmadan klonlarsan (ya da GitHub'ın *Download ZIP* düğmesini kullanırsan)
+varlıklar ~130 baytlık metin işaretçileri olarak iner ve içe aktarma bozuk
+kaynak hatalarıyla durur. `file assets/sprites/arac.png` "ASCII text" diyorsa
+sebep budur; çözüm `git lfs install && git lfs pull`.
+
+Testler ve dışa aktarma: [Çalıştırma](#çalıştırma).
+
 ## Kontroller
 
 | Tuş | Gamepad | İş |
@@ -349,6 +392,11 @@ aynı pencerede **`sayfaya_yayinla`** kutusunu işaretlemen yeterli: o zaman
 web paketi GitHub Pages'e gider ve oyun tarayıcıdan oynanır hâle gelir.
 Kutu işaretlenmedikçe Pages'e dokunulmaz.
 
+İlk yayından önce Pages'in depoda **bir kez elle** açılması gerekiyor:
+Settings → Pages → Source: **GitHub Actions**. İş akışının kendi anahtarı
+Pages sitesi oluşturamıyor; açılmamışsa yayın adımı "Resource not accessible
+by integration" hatasıyla durur.
+
 ```powershell
 godot --headless --path . --import                                # içe aktar (CI de bunu koşar)
 godot --path .                                                    # oyna
@@ -362,6 +410,26 @@ godot --headless --path . --script res://tools/ses_uret.gd        # matkap döng
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak + docs/bitis.png)
 godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # eski sürüm worktree'sinde kayıt fikstürü
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim)
+```
+
+**Test kapısı: çıkış kodu tek başına yetmiyor.** Bir test fonksiyonundaki
+çalışma zamanı hatası (null erişimi, eksik metot) yalnızca o fonksiyonu keser:
+motor `SCRIPT ERROR` yazar, kalan sınamalar sayılmaz ve paket yine
+`N sınama, 0 hata` ile 0 döner (gerçek motorla denendi: `282 sınama, 0 hata`,
+çıkış 0). CI bu yüzden her paketin günlüğünü `tests/kapi.sh`'a veriyor:
+`== N sınama, 0 hata ==` satırı olmalı, N paketin tabanının altına düşmemeli,
+günlükte `SCRIPT ERROR` / `Parse Error` olmamalı. Tabanlar `ci.yml` → `env`
+içinde: `TEST_TABANI_BIRIM` 304, `TEST_TABANI_OYNANIS` 156,
+`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 477). Fay kapısı da
+aynı betikten geçiyor (`--fay`: `bot 12/12, sisli insan botu 12/12 ... TAMAM`,
+`FAY_TOHUM_TABANI` 12). Kapının kendisi `tests/kapi_sinama.sh` ile örnek
+günlüklerde sınanıyor (Godot'suz). **Test ekleyince ilgili tabanı da
+yükselt**; düşürmek, bir bölümün sessizce kaybolduğunu kabul etmektir.
+
+```bash
+godot --headless --path . --script res://tests/test_calistir.gd 2>&1 | tee birim.log
+bash tests/kapi.sh birim.log 304                                  # CI'daki kapının aynısı
+bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 ```
 
 Tanıtım GIF'i (kareler alındıktan sonra):
