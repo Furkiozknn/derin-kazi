@@ -43,6 +43,7 @@ jobs:
   yapi:
     name: Windows + Web disa aktar
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -107,6 +108,7 @@ jobs:
     # Kutu isaretlenmedikce bu is hic kosmaz; varsayilan yayimlamamaktir.
     if: ${{ inputs.sayfaya_yayinla }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write

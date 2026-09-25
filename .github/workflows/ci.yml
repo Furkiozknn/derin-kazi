@@ -44,6 +44,9 @@ env:
 jobs:
   testler:
     runs-on: ubuntu-24.04
+    # Normal kosu ~1,5 dk. Bir sinama hic donmezse (takili bir await, sonsuz
+    # dongu) 6 saatlik varsayilan yerine 15 dakikada kirmizi.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -118,6 +121,7 @@ jobs:
   referanslar:
     name: Kaynak referanslari saglam mi
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
