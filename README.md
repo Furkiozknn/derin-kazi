@@ -412,6 +412,26 @@ godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosy
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim)
 ```
 
+**Test kapısı: çıkış kodu tek başına yetmiyor.** Bir test fonksiyonundaki
+çalışma zamanı hatası (null erişimi, eksik metot) yalnızca o fonksiyonu keser:
+motor `SCRIPT ERROR` yazar, kalan sınamalar sayılmaz ve paket yine
+`N sınama, 0 hata` ile 0 döner (gerçek motorla denendi: `282 sınama, 0 hata`,
+çıkış 0). CI bu yüzden her paketin günlüğünü `tests/kapi.sh`'a veriyor:
+`== N sınama, 0 hata ==` satırı olmalı, N paketin tabanının altına düşmemeli,
+günlükte `SCRIPT ERROR` / `Parse Error` olmamalı. Tabanlar `ci.yml` → `env`
+içinde: `TEST_TABANI_BIRIM` 304, `TEST_TABANI_OYNANIS` 156,
+`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 477). Fay kapısı da
+aynı betikten geçiyor (`--fay`: `bot 12/12, sisli insan botu 12/12 ... TAMAM`,
+`FAY_TOHUM_TABANI` 12). Kapının kendisi `tests/kapi_sinama.sh` ile örnek
+günlüklerde sınanıyor (Godot'suz). **Test ekleyince ilgili tabanı da
+yükselt**; düşürmek, bir bölümün sessizce kaybolduğunu kabul etmektir.
+
+```bash
+godot --headless --path . --script res://tests/test_calistir.gd 2>&1 | tee birim.log
+bash tests/kapi.sh birim.log 304                                  # CI'daki kapının aynısı
+bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
+```
+
 Tanıtım GIF'i (kareler alındıktan sonra):
 
 ```powershell
