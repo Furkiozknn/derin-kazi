@@ -2,6 +2,9 @@
 
 # Derin Kazı
 
+<p align="center"><img src="docs/reel/reel.gif" alt="derin-kazi - 15 saniyelik tanıtım videosu" width="720"></p>
+<p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
+
 *Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
 [![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
