@@ -245,6 +245,10 @@ godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış te
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması (sisli insan botu dahil)
+# CI her paketin günlüğünü tests/kapi.sh'a verir (tabanlar: ci.yml → TEST_TABANI_BIRIM 304,
+# _OYNANIS 156, _DENGE 7, _INSAN 10; fay: --fay, FAY_TOHUM_TABANI 12). SCRIPT ERROR olursa kırmızı,
+# çünkü yarıda kalan test fonksiyonu yine "0 hata" der. Test ekleyince ilgili tabanı yükselt.
+bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)
 godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art (yuzey.png, 9 kareli arac.png, isaret.png dahil)
 godot --headless --path . --script res://tools/ses_uret.gd        # matkap.wav (döngü) + deprem.wav, deterministik
