@@ -3,7 +3,7 @@
   "id": "derin-kazi",
   "owner": "Furkiozknn",
   "repository": "https://github.com/Furkiozknn/derin-kazi",
-  "homepage": "https://furkiozknn.github.io/#derin-kazi",
+  "homepage": "https://furkiozknn.github.io/derin-kazi/",
   "releases": "https://github.com/Furkiozknn/derin-kazi/releases",
   "status": "active",
   "category": "game",
@@ -48,9 +48,9 @@
     "videos": []
   },
   "tests": {
-    "count": 477,
-    "source": "CI log: 304 unit (`== 304 sinama, 0 hata ==`) + 156 gameplay (`== 156 sinama, 0 hata ==`) + 7 balance (`== 7 sinama, 0 hata ==`) + 10 human-like (`== 10 sinama, 0 hata ==`)",
-    "measured": "2026-09-22"
+    "count": 613,
+    "source": "CI log: 358 unit (`== 358 sınama, 0 hata ==`) + 238 gameplay (`== 238 sınama, 0 hata ==`) + 7 balance (`== 7 sınama, 0 hata ==`) + 10 human-like (`== 10 sınama, 0 hata ==`)",
+    "measured": "2026-09-29"
   },
   "ci": {
     "workflows": [
@@ -77,7 +77,7 @@
       "gamedev",
       "miningame"
     ],
-    "primary_link": "https://github.com/Furkiozknn/derin-kazi"
+    "primary_link": "https://furkiozknn.github.io/derin-kazi/"
   },
   "provenance": {
     "generated_at": "2026-09-22",
