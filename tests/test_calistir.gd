@@ -15,6 +15,8 @@ func dogru(kosul: bool, ad: String) -> void:
 
 func _initialize() -> void:
 	print("== Derin Kazı birim testleri ==")
+	# Metin sınamaları Türkçe kaynağı okur: CI'da işletim sistemi dili İngilizce olabilir.
+	TranslationServer.set_locale("tr")
 	_dunya_testleri()
 	_katman_testleri()
 	_maden_testleri()
@@ -39,6 +41,10 @@ func _initialize() -> void:
 	_ses_uretici_testleri()
 	_istatistik_testleri()
 	_isaret_testleri()
+	_ceviri_testleri()
+	_dil_testleri()
+	_tema_testleri()
+	_girdi_toleransi_testleri()
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	quit(1 if _hata > 0 else 0)
 
@@ -1078,12 +1084,16 @@ func _yuzey_testleri() -> void:
 				if im.get_pixel(v * Ayarlar.KARO + x, y).a < 0.5:
 					alt_saydam += 1
 	dogru(alt_saydam == 0, "karonun alt yarısı dolu toprak (saydam %d)" % alt_saydam)
-	var yesil := 0
+	# v0.8: düz renk dünyada çimen yok; yüzey bandı toprağın açık tonu, tek düz renk.
+	var bant := im.get_pixel(0, 2)
+	var govde := im.get_pixel(0, 8)
+	var duz := 0
 	for x in Ayarlar.KARO:
 		var c := im.get_pixel(x, 2)
-		if c.a > 0.5 and c.g > c.r and c.g > c.b:
-			yesil += 1
-	dogru(yesil >= Ayarlar.KARO - 4, "çimen bandı yeşil (%d/%d)" % [yesil, Ayarlar.KARO])
+		if c.a > 0.5 and c.is_equal_approx(bant):
+			duz += 1
+	dogru(duz >= Ayarlar.KARO - 4 and bant.get_luminance() > govde.get_luminance(),
+		"yüzey bandı toprağın açık tonunda, tek düz renk (%d/%d)" % [duz, Ayarlar.KARO])
 
 # --- araç ara kareleri (v0.7) ---------------------------------------------
 
@@ -1280,6 +1290,158 @@ func _isaret_testleri() -> void:
 	dogru(InputMap.has_action("isaret"), "isaret eylemi girdi haritasında")
 	dogru(FileAccess.get_file_as_string("res://tests/bot.gd").find("isaret") < 0,
 		"bot işareti bilmiyor (ölçüm değişmedi)")
+
+# --- v0.8: arayüz yenilemesi ----------------------------------------------
+
+## Koddaki her tr()/Ceviri.t() metni, sahnelerdeki her etiket ve sabit tablolar İngilizce
+## tabloda var mı; biçim belirteçleri (%d %s) çeviride aynı mı. Yeni bir arayüz metni
+## eklenip çevrilmezse burada kırmızı olur (tools/ceviri_tara.py aynı listeyi verir).
+func _ceviri_testleri() -> void:
+	print("- çeviri (TR/EN)")
+	Ceviri.kur()
+	var eksik := PackedStringArray()
+	var kaynak := 0
+	var r := RegEx.new()
+	r.compile("(?<![A-Za-z_])(?:Ceviri\\.t|tr)\\(\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
+	var rs := RegEx.new()
+	rs.compile("(?m)^(?:text|placeholder_text) = \"((?:[^\"\\\\]|\\\\.)*)\"")
+	var harf := RegEx.new()
+	harf.compile("[A-Za-zığşçöüİĞŞÇÖÜ]{3,}")
+	var dosyalar := PackedStringArray()
+	for d in DirAccess.get_files_at("res://scripts"):
+		if d.ends_with(".gd") and not d.begins_with("ceviri"):
+			dosyalar.append("res://scripts/" + d)
+	for d in DirAccess.get_files_at("res://scenes"):
+		if d.ends_with(".tscn") and d != "kapak.tscn":
+			dosyalar.append("res://scenes/" + d)
+	for yol in dosyalar:
+		var metin := FileAccess.get_file_as_string(yol)
+		var motor := r if yol.ends_with(".gd") else rs
+		for m in motor.search_all(metin):
+			var k := m.get_string(1).replace("\\n", "\n").replace("\\\"", "\"")
+			if harf.search(k) == null:
+				continue   ## "0 m", "..." gibi yalnız sayı/simge yer tutucuları
+			kaynak += 1
+			if not CeviriEn.EN.has(k):
+				eksik.append("%s: %s" % [yol.get_file(), k])
+	dogru(eksik.is_empty(), "koddaki ve sahnelerdeki %d metnin hepsi İngilizce tabloda %s" % [kaynak, "; ".join(eksik)])
+
+	var tablo_eksik := PackedStringArray()
+	for k in Ayarlar.KATMANLAR:
+		if not CeviriEn.EN.has(String(k["ad"])):
+			tablo_eksik.append(String(k["ad"]))
+	for tablo in [Ayarlar.MADEN_AD, Ayarlar.GELISTIRME_AD, Ayarlar.ALET_AD]:
+		for v in tablo.values():
+			if not CeviriEn.EN.has(String(v)):
+				tablo_eksik.append(String(v))
+	for e in Ayarlar.ESERLER:
+		for alan in ["ad", "metin", "hikaye"]:
+			if not CeviriEn.EN.has(String(e[alan])):
+				tablo_eksik.append("eser " + String(e["ad"]) + "." + alan)
+	for s in [Ayarlar.ESER_KILITLI, Ipucu.DUGME_US, Ipucu.DUGME_HARITA, Ipucu.DUGME_DINAMIT, Ipucu.DUGME_RADAR,
+			Ipucu.DUGME_ISARET, Ipucu.ALAN_KAZ, Ipucu.ALAN_UC, Ipucu.TUSLAR, Ipucu.TUSLAR_DOKUNMA,
+			load("res://scripts/menu.gd").YARDIM_TUS, load("res://scripts/menu.gd").YARDIM_DOKUNMA]:
+		if not CeviriEn.EN.has(String(s)):
+			tablo_eksik.append(String(s).left(24))
+	for anahtar in Ipucu.MAGAZA:
+		for s in Ipucu.MAGAZA[anahtar]:
+			if not CeviriEn.EN.has(String(s)):
+				tablo_eksik.append(String(s))
+	dogru(tablo_eksik.is_empty(), "katman/maden/geliştirme/alet/eser adları, ipucu ve tuş listeleri İngilizcede var %s"
+		% "; ".join(tablo_eksik))
+
+	var uyusmaz := PackedStringArray()
+	for k: String in CeviriEn.EN:
+		if Ceviri.belirtecler(k) != Ceviri.belirtecler(String(CeviriEn.EN[k])):
+			uyusmaz.append(k.left(30))
+		if String(CeviriEn.EN[k]).strip_edges() == "":
+			uyusmaz.append("boş: " + k.left(30))
+	dogru(uyusmaz.is_empty(), "çeviride biçim belirteçleri (%d metin) kaynakla aynı %s" % [CeviriEn.EN.size(), "; ".join(uyusmaz)])
+
+	TranslationServer.set_locale("en")
+	var en_kaz := Ipucu.metin(Durum.new(1), 0, false, false)
+	var en_pano := Ipucu.deprem_pano(4.0, 150, false)
+	var en_sat := Ceviri.t("Sat  (+%d ₺)") % 5
+	var en_eser := Ceviri.t(Ayarlar.ESERLER[0]["hikaye"])
+	TranslationServer.set_locale("tr")
+	var tr_kaz := Ipucu.metin(Durum.new(1), 0, false, false)
+	dogru(en_kaz != tr_kaz and en_kaz.begins_with("Hold S"), "ipucu İngilizcede farklı ve doğal (%s)" % en_kaz)
+	dogru(String(en_pano[1]).contains("SURFACE") and en_sat == "Sell  (+5 ₺)" and en_eser.begins_with("Its needle"),
+		"deprem panosu, mağaza satırı ve eser hikâyesi çevriliyor")
+	dogru(Ceviri.t("Oyna") == "Oyna", "Türkçede anahtar aynen döner")
+
+func _dil_testleri() -> void:
+	print("- dil seçimi ve kayıt uyumu")
+	dogru(Kayit.dil_etkin({"dil": "en"}) == "en" and Kayit.dil_etkin({"dil": "tr"}) == "tr",
+		"kayıtlı dil tercihi önceliklidir")
+	var otomatik := Kayit.dil_etkin({})
+	dogru(otomatik == ("tr" if OS.get_locale_language() == "tr" else "en"),
+		"tercih yoksa sistem dili: tr ise Türkçe, değilse İngilizce (%s / %s)" % [OS.get_locale_language(), otomatik])
+	dogru(Kayit.dil_etkin({"dil": ""}) == otomatik and Kayit.dil_etkin({"dil": "fr"}) == otomatik,
+		"boş ya da bilinmeyen değer otomatiğe düşer")
+	dogru(Kayit.AYAR_VARSAYILAN.has("dil") and String(Kayit.AYAR_VARSAYILAN["dil"]) == "",
+		"varsayılan ayarda dil anahtarı otomatik")
+	# Eski kayıt (dil anahtarı yok) okunur, dil yazılınca eski anahtarlar bozulmaz.
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 777, "para": 1234, "en_derin": 88})
+	Kayit.ayar_kaydet({"muzik_ses": 0.33, "efekt_ses": 0.5})
+	var eski_ayar := Kayit.ayar_yukle()
+	dogru(String(eski_ayar["dil"]) == "" and is_equal_approx(float(eski_ayar["muzik_ses"]), 0.33),
+		"dil anahtarı olmayan eski ayar açılıyor, ses düzeyi korunuyor")
+	var yeni_ayar := eski_ayar.duplicate()
+	yeni_ayar["dil"] = "en"
+	Kayit.ayar_kaydet(yeni_ayar)
+	var oku := Kayit.yukle(Kayit.ANA)
+	dogru(int(oku.get("para", 0)) == 1234 and int(oku.get("en_derin", 0)) == 88 and int(oku.get("tohum", 0)) == 777,
+		"dil yazılınca kayıtlı ilerleme (en derin, para, tohum) bozulmuyor")
+	dogru(String(Kayit.ayar_yukle()["dil"]) == "en" and is_equal_approx(float(Kayit.ayar_yukle()["muzik_ses"]), 0.33),
+		"dil tercihi kaydediliyor, eski ayar anahtarları yerinde")
+	Kayit.ayar_kaydet({"dil": ""})
+	Kayit.sil()
+
+func _tema_testleri() -> void:
+	print("- tema ve yazı tipleri")
+	var tema: Theme = load(Tema.TEMA_YOLU)
+	dogru(tema != null, "assets/tema.tres yükleniyor")
+	if tema != null:
+		var tipler := tema.get_type_list()
+		dogru(tipler.has("Birincil") and tipler.has("Kucuk") and tipler.has("Baslik") and tipler.has("Etiket"),
+			"birincil/küçük düğme ve başlık/etiket varyasyonları tanımlı")
+		var panel := tema.get_stylebox("panel", "PanelContainer") as StyleBoxFlat
+		dogru(panel != null and panel.bg_color.a >= 0.99, "paneller opak (dünya yazının arkasından görünmüyor)")
+	for yol in [Tema.F_GOVDE, Tema.F_KALIN, Tema.F_MONO, Tema.F_MONO_KALIN, Tema.F_SIMGE]:
+		dogru(ResourceLoader.exists(yol), "yazı tipi var: %s" % String(yol).get_file())
+	dogru(FileAccess.file_exists("res://assets/fonts/LISANS-InstrumentSans.txt")
+		and FileAccess.file_exists("res://assets/fonts/LISANS-JetBrainsMono.txt"), "yazı tipi lisansları yanında")
+	dogru(String(ProjectSettings.get_setting("gui/theme/custom")) == Tema.TEMA_YOLU, "proje teması tema.tres")
+	TranslationServer.set_locale("tr")
+	dogru(Tema.buyuk("yakıt işaret") == "YAKIT İŞARET", "Türkçe büyük harf: i→İ, ı→I")
+	dogru(Tema.kisa_baslik(1, "Toprak") == "01 / TOPRAK", "kısa başlık: 01 / TOPRAK")
+	TranslationServer.set_locale("en")
+	dogru(Tema.buyuk("fuel") == "FUEL" and Tema.kisa_baslik(4, "Bazalt") == "04 / BASALT",
+		"İngilizcede düz büyük harf ve çeviri")
+	TranslationServer.set_locale("tr")
+	# Düz renk dünyası: karo atlasında toprak karosu düz (+ en çok bir benek rengi).
+	var im := Image.load_from_file(ProjectSettings.globalize_path("res://assets/sprites/karolar.png"))
+	var renkler := {}
+	for y in Ayarlar.KARO:
+		for x in Ayarlar.KARO:
+			renkler[im.get_pixel(x, y).to_html()] = true
+	dogru(renkler.size() <= 2, "toprak karosu düz renk (+ en çok bir benek rengi): %d renk" % renkler.size())
+	var arac_im := Image.load_from_file(ProjectSettings.globalize_path("res://assets/sprites/arac.png"))
+	var arac_renk := {}
+	for y in Ayarlar.KARO:
+		for x in Ayarlar.KARO * Arac.KARE_SAYISI:
+			var c := arac_im.get_pixel(x, y)
+			if c.a > 0.0:
+				arac_renk[c.to_html()] = true
+	dogru(arac_renk.size() <= 6, "araç düz renk paleti: %d renk" % arac_renk.size())
+
+## Kojot ve tampon sabitleri (sahne davranışı tests/test_oynanis.gd'de).
+func _girdi_toleransi_testleri() -> void:
+	print("- girdi toleransı")
+	dogru(Arac.YER_KOJOT >= 0.08 and Arac.YER_KOJOT <= 0.15 and Arac.DINAMIT_TAMPON >= 0.08 and Arac.DINAMIT_TAMPON <= 0.15,
+		"kojot ve tampon platform oyunlarındaki 0,08-0,15 sn aralığında (%.2f / %.2f)" % [Arac.YER_KOJOT, Arac.DINAMIT_TAMPON])
 
 ## Yüzeyden başlayıp kazılabilir/boş hücreler üzerinden genişleyen erişim kümesi.
 func _ulasilabilir(u: DunyaUretici) -> Dictionary:

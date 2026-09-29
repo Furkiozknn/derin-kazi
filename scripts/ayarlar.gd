@@ -82,15 +82,15 @@ const MADEN_AD := {BAKIR: "Bakır", DEMIR: "Demir", ALTIN: "Altın", ELMAS: "Elm
 ## tehlike: karo türü ya da BOS · tehlike_sans: 0..1
 const KATMANLAR := [
 	{"ad": "Toprak", "y0": 0, "taban": TOPRAK, "matkap": 0, "maden": BAKIR,
-		"yogunluk": 0.130, "tehlike": GEVSEK, "tehlike_sans": 0.020, "renk": Color(0.44, 0.24, 0.15)},
+		"yogunluk": 0.130, "tehlike": GEVSEK, "tehlike_sans": 0.020, "renk": Color("3a2a1c")},
 	{"ad": "Taş", "y0": 40, "taban": TAS, "matkap": 1, "maden": DEMIR,
-		"yogunluk": 0.105, "tehlike": GAZ, "tehlike_sans": 0.022, "renk": Color(0.22, 0.24, 0.30)},
+		"yogunluk": 0.105, "tehlike": GAZ, "tehlike_sans": 0.022, "renk": Color("33251a")},
 	{"ad": "Sert Taş", "y0": 90, "taban": SERT, "matkap": 2, "maden": ALTIN,
-		"yogunluk": 0.080, "tehlike": GEVSEK, "tehlike_sans": 0.034, "renk": Color(0.18, 0.18, 0.22)},
+		"yogunluk": 0.080, "tehlike": GEVSEK, "tehlike_sans": 0.034, "renk": Color("2a1e15")},
 	{"ad": "Bazalt", "y0": 150, "taban": BAZALT, "matkap": 3, "maden": ELMAS,
-		"yogunluk": 0.060, "tehlike": LAV, "tehlike_sans": 0.028, "renk": Color(0.13, 0.10, 0.14)},
+		"yogunluk": 0.060, "tehlike": LAV, "tehlike_sans": 0.028, "renk": Color("221810")},
 	{"ad": "Çekirdek Kabuğu", "y0": 210, "taban": OBSIDYEN, "matkap": 4, "maden": PLATIN,
-		"yogunluk": 0.046, "tehlike": LAV, "tehlike_sans": 0.040, "renk": Color(0.16, 0.06, 0.09)},
+		"yogunluk": 0.046, "tehlike": LAV, "tehlike_sans": 0.040, "renk": Color("3b130d")},
 ]
 
 ## y derinliğindeki katmanın indeksi (0..4).
@@ -113,7 +113,7 @@ const SIS_HATIRA := 0.62       ## keşfedilmiş ama ışık dışındaki karonun
 const SIS_RADAR := 0.30        ## radar açıkken geçici açılan sisin örtüsü
 const RADAR_SIS_YARICAP := 9   ## radarın sisi geçici açtığı yarıçap (keşif saymaz)
 const GUN_ISIGI := 8           ## bu derinliğe kadar gün ışığı sisi eritir
-const SIS_RENK := Color(0.035, 0.03, 0.06)
+const SIS_RENK := Color("100a06")
 
 ## Modun ışık yarıçapı. Eser bonusu (7. eser, "isik") Durum.isik_yaricap() ekler;
 ## bot da aynı fonksiyonu kullanıyor — ikisi ayrı sabit okumasın.
@@ -128,13 +128,13 @@ static func isik_yaricap(derin: bool) -> int:
 ## 5 parça müzik 4 parçadan daha iyi olmazdı, sadece daha büyük bir pck olurdu.
 const AMBIYANS := [
 	{"ad": "toprak", "y0": 0, "muzik": "muzik", "parcacik": "toz",
-		"renk": Color("b86f50"), "fon": Color(0.075, 0.055, 0.04)},
+		"renk": Color("b58a55"), "fon": Color("241811")},
 	{"ad": "kaya", "y0": 40, "muzik": "muzik_derin", "parcacik": "toz",
-		"renk": Color("8b9bb4"), "fon": Color(0.043, 0.047, 0.078)},
+		"renk": Color("cdb99a"), "fon": Color("1c130d")},
 	{"ad": "bazalt", "y0": 150, "muzik": "muzik_bazalt", "parcacik": "kivilcim",
-		"renk": Color("f77622"), "fon": Color(0.075, 0.035, 0.055)},
+		"renk": Color("f3a33d"), "fon": Color("1a0f0b")},
 	{"ad": "cekirdek", "y0": 210, "muzik": "muzik_cekirdek", "parcacik": "kivilcim",
-		"renk": Color("e43b44"), "fon": Color(0.10, 0.03, 0.04)},
+		"renk": Color("e94f36"), "fon": Color("2a0d09")},
 ]
 const MUZIK_GECIS := 1.6       ## bant değişince iki parça arasındaki crossfade (sn)
 

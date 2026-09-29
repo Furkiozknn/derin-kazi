@@ -270,6 +270,16 @@
 - [x] Web çıktısı Playwright ile tarayıcıda açıldı (menü, konsol hatası yok) —
       ses ve oynanış tarayıcıda dinlenmedi (bkz. `yayin/butler-komutlari.md`)
 
+## Geliştirme turu 7 — v0.8 arayüz yenilemesi (2026-09-29)
+
+- [x] Denetim (`docs/DENETIM.md`): menü, HUD, dil, oyun sonu, dinamit ve delik kenarı bulguları
+- [x] Video paletine düz renk dünya, Instrument Sans + JetBrains Mono, tema (`tools/tema_uret.gd`)
+- [x] Menü (tek Oyna), duraklat, oyun sonu (Tekrar), ayarlar (dil), renk bandı geçişi
+- [x] Türkçe / İngilizce (`scripts/ceviri.gd`), eski kayıt ve `[ayar]` korunur
+- [x] Dinamit kojotu + tamponu, kazı hizalama (`tools/his_olc.gd` ölçümü)
+- [ ] Yüksek matkap seviyesinde düşüş bekleme süresi (zamanın %59'u boşlukta): gerçek oyuncuyla denenmeli
+- [ ] Gerçek telefonda ve İngilizce tarayıcıda otomatik dil seçimi denemesi
+
 ## Sonraki tur
 
 ### Oynanış

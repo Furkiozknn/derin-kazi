@@ -5,6 +5,30 @@ README'nin ilk ekranı bir sürüm dökümüyle doluydu. Liste silinmedi, buraya
 Güncel sürümün notları GitHub'da da duruyor:
 <https://github.com/Furkiozknn/derin-kazi/releases>
 
+## v0.8 — arayüz yenilemesi (29 Eylül 2026)
+
+Oyun, tanıtım videosuyla aynı dünyada: düz renk (gölgesiz, konturlu değil) toprak bantları,
+kağıt rengi matkap + kırmızı uç, amber maden kareleri; Instrument Sans + JetBrains Mono
+(OFL, lisansları `assets/fonts/`). Tüm görseller `tools/sprite_uret.gd` ile düz geometriye
+yeniden üretildi (boyutlar ve atlas düzeni aynı). Çekirdek mekanik, denge ve bot ölçümleri
+**değişmedi** (tur 106 sn, çekirdeğe 25 dk, 7/7 ve 12/12).
+
+- **Menü:** tek büyük **Oyna**, tek satır kontrol yardımı, küçük ikincil düğmeler; sol şeritte
+  ağır ağır inen matkap. "Yeni dünya" iki adımlı.
+- **Yeni ekranlar:** duraklatma (Devam · Ayarlar · Menü + tam tuş listesi), oyun sonu (süre,
+  en derin, istatistik, tek dokunuşla **Tekrar — Derin Mod xN**), ayarlar (ses, sarsıntı,
+  tam ekran, **dil**). HUD yalnız gerekli bilgi; renk yalnız uyarıda. Menü ⇄ oyun renk bandı
+  geçişi, yüzeye çekilirken tehlike flaşı.
+- **Türkçe / İngilizce:** varsayılan tarayıcı / sistem dili (`tr` değilse İngilizce); ayarlardan
+  değişir. Kayıt: `[ayar]` bölümüne yeni `dil` anahtarı; eski kayıt ve en iyi değerler bozulmaz.
+- **Oynanış hissi (ölçüldü, `tools/his_olc.gd`):** dinamit kojotu + tamponu 0,12 sn (inişten önce
+  basışta 1/8 → 8/8); kazı hizalama — deliğin kenarına asılan araç düşüyor (3/11 → 11/11).
+- **Testler:** 304 → 333 birim, 156 → 191 oynanış (menü / duraklat / oyun sonu / dil / tema /
+  girdi toleransı / çeviri kapsamı). `ci.yml` tabanları 333 ve 191.
+- **Boyut:** web `index.pck` 970.752 → 1.220.160 bayt (yazı tipleri); toplam +%0,61. Kare süresi
+  60 m derinlikte 2,56 → 2,83 ms (medyan). Ayrıntı: `docs/TASARIM.md` §5.
+- **Denetim ve tasarım belgeleri:** `docs/DENETIM.md`, `docs/TASARIM.md`.
+
 ## v0.7.2 — paket küçültme ve depo turu (22 Eylül 2026)
 
 Oynanış v0.7 ile aynı. Dışa aktarma ön ayarlarından `tests/*`, `tools/*`,

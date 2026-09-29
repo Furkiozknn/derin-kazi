@@ -24,6 +24,8 @@ func _kare(n: int) -> void:
 
 func _calis() -> void:
 	print("== Oynanış testi ==")
+	await process_frame
+	TranslationServer.set_locale("tr")   ## metin sınamaları Türkçe kaynağı okur (CI'da sistem dili İngilizce olabilir)
 	# Temiz başlangıç + SABİT TOHUM. Kayıt yokken oyun sahnesi randi() ile tohum
 	# seçiyor; o zaman bu test her çalıştırmada başka bir dünyada oynuyor ve
 	# arada bir kararsız hata veriyordu (derinlik, deprem ve varyant sınamaları
@@ -739,7 +741,7 @@ func _calis() -> void:
 	var kod := TohumKodu.kodla(4242)
 	dogru(String(menu.get_node("Bilgi").text).contains(kod),
 		"menü kayıtlı dünyanın tohum kodunu yazıyor (%s)" % kod)
-	dogru(menu.get_node("M/V/Derin").visible, "çekirdek çıkarıldıysa Derin Mod düğmesi açık")
+	dogru(menu.get_node("M/V/Ikincil/Derin").visible, "çekirdek çıkarıldıysa Derin Mod düğmesi açık")
 	dogru(not menu.get_node("Rozet").visible, "Derin Mod'a hiç girilmediyse rozet yok")
 
 	# --- Derin Mod yuvası ayrı (v0.6) ----------------------------------------
@@ -758,12 +760,12 @@ func _calis() -> void:
 	menu.call("_bilgi_yenile")
 	dogru(menu.get_node("Rozet").visible and String(menu.get_node("Rozet").text).contains("x1"),
 		"menüde Derin Mod rozeti (%s)" % menu.get_node("Rozet").text)
-	dogru(String(menu.get_node("M/V/Derin").text).contains("devam"),
-		"Derin Mod düğmesi süren tura devam diyor (%s)" % menu.get_node("M/V/Derin").text)
+	dogru(String(menu.get_node("M/V/Ikincil/Derin").text).contains("devam"),
+		"Derin Mod düğmesi süren tura devam diyor (%s)" % menu.get_node("M/V/Ikincil/Derin").text)
 	Kayit.kaydet({"kazandi": true, "eserler": PackedInt32Array([0, 2, 6])}, Kayit.DERIN)
 	menu.call("_bilgi_yenile")
-	dogru(String(menu.get_node("M/V/Derin").text).contains("x2"),
-		"Derin Mod bitince x2 sunuluyor (%s)" % menu.get_node("M/V/Derin").text)
+	dogru(String(menu.get_node("M/V/Ikincil/Derin").text).contains("x2"),
+		"Derin Mod bitince x2 sunuluyor (%s)" % menu.get_node("M/V/Ikincil/Derin").text)
 	dogru(String(menu.get_node("Rozet").text).contains("bulundu"), "rozet 7. eserin bulunduğunu yazıyor")
 	var d3 := Kayit.derin_mod_hazirla()
 	dogru(int(d3["derin_seviye"]) == 2 and PackedInt32Array(d3["eserler"]) == PackedInt32Array([0, 2, 6])
@@ -796,6 +798,9 @@ func _calis() -> void:
 	menu.queue_free()
 	await process_frame
 
+	# --- v0.8: menü, duraklat, oyun sonu, dil ve girdi toleransı -----------------
+	await _yeni_arayuz_testleri()
+
 	print(ozet)
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	Kayit.sil()
@@ -805,3 +810,200 @@ func _calis() -> void:
 
 static func _renk_uzaklik(a: Color, b: Color) -> float:
 	return (a.r - b.r) * (a.r - b.r) + (a.g - b.g) * (a.g - b.g) + (a.b - b.b) * (a.b - b.b)
+
+# --- v0.8: arayüz yenilemesi sahne testleri -----------------------------------
+
+func _tus(eylem: String) -> InputEventAction:
+	var ev := InputEventAction.new()
+	ev.action = StringName(eylem)
+	ev.pressed = true
+	return ev
+
+func _yeni_arayuz_testleri() -> void:
+	print("- v0.8 arayüz: menü, duraklat, oyun sonu, dil, girdi toleransı")
+	TranslationServer.set_locale("tr")
+	var ses = root.get_node("Ses")
+	var eski_ayar: Dictionary = ses.ayar.duplicate()
+
+	# --- menü: tek büyük Oyna, tek satır yardım, küçük ikincil düğmeler ---------
+	Kayit.sil()
+	Kayit.sil(Kayit.DERIN)
+	Kayit.kaydet({"tohum": 5150, "para": 321, "en_derin": 64})
+	var menu: Node = load("res://scenes/menu.tscn").instantiate()
+	root.add_child(menu)
+	await _kare(5)
+	var oyna: Button = menu.get_node("M/V/Basla")
+	dogru(oyna.text == "Oyna" and oyna.theme_type_variation == &"Birincil" and oyna.has_focus(),
+		"menüde büyük birincil Oyna düğmesi, odak orada (%s)" % oyna.text)
+	var yardim: Label = menu.get_node("M/V/Kontroller")
+	dogru(yardim.text != "" and not yardim.text.contains("\n"), "nasıl oynanır tek satır (%s)" % yardim.text)
+	var ikincil: Node = menu.get_node("M/V/Ikincil")
+	var gorunen := 0
+	for b in ikincil.get_children():
+		if b.visible:
+			gorunen += 1
+	dogru(gorunen >= 4 and gorunen <= 5 and not menu.get_node("M/V/Ikincil/Derin").visible,
+		"ikincil düğmeler küçük sırada (%d görünür), Derin Mod kilitliyken gizli" % gorunen)
+	dogru(String(menu.get_node("Bilgi").text).contains("321") and String(menu.get_node("Bilgi").text).contains("64 m"),
+		"kayıtlı para ve en derin metre menüde")
+	# Yeni dünya iki adımlı: ilk basış ilerlemeyi silmez.
+	var tohum_once := int(Kayit.yukle(Kayit.ANA).get("tohum", 0))
+	menu.call("_yeni_iste")
+	await _kare(2)
+	dogru(int(Kayit.yukle(Kayit.ANA).get("tohum", 0)) == tohum_once
+		and String(menu.get_node("M/V/Ikincil/Yeni").text).contains("Emin"),
+		"Yeni dünya ilk basışta silmiyor, onay istiyor (%s)" % menu.get_node("M/V/Ikincil/Yeni").text)
+	menu.set("_yeni_bekliyor", false)
+
+	# --- dil: Ayarlar'da düğme, anında yeniden kurulur, tercih kaydedilir ----------
+	menu.call("_ayar_ac")
+	await _kare(2)
+	var liste: VBoxContainer = menu.get_node("Ayar/M/V/Kaydir/Liste")
+	var dil_dugme: Button = null
+	for c in liste.get_children():
+		for cc in c.get_children():
+			if cc is Button and (cc.text == "English" or cc.text == "Türkçe"):
+				dil_dugme = cc
+	dogru(dil_dugme != null and dil_dugme.text == "English", "ayarlarda dil düğmesi (Türkçe iken 'English' önerir)")
+	dil_dugme.pressed.emit()
+	await _kare(3)
+	dogru(TranslationServer.get_locale().begins_with("en") and String(ses.ayar.get("dil", "")) == "en"
+		and String(Kayit.ayar_yukle()["dil"]) == "en", "dil değişti ve kayda yazıldı")
+	dogru(oyna.atr(oyna.text) == "Play", "menü İngilizceye döndü (%s)" % oyna.atr(oyna.text))
+	dogru(String(menu.get_node("M/V/Kontroller").text).contains("dig down"),
+		"nasıl oynanır satırı İngilizce (%s)" % menu.get_node("M/V/Kontroller").text)
+	dogru(String(menu.get_node("Bilgi").text).contains("DEEPEST"), "menü bilgi satırı İngilizce (%s)" % menu.get_node("Bilgi").text)
+	dogru(int(Kayit.yukle(Kayit.ANA).get("para", 0)) == 321 and int(Kayit.yukle(Kayit.ANA).get("en_derin", 0)) == 64,
+		"dil değişince kayıtlı ilerleme bozulmadı")
+	menu.call("_ayar_kapat")
+	menu.queue_free()
+	await process_frame
+
+	# --- oyun sahnesi: HUD, duraklat, oyun sonu (İngilizce) --------------------
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242})
+	var sahne: Node = load("res://scenes/oyun.tscn").instantiate()
+	root.add_child(sahne)
+	await process_frame
+	await _kare(30)
+	var arac: Arac = sahne.get_node("Arac")
+	var durum: Durum = sahne.durum
+	dogru(String(sahne.get_node("HUD/Ust/Yakit").text).begins_with("FUEL"), "HUD İngilizce: yakıt etiketi (%s)" % sahne.get_node("HUD/Ust/Yakit").text)
+	dogru(String(sahne.get_node("HUD/Katman").text).begins_with("01 / SOIL"), "HUD katman etiketi 01 / SOIL (%s)" % sahne.get_node("HUD/Katman").text)
+	# HUD yalnız gerekli bilgi: yakıt/yük/can/para + derinlik + katman; renk yalnız uyarıda.
+	durum.yakit = durum.yakit_kapasitesi() * 0.1
+	await _kare(3)
+	var yakit_renk: Color = sahne.get_node("HUD/Ust/Yakit").get_theme_color("font_color")
+	dogru(yakit_renk.is_equal_approx(Tema.TEHLIKE), "yakıt %25'in altına inince etiket uyarı renginde")
+	durum.yakit = durum.yakit_kapasitesi()
+	arac.global_position = Vector2(arac.global_position.x, 125.0 * Ayarlar.KARO)
+	await _kare(3)
+	var dolu: ColorRect = sahne.get_node("HUD/Ilerleme/Dolu")
+	dogru(absf(dolu.size.x - 48.0) < 4.0, "katman çubuğu 125 m'de yarıda (%.0f/96 px)" % dolu.size.x)
+	arac.usse_don()
+	await _kare(60)
+
+	# duraklat: Esc → panel, tam tuş listesi, odak Devam'da; ikinci Esc → kapanır
+	sahne.call("_unhandled_input", _tus("duraklat"))
+	await _kare(2)
+	var pause: PanelContainer = sahne.get_node("HUD/Duraklat")
+	var devam: Button = sahne.get_node("HUD/Duraklat/M/V/Devam")
+	dogru(pause.visible and arac.kilitli, "Esc duraklatıyor, araç kilitli")
+	dogru(devam.has_focus() and devam.theme_type_variation == &"Birincil", "odak birincil Devam düğmesinde")
+	dogru(String(sahne.get_node("HUD/Duraklat/M/V/Tuslar").text).contains("Space")
+		and sahne.get_node("HUD/Duraklat/M/V/Baslik").atr("Duraklatıldı") == "Paused",
+		"duraklatma ekranı başlığı ve tam tuş listesi İngilizce")
+	dogru(pause.size.x <= Ayarlar.EKRAN_G and pause.size.y <= Ayarlar.EKRAN_Y, "duraklat paneli 640×360'a sığıyor (%.0f×%.0f)" % [pause.size.x, pause.size.y])
+	sahne.call("_unhandled_input", _tus("duraklat"))
+	await _kare(2)
+	dogru(not pause.visible and not arac.kilitli, "ikinci Esc devam ettiriyor")
+	# ayarlar duraklatmadan: dil düğmesi orada da var
+	sahne.call("_unhandled_input", _tus("duraklat"))
+	await _kare(2)
+	sahne.call("_ayar_ac")
+	await _kare(2)
+	var var_dil := false
+	for c in sahne.get_node("HUD/Ayar/M/V/Kaydir/Liste").get_children():
+		for cc in c.get_children():
+			if cc is Button and cc.text == "Türkçe":
+				var_dil = true
+	dogru(var_dil, "duraklat → ayarlar içinde de dil düğmesi (İngilizce iken 'Türkçe')")
+	sahne.call("_panelleri_kapat")
+	await _kare(2)
+
+	# oyun sonu: skor + en iyi + tek dokunuşla tekrar
+	durum.en_derin = 250
+	sahne.call("_kazandi")
+	await _kare(3)
+	var bitis: PanelContainer = sahne.get_node("HUD/Bitis")
+	var tekrar: Button = sahne.get_node("HUD/Bitis/M/V/Tekrar")
+	dogru(bitis.visible and tekrar.has_focus() and tekrar.theme_type_variation == &"Birincil",
+		"oyun sonunda ilk odak Tekrar düğmesinde")
+	dogru(tekrar.text.begins_with("Again"), "Tekrar düğmesi bir üst Derin Mod turunu sunuyor (%s)" % tekrar.text)
+	dogru(String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("DEEPEST 250 m"),
+		"oyun sonu paneli süre / en derin / para satırı (%s)" % String(sahne.get_node("HUD/Bitis/M/V/Metin").text).left(60))
+	dogru(tekrar.pressed.get_connections().size() > 0 and sahne.get_node("HUD/Bitis/M/V/Menu").pressed.get_connections().size() > 0,
+		"Tekrar ve Menü düğmeleri bağlı")
+	dogru(bitis.size.x <= Ayarlar.EKRAN_G and bitis.size.y <= Ayarlar.EKRAN_Y, "oyun sonu paneli 640×360'a sığıyor (%.0f×%.0f)" % [bitis.size.x, bitis.size.y])
+	sahne.queue_free()
+	await process_frame
+
+	# --- girdi toleransı: kojot + dinamit tamponu (sahnede, gerçek fizik) -----------
+	TranslationServer.set_locale("tr")
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242})
+	var s2: Node = load("res://scenes/oyun.tscn").instantiate()
+	root.add_child(s2)
+	await process_frame
+	await _kare(40)
+	var a2: Arac = s2.get_node("Arac")
+	var d2: Durum = s2.durum
+	d2.dinamit = 20
+	dogru(a2.is_on_floor() and a2.yerde_gibi(), "yerdeyken yerde_gibi")
+	# 1) havadayken basılan F, kojot penceresi dışındaysa tamponlanır ve inince atılır
+	var zemin_y := a2.global_position.y
+	a2.global_position = Vector2(a2.global_position.x, zemin_y - 40.0)
+	a2.velocity = Vector2.ZERO
+	await _kare(10)
+	dogru(not a2.is_on_floor() and not a2.yerde_gibi(), "ışınlanıp 0,17 sn havada kalınca kojot bitti")
+	for i in 60:                      ## inişe ~12 px kalana dek (≈0,07 sn < tampon) bekle
+		await physics_frame
+		if a2.global_position.y > zemin_y - 12.0:
+			break
+	var ilk := d2.dinamit
+	dogru(not a2.is_on_floor(), "iniş anına yakın hâlâ havada")
+	dogru(not a2.dinamit_at() and a2.dinamit_bekliyor(), "havada F: hemen atılmaz ama tamponlanır")
+	for i in 120:
+		await physics_frame
+		if d2.dinamit < ilk:
+			break
+	dogru(d2.dinamit == ilk - 1, "inişten sonra tamponlanan dinamit atıldı (%d → %d)" % [ilk, d2.dinamit])
+	dogru(not a2.dinamit_bekliyor(), "tampon tüketildi")
+	# 2) tampon süresi geçince düşer: çok erken basılan F atılmaz
+	await _kare(40)
+	a2.global_position = Vector2(a2.global_position.x, a2.global_position.y - 90.0)
+	a2.velocity = Vector2.ZERO
+	await _kare(9)                   ## kojot penceresi (0,12 sn) dolsun
+	var ilk2 := d2.dinamit
+	a2.dinamit_at()
+	await _kare(12)                   ## 0,2 sn > DINAMIT_TAMPON, hâlâ havada
+	dogru(not a2.dinamit_bekliyor() and d2.dinamit == ilk2, "çok erken basılan F tampon süresi dolunca boşa düşüyor (atılmadı)")
+	# 3) kojot: zeminden yeni ayrılmışken dinamit hemen atılır
+	for i in 200:
+		await physics_frame
+		if a2.is_on_floor():
+			break
+	await _kare(5)
+	a2.velocity = Vector2(0, -80.0)
+	await physics_frame
+	await physics_frame
+	dogru(not a2.is_on_floor() and a2.yerde_gibi(), "zeminden yeni ayrılan araç kojot penceresinde")
+	var ilk3 := d2.dinamit
+	dogru(a2.dinamit_at() and d2.dinamit == ilk3 - 1, "kojot içinde F hemen atılıyor")
+	s2.queue_free()
+	await process_frame
+	# Dil ve ayarı önceki değerine döndür.
+	ses.ayar = eski_ayar
+	Kayit.ayar_kaydet(eski_ayar)
+	Kayit.sil()
+	TranslationServer.set_locale("tr")

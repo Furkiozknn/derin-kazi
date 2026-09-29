@@ -1,27 +1,6 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu.gd" id="1_menu"]
-[ext_resource type="Texture2D" path="res://assets/sprites/logo.png" id="2_logo"]
-[ext_resource type="Texture2D" path="res://assets/sprites/gok.png" id="3_gok"]
-[ext_resource type="Texture2D" path="res://assets/sprites/kasaba.png" id="4_kasaba"]
-[ext_resource type="Texture2D" path="res://assets/sprites/tepeler.png" id="5_tepeler"]
-[ext_resource type="Texture2D" path="res://assets/sprites/fon_kaya.png" id="6_kaya"]
-
-[sub_resource type="StyleBoxFlat" id="Rozet_1"]
-content_margin_left = 8.0
-content_margin_top = 3.0
-content_margin_right = 8.0
-content_margin_bottom = 3.0
-bg_color = Color(0.1, 0.03, 0.05, 0.92)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.89, 0.23, 0.27, 0.9)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
 
 [node name="Menu" type="Control"]
 layout_mode = 3
@@ -32,89 +11,32 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
 
-[node name="Fon" type="TextureRect" parent="."]
+[node name="Fon" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("3_gok")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="Tepeler" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -150.0
-offset_bottom = -86.0
-grow_horizontal = 2
-grow_vertical = 0
-texture = ExtResource("5_tepeler")
-stretch_mode = 1
-modulate = Color(0.72, 0.74, 0.86, 0.75)
-
-[node name="Kasaba" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -122.0
-offset_bottom = -74.0
-grow_horizontal = 2
-grow_vertical = 0
-texture = ExtResource("4_kasaba")
-stretch_mode = 1
-modulate = Color(1, 1, 1, 0.75)
-
-[node name="Zemin" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -76.0
-offset_bottom = 0.0
-grow_horizontal = 2
-grow_vertical = 0
-texture = ExtResource("6_kaya")
-stretch_mode = 1
-modulate = Color(0.40, 0.24, 0.16, 1)
-
-[node name="ZeminCizgi" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -78.0
-offset_bottom = -74.0
-grow_horizontal = 2
-grow_vertical = 0
-color = Color(0.29, 0.15, 0.12, 1)
-
-[node name="Karart" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.02, 0.02, 0.04, 0.45)
 mouse_filter = 2
+color = Color(0.11, 0.075, 0.05, 1)
 
-[node name="Logo" type="TextureRect" parent="."]
+[node name="Kesit" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_right = 168.0
+offset_bottom = 360.0
+mouse_filter = 2
+clip_contents = true
+
+[node name="Etiket" type="Label" parent="."]
 layout_mode = 0
-offset_left = 26.0
-offset_top = 18.0
-offset_right = 74.0
-offset_bottom = 66.0
-texture = ExtResource("2_logo")
-stretch_mode = 2
+offset_left = 186.0
+offset_top = 14.0
+offset_right = 470.0
+offset_bottom = 30.0
+theme_type_variation = &"Etiket"
+text = "01 / YÜZEY"
 
 [node name="M" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -123,71 +45,88 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 150
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 150
-theme_override_constants/margin_bottom = 100
+theme_override_constants/margin_left = 186
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 40
 
 [node name="V" type="VBoxContainer" parent="M"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="Baslik" type="Label" parent="M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.99, 0.68, 0.2, 1)
-theme_override_font_sizes/font_size = 26
-text = "DERİN KAZI"
-horizontal_alignment = 1
+theme_type_variation = &"Baslik"
+theme_override_font_sizes/font_size = 40
+text = "Derin Kazı"
 
 [node name="AltBaslik" type="Label" parent="M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.79, 0.86, 1)
-theme_override_font_sizes/font_size = 11
-text = "Kaz, topla, sat, geliştir — 250 metrede çekirdek var."
-horizontal_alignment = 1
+theme_type_variation = &"Govde"
+theme_override_font_sizes/font_size = 13
+text = "Kaz, sat, geliştir. 250 metre aşağıda çekirdek var."
+autowrap_mode = 3
+
+[node name="Bosluk" type="Control" parent="M/V"]
+custom_minimum_size = Vector2(0, 6)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="Basla" type="Button" parent="M/V"]
-custom_minimum_size = Vector2(0, 21)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Başla"
+theme_type_variation = &"Birincil"
+theme_override_font_sizes/font_size = 22
+text = "Oyna"
 
-[node name="Yeni" type="Button" parent="M/V"]
-custom_minimum_size = Vector2(0, 21)
+[node name="Kontroller" type="Label" parent="M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Yeni dünya (ilerleme sıfırlanır)"
+theme_type_variation = &"Etiket"
+theme_override_font_sizes/font_size = 9
+text = "..."
+autowrap_mode = 3
 
-[node name="Tohum" type="Button" parent="M/V"]
-custom_minimum_size = Vector2(0, 21)
+[node name="Ikincil" type="HFlowContainer" parent="M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
-text = "Tohum kodu — göster / gir"
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
 
-[node name="Gunluk" type="Button" parent="M/V"]
-custom_minimum_size = Vector2(0, 21)
+[node name="Gunluk" type="Button" parent="M/V/Ikincil"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"Kucuk"
+focus_mode = 2
 text = "Günlük dünya"
 
-[node name="Derin" type="Button" parent="M/V"]
-visible = false
-custom_minimum_size = Vector2(0, 21)
+[node name="Derin" type="Button" parent="M/V/Ikincil"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"Kucuk"
+focus_mode = 2
 text = "Derin Mod"
+visible = false
 
-[node name="Ayarlar" type="Button" parent="M/V"]
-custom_minimum_size = Vector2(0, 21)
+[node name="Yeni" type="Button" parent="M/V/Ikincil"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"Kucuk"
+focus_mode = 2
+text = "Yeni dünya"
+
+[node name="Tohum" type="Button" parent="M/V/Ikincil"]
+layout_mode = 2
+theme_type_variation = &"Kucuk"
+focus_mode = 2
+text = "Tohum kodu"
+
+[node name="Ayarlar" type="Button" parent="M/V/Ikincil"]
+layout_mode = 2
+theme_type_variation = &"Kucuk"
+focus_mode = 2
 text = "Ayarlar"
 
-[node name="Cikis" type="Button" parent="M/V"]
-custom_minimum_size = Vector2(0, 21)
+[node name="Cikis" type="Button" parent="M/V/Ikincil"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"Kucuk"
+focus_mode = 2
 text = "Çıkış"
 
 [node name="Bilgi" type="Label" parent="."]
@@ -196,39 +135,15 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = -98.0
-offset_right = -10.0
-offset_bottom = -52.0
+offset_left = 186.0
+offset_top = -34.0
+offset_right = -28.0
+offset_bottom = -12.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.17, 0.91, 0.96, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.06, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
+theme_type_variation = &"Etiket"
+theme_override_font_sizes/font_size = 9
 text = "..."
-horizontal_alignment = 1
-vertical_alignment = 2
-autowrap_mode = 3
-
-[node name="Kontroller" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 10.0
-offset_top = -50.0
-offset_right = -10.0
-offset_bottom = -3.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(0.72, 0.77, 0.85, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.06, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
-text = "..."
-horizontal_alignment = 1
 vertical_alignment = 2
 autowrap_mode = 3
 
@@ -241,13 +156,12 @@ anchor_right = 1.0
 offset_left = -250.0
 offset_top = 10.0
 offset_right = -12.0
-offset_bottom = 32.0
+offset_bottom = 30.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(0.99, 0.68, 0.2, 1)
-theme_override_font_sizes/font_size = 11
-theme_override_styles/normal = SubResource("Rozet_1")
+theme_type_variation = &"Vurgu"
+theme_override_font_sizes/font_size = 9
 text = "▼ DERİN MOD x1 ▼"
-horizontal_alignment = 1
+horizontal_alignment = 2
 vertical_alignment = 1
 
 [node name="Ayar" type="PanelContainer" parent="."]
@@ -270,23 +184,22 @@ theme_override_constants/margin_bottom = 14
 
 [node name="V" type="VBoxContainer" parent="Ayar/M"]
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 6
 
 [node name="Baslik" type="Label" parent="Ayar/M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"Baslik2"
 text = "Ayarlar"
-horizontal_alignment = 1
 
 [node name="Kaydir" type="ScrollContainer" parent="Ayar/M/V"]
+custom_minimum_size = Vector2(360, 190)
 layout_mode = 2
-custom_minimum_size = Vector2(380, 200)
 horizontal_scroll_mode = 0
 
 [node name="Liste" type="VBoxContainer" parent="Ayar/M/V/Kaydir"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 2
+theme_override_constants/separation = 6
 
 [node name="TohumPanel" type="PanelContainer" parent="."]
 visible = false
@@ -308,43 +221,39 @@ theme_override_constants/margin_bottom = 14
 
 [node name="V" type="VBoxContainer" parent="TohumPanel/M"]
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 6
 
 [node name="Baslik" type="Label" parent="TohumPanel/M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_type_variation = &"Baslik2"
 text = "Tohum kodu"
-horizontal_alignment = 1
 
 [node name="Bilgi" type="Label" parent="TohumPanel/M/V"]
 custom_minimum_size = Vector2(400, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
 text = "..."
 autowrap_mode = 3
 
 [node name="Giris" type="LineEdit" parent="TohumPanel/M/V"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
-max_length = 9
 placeholder_text = "7 harf — ör. BCDFGHJ"
+max_length = 9
 alignment = 1
 
 [node name="Durum" type="Label" parent="TohumPanel/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.99, 0.68, 0.2, 1)
-theme_override_font_sizes/font_size = 11
-text = ""
+theme_type_variation = &"Vurgu"
+theme_override_font_sizes/font_size = 10
 horizontal_alignment = 1
 
 [node name="KodBasla" type="Button" parent="TohumPanel/M/V"]
-custom_minimum_size = Vector2(0, 21)
+custom_minimum_size = Vector2(0, 26)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"Birincil"
+theme_override_font_sizes/font_size = 13
 text = "Bu tohumla yeni dünya"
 
 [node name="Kapat" type="Button" parent="TohumPanel/M/V"]
-custom_minimum_size = Vector2(0, 21)
 layout_mode = 2
-theme_override_font_sizes/font_size = 12
 text = "Kapat  (Esc)"

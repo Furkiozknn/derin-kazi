@@ -75,6 +75,7 @@ func _ready() -> void:
 	for ad in MUZIKLER:
 		_akis_al(ad)
 	ayar = Kayit.ayar_yukle()
+	Kayit.dil_uygula(ayar)
 	ayarlari_uygula()
 
 func _muzik_oyuncu() -> AudioStreamPlayer:
@@ -248,6 +249,8 @@ func ayarlari_uygula() -> void:
 func ayarla(anahtar: String, deger) -> void:
 	ayar[anahtar] = deger
 	ayarlari_uygula()
+	if anahtar == "dil":
+		Kayit.dil_uygula(ayar)
 	Kayit.ayar_kaydet(ayar)
 
 func sarsinti_acik() -> bool:
