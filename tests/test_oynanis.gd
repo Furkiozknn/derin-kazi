@@ -824,6 +824,7 @@ func _yeni_arayuz_testleri() -> void:
 	TranslationServer.set_locale("tr")
 	var ses = root.get_node("Ses")
 	var eski_ayar: Dictionary = ses.ayar.duplicate()
+	ses.ayarla("dil", "tr")   ## kayıtlı tercih: CI'da sistem dili İngilizce olabilir, düğme metni buna bağlı
 
 	# --- menü: tek büyük Oyna, tek satır yardım, küçük ikincil düğmeler ---------
 	Kayit.sil()
