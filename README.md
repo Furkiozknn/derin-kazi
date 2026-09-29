@@ -4,6 +4,7 @@
 
 <p align="center"><img src="docs/reel/reel.gif" alt="derin-kazi - 15 saniyelik tanıtım videosu" width="720"></p>
 <p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
+<h3 align="center"><a href="https://furkiozknn.github.io/derin-kazi/">Tarayıcıda oyna → furkiozknn.github.io/derin-kazi</a></h3>
 
 *Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
@@ -23,8 +24,8 @@ yakıtın sayaç olduğu iniş-çıkış kararı, keşif sisi, okunabilen deprem
 kodundan kurulan günlük dünya ve Derin Mod, tek kullanımlık ışınlama işareti,
 bitiş ekranında istatistik dökümü.
 
-Windows + Web çıktısı alınıyor; yayın paketi `yayin/` altında hazır
-(**yüklenmedi**).
+Windows + Web çıktısı alınıyor; web sürümü [tarayıcıda yayında](https://furkiozknn.github.io/derin-kazi/),
+itch.io yayın paketi `yayin/` altında hazır (**yüklenmedi**).
 
 Sürüm sürüm ne değiştiği: **[SURUM-GECMISI.md](SURUM-GECMISI.md)** · güncel sürümün
 notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasında.
@@ -40,10 +41,14 @@ her iniş, yakıt bitmeden yükü üsse taşıyıp taşıyamayacağına dair bir
 İnsan benzeri bot çekirdeğe ~25 dakikada varıyor (`tests/test_insan.gd`).
 
 **Platform:** Windows masaüstü ve Web (HTML5; thread'siz derleme, düz bir
-statik sunucuda açılır). Klavye, gamepad ve dokunmatik. Tarayıcıda oynanan
-bir sürüm **henüz yayında değil** — GitHub Pages bu depoda açılmadı.
+statik sunucuda açılır). Klavye, gamepad ve dokunmatik.
 
-**1. Godot kurmadan oyna.** [Actions → Yapi](https://github.com/Furkiozknn/derin-kazi/actions/workflows/yapi.yml)
+**1. Tarayıcıda oyna.** **[furkiozknn.github.io/derin-kazi](https://furkiozknn.github.io/derin-kazi/)** —
+kurulum gerekmez. 29 Eylül 2026'da masaüstü Chromium'da açıldı: menü geldi,
+**Başla** yeni bir dünya kurdu, klavyeyle kazıldı, konsolda hata yok.
+Dokunmatik ve mobil tarayıcı bu kontrolde denenmedi.
+
+**2. Godot kurmadan indir.** [Actions → Yapi](https://github.com/Furkiozknn/derin-kazi/actions/workflows/yapi.yml)
 → son başarılı koşu → *Artifacts* (indirmek için GitHub hesabıyla giriş
 gerekir; artifact'ler 90 gün tutulur, yeni koşuyu *Run workflow* ile depo
 sahibi başlatır):
@@ -54,7 +59,7 @@ sahibi başlatır):
   `http://localhost:8000`. `index.html`'e çift tıklamak çalışmaz: tarayıcı
   `file://` altında `.wasm`/`.pck` yüklemez.
 
-**2. Kaynaktan oyna.** Gerekenler: **Godot 4.7.2-stable** (standart sürüm,
+**3. Kaynaktan oyna.** Gerekenler: **Godot 4.7.2-stable** (standart sürüm,
 .NET değil) ve **Git LFS** — bütün PNG/WAV/TTF/GIF varlıkları LFS'te.
 
 ```sh
