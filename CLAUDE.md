@@ -10,8 +10,8 @@ Arayüz, kod ve belgeler **Türkçe**. Değişken/fonksiyon adları da Türkçe.
 ## Motor ve ayarlar — değiştirme
 
 - **GL Compatibility** renderer (tümleşik Intel UHD hedefi). `forward_plus` açma.
-- Pixel art: `default_texture_filter=0` (nearest), `snap_2d_transforms_to_pixel`,
-  `snap_2d_vertices_to_pixel`. Kamera yakınlaştırması **2x**, temel görüntü 640x360.
+- Görsel dil: **düz renk, gölgesiz, geometrik** (v0.8, tanıtım videosundan; bkz. "Arayüz ve dil").
+  `default_texture_filter=0` (nearest), `snap_2d_*` kalır. Kamera yakınlaştırması **2x**, temel görüntü 640x360.
 - Tüm `.gd` / `.tscn` / `.cfg` / `.md` dosyaları **BOM'suz UTF-8**.
 - Ses veri yolları: `Master > Muzik`, `Master > Efekt` (`default_bus_layout.tres`).
 - `Ses` autoload'u (`scripts/ses.gd`) efekt ve müziği yönetir; doğrudan
@@ -36,6 +36,10 @@ scripts/deprem.gd         deprem hesabı + oyuncunun kararı (saf sınıf; uygul
 scripts/ipucu.gd          ipucu, deprem panosu ve mağaza satırları (saf sınıf; dokunmatik/masaüstü ayrımı)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
+scripts/tema.gd           video paleti + mono etiket/kutu yardımcıları (Tema); tema.tres'in kaynağı tools/tema_uret.gd
+scripts/ceviri.gd         TR/EN: kodda tr("Türkçe metin") (static/const bağlamda Ceviri.t), tablo scripts/ceviri_en.gd
+scripts/gecis.gd          autoload Gecis: 8 geçiş ailesi shader'ı (assets/gecis.gdshader): git/kapat/ac/acilis/ara/vurus, yanip_son; sade() = hareket azaltma
+scripts/ui.gd             menü öğelerinin sıralı girişi, düğme basış hareketi
 scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları, istatistik sayaçları, işaret (saf sınıf)
 scripts/arac.gd           hareket, kazma, hasar, aletler, animasyon kareleri (saf seçim)
 scripts/oyun.gd           HUD, üs, müze, ışınlanma + işaret, tehlikeler, oyun hissi, bitiş dökümü
@@ -152,6 +156,30 @@ ilk oyunla yan yana ölçer (`Bot.INSAN_DERIN`).
   varışta hücreyi açar. Eski kayıt `isaret` anahtarı olmadan açılır. Bot bilmez;
   birim test `tests/bot.gd` içinde "isaret" geçmediğini tarıyor.
 
+## Arayüz ve dil (v0.8)
+
+- **Tema:** `assets/tema.tres` proje teması (`gui/theme/custom`); ELLE DÜZENLEME, `tools/tema_uret.gd`
+  üretir (sonra `--import`). Renkler `scripts/tema.gd` ve `tools/sprite_uret.gd`'de AYNI değerler;
+  dünya arka plan tonu/parçacık/sis rengi `Ayarlar` içinde. Paletin kaynağı `docs/TASARIM.md`.
+- **Görseller** `tools/sprite_uret.gd` ile düz renk üretilir (atlas sütunları ve 9 kare düzeni değişmedi).
+  Yüzey testi (`_yuzey_testleri`) artık "yeşil çimen" değil "tek düz açık toprak bandı" arar.
+- **Metin:** kodda `tr("Türkçe metin")`; `const`/static/sabit tablolarda `Ceviri.t(...)` kullan.
+  Yeni metin → `scripts/ceviri_en.gd`'ye İngilizcesi (belirteç sayısı/sırası aynı). `_ceviri_testleri`
+  ve `python tools/ceviri_tara.py` eksikleri yakalar. `Ayarlar` tabloları (`MADEN_AD`, `KATMANLAR`,
+  `ESERLER`...) Türkçe kaynak kalır, gösterilirken `Ceviri.t` ile çevrilir.
+- **Dil:** `Kayit.dil_etkin(ayar)`: `[ayar] dil` "tr"/"en" ise o, değilse `OS.get_locale_language()`. Yeni
+  anahtar, eski kayıt bozulmaz. Test betikleri dili `tr`'ye sabitler (CI'da sistem dili İngilizce olabilir);
+  `Control.text` özelliği ÇEVRİLMEMİŞ anahtarı döner: sahnede İngilizce metin sınamak için `atr(text)`.
+- **Geçiş (v0.9):** günlük video geçiş aileleri + renk akışı (`Tema.AKIS`, iki derinlik paleti, `Tema.derinlik_temasi`).
+  Menü ↔ oyun `Gecis.git(yol, tema, tur)`; içerik açılışı `Gecis.acilis`; yerinde değişim `Gecis.ara`
+  (meşgulken de değişikliği yapar); bekletmeyen tek vuruş `Gecis.vurus` (deprem glitch'i, çekirdek flaşı).
+  **Sade geçişler** ayarı (`[ayar] sade_gecis`) ya da tarayıcıda `prefers-reduced-motion` = `Gecis.sade()`:
+  efekt ve bekleme yok, sayaç vurgusu yok. Yeni renk eklersen yazı/vurgu ve vurgu/zemin >= 4,5:1
+  (testte hesaplanır). `Gecis.git` (sahne değişimi) `--script` testinde koşmaz; tarayıcıda gözle doğrula.
+- **Girdi toleransı:** `Arac.YER_KOJOT`, `DINAMIT_TAMPON` (0,12 sn), `KAZI_HIZALAMA`. Ölçüm
+  `tools/his_olc.gd`; kazma kuralı (havada kazılmaz) DEĞİŞMEDİ. `Polygon2D` kullanma: web'de WebGL uyarısı verdi.
+- **Ham klip:** `tools/kayit.ps1` (`tools/kayit.gd` insan bandında bot sürer; HUD ve uçan yazılar gizli).
+
 ## Kayıt uyumu
 
 Eski sürümün kaydı yeni sürümde açılmalı. Fikstür **gerçek dosya**:
@@ -245,12 +273,12 @@ godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış te
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması (sisli insan botu dahil)
-# CI her paketin günlüğünü tests/kapi.sh'a verir (tabanlar: ci.yml → TEST_TABANI_BIRIM 304,
-# _OYNANIS 156, _DENGE 7, _INSAN 10; fay: --fay, FAY_TOHUM_TABANI 12). SCRIPT ERROR olursa kırmızı,
+# CI her paketin günlüğünü tests/kapi.sh'a verir (tabanlar: ci.yml → TEST_TABANI_BIRIM 358,
+# _OYNANIS 238, _DENGE 7, _INSAN 10; fay: --fay, FAY_TOHUM_TABANI 12). SCRIPT ERROR olursa kırmızı,
 # çünkü yarıda kalan test fonksiyonu yine "0 hata" der. Test ekleyince ilgili tabanı yükselt.
 bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)
-godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art (yuzey.png, 9 kareli arac.png, isaret.png dahil)
+godot --headless --path . --script res://tools/sprite_uret.gd     # tüm görseller, düz renk (yuzey.png, 9 kareli arac.png, isaret.png dahil)
 godot --headless --path . --script res://tools/ses_uret.gd        # matkap.wav (döngü) + deprem.wav, deterministik
 godot --headless --path . --script res://tools/onizleme.gd        # sprite önizleme sayfası + docs/v07-kareler.png
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak) + telefon/deprem denetimi (render gerekir)
@@ -292,8 +320,8 @@ içindeki komutlar bilerek çalıştırılmamış durumda.
 
 ## Varlık üretimi
 
-GUI aracı kullanılamıyor. Tüm pixel art `tools/sprite_uret.gd` içinde Godot
-`Image` API'siyle üretiliyor; palet **Endesga 32** ve o dosya tek kaynak.
+GUI aracı kullanılamıyor. Tüm görseller `tools/sprite_uret.gd` içinde Godot
+`Image` API'siyle üretiliyor: v0.8'den beri DÜZ renk (video paleti; eski Endesga 32 pixel art bırakıldı) ve o dosya tek kaynak.
 Elle PNG düzenleme yok — görseli değiştireceksen betiği değiştir ve yeniden üret,
 sonra `tools/onizleme.gd` ile çıktıyı gözle denetle.
 

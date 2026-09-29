@@ -32,6 +32,17 @@ const KAZ_HIZ := 14.0      ## kazma animasyonu, kare/sn
 const UCUS_HIZ := 12.0     ## alev, kare/sn
 const PALET_PIKSEL := 3.0  ## palet deseni bir kare kaymak için kaç px yol (desen 3 px periyotlu)
 const KAZMA_KUYRUK := 0.3  ## kazı kesilince matkap sesi bu kadar sn daha sürer: karo arası düşüşte kesilmesin
+## Girdi toleransı (v0.8, docs/TASARIM.md ölçümü): dinamit yalnız zeminde atılır. Karo kırılınca araç
+## her seferinde ~0,28 sn boşlukta; oyuncu F'ye tam o karede basınca "zemine bas" uyarısı alıyordu.
+## Kojot: zeminden ayrıldıktan sonra YER_KOJOT sn hâlâ "yerde" sayılır. Tampon: havadayken basılan
+## F, DINAMIT_TAMPON sn içinde inilirse iner inmez atılır. Kazma DEĞİŞMEDİ (havada kazılmaz).
+## Kazı hizalama (v0.8): 12 px'lik gövde 16 px'lik deliğe tam ortalanmadan basılırsa gövdenin bir
+## kenarı komşu karonun köşesinde 0,1-1 px asılı kalıyordu ve araç "aşağı" tuşu basılı olduğu hâlde
+## deliğe düşmüyordu (tools/his_olc.gd: ortadan -5..+5 px kaymış 11 başlangıçtan 8'inde asıldı, hizalamayla 0).
+## Aşağı basılıyken ve altındaki hücre boşken araç sütunun ortasına doğru kayar; sıfır = kapalı.
+const KAZI_HIZALAMA := 12.0     ## 1/sn: hizalama hızı (px farkı × bu değer px/sn)
+const YER_KOJOT := 0.12
+const DINAMIT_TAMPON := 0.12
 
 var durum: Durum
 var dunya: Dunya
@@ -46,6 +57,8 @@ var _kazma_kuyruk := 0.0
 var _en_hizli_dusus := 0.0
 var _lav_birikim := 0.0
 var _uyari_bekle := 0.0
+var _yer_kalan := 0.0      ## kojot: zeminden ayrılalı bu kadar sn dolmadıysa hâlâ "yerde"
+var _dinamit_tampon := 0.0 ## havadayken basılan F'nin kalan bekleme süresi
 
 @onready var _gorsel: Sprite2D = $Gorsel
 
@@ -70,6 +83,11 @@ func _physics_process(delta: float) -> void:
 		_hedef = YOK
 		_ilerleme = 0.0
 		velocity.x = yatay * Ayarlar.YATAY_HIZ
+		if KAZI_HIZALAMA > 0.0 and absf(yatay) < 0.1 and is_on_floor() and Input.is_action_pressed("asagi"):
+			var alt_h := dunya.hucre(global_position + Vector2(0, ALT_UZANIM))
+			if dunya.karo_tur(alt_h) == Ayarlar.BOS:
+				var kayma := dunya.hucre_merkezi(alt_h).x - global_position.x
+				velocity.x = clampf(kayma * KAZI_HIZALAMA, -Ayarlar.YATAY_HIZ * 0.5, Ayarlar.YATAY_HIZ * 0.5)
 
 	if itiyor:
 		velocity.y = move_toward(velocity.y, -Ayarlar.TIRMANIS_HIZ, Ayarlar.ITKI * delta)
@@ -91,6 +109,12 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if havadaydi and is_on_floor():
 		_dusme_carpmasi()
+	_yer_kalan = YER_KOJOT if is_on_floor() else maxf(0.0, _yer_kalan - delta)
+	if _dinamit_tampon > 0.0:
+		_dinamit_tampon = maxf(0.0, _dinamit_tampon - delta)
+		if is_on_floor():
+			_dinamit_tampon = 0.0
+			dinamit_at()
 	# Yüzeyde kenardan uçup gitmeyi engelle (yerin üstünde duvar karosu yok).
 	global_position.x = clampf(global_position.x, Ayarlar.KARO * 1.5, (Ayarlar.GENISLIK - 1.5) * Ayarlar.KARO)
 
@@ -115,6 +139,13 @@ func _kazma_bildir(kaziyor: bool) -> void:
 		return
 	_kaziyor = kaziyor
 	kazma_degisti.emit(kaziyor)
+
+## Zeminde ya da zeminden yeni ayrılmış (kojot penceresi içinde).
+func yerde_gibi() -> bool:
+	return is_on_floor() or _yer_kalan > 0.0
+
+func dinamit_bekliyor() -> bool:
+	return _dinamit_tampon > 0.0
 
 func kaziyor_mu() -> bool:
 	return _kaziyor
@@ -285,7 +316,10 @@ func _lav_kontrol(delta: float) -> void:
 
 ## 3x3 patlatma. Yönü aşağı/yana girdiye göre seçer, yoksa aracın altını patlatır.
 func dinamit_at() -> bool:
-	if durum.dinamit <= 0 or not is_on_floor():
+	if durum.dinamit <= 0:
+		return false
+	if not yerde_gibi():
+		_dinamit_tampon = DINAMIT_TAMPON   ## inince atılır (havada uzun süre bekletmez)
 		return false
 	durum.dinamit -= 1
 	var merkez := hucre() + Vector2i.DOWN
@@ -321,6 +355,8 @@ func isinlan(hedef: Vector2) -> void:
 	_hedef = YOK
 	_ilerleme = 0.0
 	_en_hizli_dusus = 0.0
+	_yer_kalan = 0.0
+	_dinamit_tampon = 0.0
 	durum.yakit_harca(Ayarlar.ISINLAMA_YAKIT)
 
 func usse_don() -> void:

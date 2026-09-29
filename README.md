@@ -6,7 +6,7 @@
 <p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
 <h3 align="center"><a href="https://furkiozknn.github.io/derin-kazi/">Tarayıcıda oyna → furkiozknn.github.io/derin-kazi</a></h3>
 
-*Side-view digging and upgrade loop (Godot 4, Turkish UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 304 unit + 156 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
+*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 333 unit + 191 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
 [![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
 
@@ -15,14 +15,25 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Oynanış](yayin/ekran-2.png)
 
-Durum: **v0.7.2** — MIT lisansı, her push'ta **304 birim + 156 oynanış + 17 ölçüm**
-testinin ve fay hattı kapısının koştuğu CI, ve oyuncuya inen web paketinin **1.782.396 → 968.680 bayta** inmesi (iç
-klasörler dışa aktarmadan çıkarıldı). Oynanış v0.7 ile aynı.
+![Menü](docs/ekran/menu_en.png)
+
+Durum: **v0.9** — günlük video imkânları (renk akışı + sekiz geçiş ailesi) v0.8'in arayüz
+yenilemesinin üstüne. Oyun tanıtım videosundaki dünyayla aynı
+dilde: düz renk toprak bantları, kağıt rengi matkap, amber maden kareleri, Instrument
+Sans + JetBrains Mono, tek büyük **Oyna**, yeni duraklat / oyun sonu / ayarlar
+ekranları ve **Türkçe / İngilizce** arayüz (varsayılan: tarayıcı dili). Çekirdek
+mekanik ve denge aynı; iki oynanış düzeltmesi: dinamit için kojot + tampon, deliğe
+düşerken kenara asılmayı önleyen kazı hizalama. Menü açılışı, sahne geçişleri, ışınlanma,
+derinlik sayacı, yeni rekor, deprem ve oyun sonu günlük videolardaki geçiş ve renk akışıyla;
+ayarlarda **Sade geçişler** (hareket azaltma). Her push'ta **358 birim + 238
+oynanış + 17 ölçüm** testinin ve fay hattı kapısının koştuğu CI. Denetim
+[`docs/DENETIM.md`](docs/DENETIM.md), tasarım ve ölçümler
+[`docs/TASARIM.md`](docs/TASARIM.md).
 
 **Oyunda ne var:** beş katmanlı kazı-sat-geliştir döngüsü ve 250 m'deki çekirdek,
 yakıtın sayaç olduğu iniş-çıkış kararı, keşif sisi, okunabilen depremler, tohum
 kodundan kurulan günlük dünya ve Derin Mod, tek kullanımlık ışınlama işareti,
-bitiş ekranında istatistik dökümü.
+bitiş ekranında istatistik dökümü ve tek dokunuşla tekrar, Türkçe / İngilizce arayüz.
 
 Windows + Web çıktısı alınıyor; web sürümü [tarayıcıda yayında](https://furkiozknn.github.io/derin-kazi/),
 itch.io yayın paketi `yayin/` altında hazır (**yüklenmedi**).
@@ -34,7 +45,7 @@ notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasın
 
 ![Dört saniyelik oynanış: kazı, maden toplama, kazı zinciri, deprem uyarısı](yayin/tanitim.gif)
 
-<sub>4 sn, 12 kare/sn — gerçek oyundan `tools/tanitim_al.gd` ile alınan kareler, montaj yok.</sub>
+<sub>4 sn, 12 kare/sn — gerçek oyundan `tools/tanitim_al.gd` ile alınan kareler, montaj yok. Metinler oyunun kendi dilinde (Türkçe); İngilizce ekranlar `docs/ekran/*_en.png`.</sub>
 
 **Hedef:** 250 m'deki çekirdeğe dokunup yüzeye geri dönmek. Yakıt sayaçtır:
 her iniş, yakıt bitmeden yükü üsse taşıyıp taşıyamayacağına dair bir bahis.
@@ -45,7 +56,9 @@ statik sunucuda açılır). Klavye, gamepad ve dokunmatik.
 
 **1. Tarayıcıda oyna.** **[furkiozknn.github.io/derin-kazi](https://furkiozknn.github.io/derin-kazi/)** —
 kurulum gerekmez. 29 Eylül 2026'da masaüstü Chromium'da açıldı: menü geldi,
-**Başla** yeni bir dünya kurdu, klavyeyle kazıldı, konsolda hata yok.
+**Başla** yeni bir dünya kurdu, klavyeyle kazıldı, konsolda hata yok (o gün
+yayındaki v0.7.2). v0.8 yapısı aynı gün yerelde (`python -m http.server`) aynı yolla
+denendi: menü → **Oyna** (renk bandı) → kazı → `Esc` duraklat, konsol temiz.
 Dokunmatik ve mobil tarayıcı bu kontrolde denenmedi.
 
 **2. Godot kurmadan indir.** [Actions → Yapi](https://github.com/Furkiozknn/derin-kazi/actions/workflows/yapi.yml)
@@ -413,9 +426,15 @@ godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış te
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması
-godot --headless --path . --script res://tools/sprite_uret.gd     # tüm pixel art (yüzey, 9 kareli araç, işaret dahil)
+godot --headless --path . --script res://tools/sprite_uret.gd     # tüm görseller, düz renk (yüzey, 9 kareli araç, işaret dahil)
+godot --headless --path . -s res://tools/tema_uret.gd             # assets/tema.tres (sonra --import)
+python tools/ceviri_tara.py                                       # İngilizce tabloda eksik metin var mı
 godot --headless --path . --script res://tools/ses_uret.gd        # matkap döngüsü + deprem gürültüsü (deterministik)
 godot --path . --script res://tools/ekran_al.gd                   # yayın görselleri (6 ekran + kapak + docs/bitis.png)
+godot --path . --script res://tools/kanit_al.gd -- docs/ekran     # TR/EN ekran seti (menü, ayarlar, HUD, duraklat, mağaza, oyun sonu)
+godot --path . --script res://tools/his_olc.gd                    # oyun hissi ölçümü (girdi gecikmesi, dinamit tamponu, kazı hizalama)
+godot --path . -s res://tools/fps.gd -- 600 60                    # kare süresi (gerçek render, vsync kapalı)
+powershell -File tools\kayit.ps1                                  # ham oynanış klibi (yazısız, dikey 1080x1920)
 godot --headless --path . --script res://tools/kayit_fikstur.gd -- --cikti <dosya>   # eski sürüm worktree'sinde kayıt fikstürü
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim)
 ```
@@ -427,8 +446,8 @@ motor `SCRIPT ERROR` yazar, kalan sınamalar sayılmaz ve paket yine
 çıkış 0). CI bu yüzden her paketin günlüğünü `tests/kapi.sh`'a veriyor:
 `== N sınama, 0 hata ==` satırı olmalı, N paketin tabanının altına düşmemeli,
 günlükte `SCRIPT ERROR` / `Parse Error` olmamalı. Tabanlar `ci.yml` → `env`
-içinde: `TEST_TABANI_BIRIM` 304, `TEST_TABANI_OYNANIS` 156,
-`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 477). Fay kapısı da
+içinde: `TEST_TABANI_BIRIM` 333, `TEST_TABANI_OYNANIS` 191,
+`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 541). Fay kapısı da
 aynı betikten geçiyor (`--fay`: `bot 12/12, sisli insan botu 12/12 ... TAMAM`,
 `FAY_TOHUM_TABANI` 12). Kapının kendisi `tests/kapi_sinama.sh` ile örnek
 günlüklerde sınanıyor (Godot'suz). **Test ekleyince ilgili tabanı da
@@ -436,7 +455,7 @@ yükselt**; düşürmek, bir bölümün sessizce kaybolduğunu kabul etmektir.
 
 ```bash
 godot --headless --path . --script res://tests/test_calistir.gd 2>&1 | tee birim.log
-bash tests/kapi.sh birim.log 304                                  # CI'daki kapının aynısı
+bash tests/kapi.sh birim.log 333                                  # CI'daki kapının aynısı
 bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 ```
 
@@ -489,9 +508,13 @@ scripts/deprem.gd         deprem hesabı ve oyuncunun kararı (saf sınıf)
 scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı (saf sınıf)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
-scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar
+scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar (dil dahil)
+scripts/tema.gd           video paleti, mono etiket / kutu yardımcıları (assets/tema.tres'in kaynağı tools/tema_uret.gd)
+scripts/ceviri.gd         TR/EN: tr("Türkçe metin") anahtar, tablo scripts/ceviri_en.gd
+scripts/gecis.gd          autoload: sekiz geçiş ailesi (assets/gecis.gdshader), sahne geçişi, vuruşlar, sade kip
+scripts/ui.gd             menü öğelerinin sıralı girişi, düğme basış hareketi
 scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/döngü sesi/ayar
-tools/                    varlık üretimi (pixel art, müzik, sentez efekt, ekran görüntüsü), kayıt fikstürü
+tools/                    varlık üretimi (düz renk görseller, tema, müzik, sentez efekt), ekran/kanıt/kayıt araçları, ölçüm (his_olc, fps), kayıt fikstürü
 tests/bot.gd              bot simülasyonu (kusursuz · insan benzeri · sisli insan · Derin Mod)
 tests/veri/               gerçek eski sürüm kayıtları (kayit-v0.5.cfg)
 tests/                    headless testler (çıkış kodu 0 = geçti)
@@ -503,12 +526,13 @@ Kayıt dosyası: `user://kayit.cfg`
 kazılan ve depremle değişen hücreler, keşif haritası (`kesif`: 17.408 bayt,
 deflate + base64) · `[gunluk]` günlük dünyanın ayrı yuvası · `[derin]` Derin
 Mod'un ayrı yuvası (v0.6) · `[oyuncu]` bütün yuvaların birikimli istatistiği (v0.7)
-· `[ayar]` ses/tam ekran/sarsıntı tercihleri.
+· `[ayar]` ses/tam ekran/sarsıntı, dil (v0.8) ve sade geçişler (v0.9) tercihleri.
 
 ## Varlıklar
 
-GUI aracı kullanılmadı. Tüm pixel art `tools/sprite_uret.gd` içinde Godot `Image`
-API'siyle üretiliyor (palet: **Endesga 32**). Ses efektleri rFXGen ön ayarlarından;
+GUI aracı kullanılmadı. Tüm görseller `tools/sprite_uret.gd` içinde Godot `Image`
+API'siyle üretiliyor: v0.8'den beri düz renk, gölgesiz, geometrik (palet
+tanıtım videosundan örneklendi, `docs/TASARIM.md`; v0.7'ye kadar Endesga 32 pixel art). Ses efektleri rFXGen ön ayarlarından;
 rFXGen'in veremediği matkap döngüsü ve deprem gürültüsü `tools/ses_uret.gd` ile
 kodla sentezleniyor. Müzik `tools/muzik_uret.gd` ile kodla üretilen chiptune: altı
 ruh hâli (hizli/neseli/sakin/gizemli/gergin/**cekirdek**), dört bandın komutları

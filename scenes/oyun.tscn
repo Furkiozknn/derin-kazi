@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/oyun.gd" id="1_oyun"]
 [ext_resource type="Script" path="res://scripts/sis.gd" id="10_sis"]
@@ -16,22 +16,6 @@ size = Vector2(12, 12)
 
 [sub_resource type="RectangleShape2D" id="Dokun_1"]
 size = Vector2(150, 110)
-
-[sub_resource type="StyleBoxFlat" id="Panel_1"]
-content_margin_left = 4.0
-content_margin_top = 4.0
-content_margin_right = 4.0
-content_margin_bottom = 4.0
-bg_color = Color(0.07, 0.06, 0.11, 0.97)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.99, 0.68, 0.2, 0.75)
-corner_radius_top_left = 3
-corner_radius_top_right = 3
-corner_radius_bottom_right = 3
-corner_radius_bottom_left = 3
 
 [node name="Oyun" type="Node2D"]
 script = ExtResource("1_oyun")
@@ -124,94 +108,117 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.89, 0.23, 0.27, 0)
 
+[node name="UstBant" type="ColorRect" parent="HUD"]
+offset_right = 640.0
+offset_bottom = 24.0
+mouse_filter = 2
+color = Color(0.11, 0.075, 0.05, 0.62)
+
 [node name="Ust" type="HBoxContainer" parent="HUD"]
 offset_left = 8.0
-offset_top = 4.0
+offset_top = 3.0
 offset_right = 632.0
-offset_bottom = 20.0
+offset_bottom = 21.0
+mouse_filter = 2
 theme_override_constants/separation = 12
 
-[node name="Derinlik" type="Label" parent="HUD/Ust"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
-layout_mode = 2
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.17, 0.6, 0.86, 1)
-text = "0 m"
-
 [node name="Yakit" type="Label" parent="HUD/Ust"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.97, 0.68, 0.2, 1)
-text = "Yakıt 0/0"
+size_flags_vertical = 1
+theme_type_variation = &"EtiketKalin"
+theme_override_font_sizes/font_size = 10
+text = "YAKIT 0/0"
+vertical_alignment = 1
 
 [node name="Yuk" type="Label" parent="HUD/Ust"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.39, 0.78, 0.3, 1)
-text = "Yük 0/0"
+size_flags_vertical = 1
+theme_type_variation = &"EtiketKalin"
+theme_override_font_sizes/font_size = 10
+text = "YÜK 0/0"
+vertical_alignment = 1
 
 [node name="Can" type="Label" parent="HUD/Ust"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.89, 0.23, 0.27, 1)
-text = "Can 0"
+size_flags_vertical = 1
+theme_type_variation = &"EtiketKalin"
+theme_override_font_sizes/font_size = 10
+text = "CAN 0"
+vertical_alignment = 1
 
 [node name="Para" type="Label" parent="HUD/Ust"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 layout_mode = 2
-theme_override_font_sizes/font_size = 13
-theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+size_flags_vertical = 1
+theme_type_variation = &"EtiketKalin"
+theme_override_colors/font_color = Color(0.953, 0.639, 0.239, 1)
+theme_override_font_sizes/font_size = 10
 text = "0 ₺"
+vertical_alignment = 1
+
+[node name="Bosluk" type="Control" parent="HUD/Ust"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Derinlik" type="Label" parent="HUD/Ust"]
+layout_mode = 2
+size_flags_vertical = 1
+theme_type_variation = &"EtiketKalin"
+theme_override_font_sizes/font_size = 14
+text = "0 m"
+vertical_alignment = 1
 
 [node name="Katman" type="Label" parent="HUD"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 offset_left = 8.0
-offset_top = 21.0
-offset_right = 320.0
-offset_bottom = 44.0
-theme_override_colors/font_color = Color(0.55, 0.61, 0.71, 1)
-theme_override_font_sizes/font_size = 13
+offset_top = 27.0
+offset_right = 300.0
+offset_bottom = 41.0
+mouse_filter = 2
+theme_type_variation = &"Etiket"
+theme_override_font_sizes/font_size = 9
 text = ""
 
+[node name="Ilerleme" type="ColorRect" parent="HUD"]
+offset_left = 8.0
+offset_top = 42.0
+offset_right = 104.0
+offset_bottom = 45.0
+mouse_filter = 2
+color = Color(0.953, 0.91, 0.843, 0.22)
+
+[node name="Dolu" type="ColorRect" parent="HUD/Ilerleme"]
+offset_right = 0.0
+offset_bottom = 3.0
+mouse_filter = 2
+color = Color(0.953, 0.639, 0.239, 1)
+
 [node name="Zincir" type="Label" parent="HUD"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -300.0
-offset_top = 21.0
-offset_right = -84.0
-offset_bottom = 39.0
+offset_top = 27.0
+offset_right = -8.0
+offset_bottom = 43.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
-theme_override_font_sizes/font_size = 15
-text = ""
+mouse_filter = 2
+theme_type_variation = &"Vurgu"
+theme_override_font_sizes/font_size = 10
 horizontal_alignment = 2
 
 [node name="Radar" type="Label" parent="HUD"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
 offset_left = -300.0
-offset_top = 40.0
-offset_right = -84.0
-offset_bottom = 56.0
+offset_top = 44.0
+offset_right = -8.0
+offset_bottom = 58.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(0.17, 0.91, 0.96, 1)
-theme_override_font_sizes/font_size = 13
-text = ""
+mouse_filter = 2
+theme_type_variation = &"Etiket"
+theme_override_colors/font_color = Color(0.49, 0.83, 0.906, 1)
+theme_override_font_sizes/font_size = 9
 horizontal_alignment = 2
 
 [node name="Deprem" type="VBoxContainer" parent="HUD"]
@@ -220,9 +227,9 @@ anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
 offset_left = -250.0
-offset_top = 58.0
+offset_top = 62.0
 offset_right = 250.0
-offset_bottom = 126.0
+offset_bottom = 130.0
 grow_horizontal = 2
 mouse_filter = 2
 theme_override_constants/separation = 1
@@ -230,31 +237,25 @@ theme_override_constants/separation = 1
 [node name="Sayac" type="Label" parent="HUD/Deprem"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 7
-theme_override_colors/font_color = Color(0.89, 0.23, 0.27, 1)
-theme_override_font_sizes/font_size = 22
-text = ""
+theme_type_variation = &"Baslik"
+theme_override_colors/font_color = Color(0.914, 0.31, 0.212, 1)
+theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 
 [node name="Kacis" type="Label" parent="HUD/Deprem"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 6
-theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
+theme_type_variation = &"Baslik2"
+theme_override_colors/font_color = Color(0.953, 0.91, 0.843, 1)
 theme_override_font_sizes/font_size = 15
-text = ""
 horizontal_alignment = 1
 
 [node name="Kal" type="Label" parent="HUD/Deprem"]
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 6
-theme_override_colors/font_color = Color(0.85, 0.55, 0.5, 1)
-theme_override_font_sizes/font_size = 15
-text = ""
+theme_type_variation = &"Govde"
+theme_override_colors/font_color = Color(0.953, 0.91, 0.843, 0.7)
+theme_override_font_sizes/font_size = 13
 horizontal_alignment = 1
 
 [node name="Harita" type="TextureRect" parent="HUD"]
@@ -273,23 +274,22 @@ grow_vertical = 2
 stretch_mode = 2
 
 [node name="Ipucu" type="Label" parent="HUD"]
-theme_override_colors/font_outline_color = Color(0.05, 0.04, 0.08, 1)
-theme_override_constants/outline_size = 5
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -30.0
+offset_top = -26.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_colors/font_color = Color(0.9, 0.89, 0.96, 1)
-theme_override_font_sizes/font_size = 13
-text = ""
+mouse_filter = 2
+theme_type_variation = &"Etiket"
+theme_override_colors/font_color = Color(0.953, 0.91, 0.843, 0.95)
+theme_override_font_sizes/font_size = 10
 horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Magaza" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -311,8 +311,8 @@ theme_override_constants/separation = 4
 
 [node name="Baslik" type="Label" parent="HUD/Magaza/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Baslik2"
+theme_override_font_sizes/font_size = 15
 text = "ÜS"
 horizontal_alignment = 1
 
@@ -333,7 +333,6 @@ theme_override_constants/separation = 1
 
 [node name="Muze" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -355,8 +354,8 @@ theme_override_constants/separation = 4
 
 [node name="Baslik" type="Label" parent="HUD/Muze/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.99, 0.68, 0.2, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Baslik2"
+theme_override_font_sizes/font_size = 15
 text = "MÜZE"
 horizontal_alignment = 1
 
@@ -377,7 +376,6 @@ theme_override_constants/separation = 1
 
 [node name="Isinlanma" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -399,8 +397,8 @@ theme_override_constants/separation = 4
 
 [node name="Baslik" type="Label" parent="HUD/Isinlanma/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.17, 0.91, 0.96, 1)
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Baslik2"
+theme_override_font_sizes/font_size = 15
 text = "IŞINLANMA"
 horizontal_alignment = 1
 
@@ -421,7 +419,6 @@ theme_override_constants/separation = 1
 
 [node name="Ayar" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -443,7 +440,8 @@ theme_override_constants/separation = 5
 
 [node name="Baslik" type="Label" parent="HUD/Ayar/M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Baslik2"
+theme_override_font_sizes/font_size = 15
 text = "Ayarlar"
 horizontal_alignment = 1
 
@@ -459,7 +457,6 @@ theme_override_constants/separation = 1
 
 [node name="Duraklat" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -481,12 +478,25 @@ theme_override_constants/separation = 5
 
 [node name="Baslik" type="Label" parent="HUD/Duraklat/M/V"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 16
+theme_type_variation = &"Baslik2"
+theme_override_font_sizes/font_size = 15
 text = "Duraklatıldı"
 horizontal_alignment = 1
 
-[node name="Devam" type="Button" parent="HUD/Duraklat/M/V"]
+[node name="Tuslar" type="Label" parent="HUD/Duraklat/M/V"]
+custom_minimum_size = Vector2(330, 0)
 layout_mode = 2
+theme_type_variation = &"Etiket"
+theme_override_font_sizes/font_size = 9
+text = "..."
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Devam" type="Button" parent="HUD/Duraklat/M/V"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"Birincil"
+theme_override_font_sizes/font_size = 16
 text = "Devam et"
 
 [node name="Ayar" type="Button" parent="HUD/Duraklat/M/V"]
@@ -499,7 +509,6 @@ text = "Menüye dön (kaydeder)"
 
 [node name="Bitis" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -519,14 +528,29 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 8
 
+[node name="Baslik" type="Label" parent="HUD/Bitis/M/V"]
+layout_mode = 2
+theme_type_variation = &"Baslik"
+theme_override_colors/font_color = Color(0.953, 0.639, 0.239, 1)
+theme_override_font_sizes/font_size = 26
+text = "ÇEKİRDEK ÇIKARILDI!"
+horizontal_alignment = 1
+
 [node name="Metin" type="Label" parent="HUD/Bitis/M/V"]
 custom_minimum_size = Vector2(480, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.99, 0.9, 0.38, 1)
-theme_override_font_sizes/font_size = 12
+theme_type_variation = &"Govde"
+theme_override_font_sizes/font_size = 11
 text = "..."
 horizontal_alignment = 1
 autowrap_mode = 3
+
+[node name="Tekrar" type="Button" parent="HUD/Bitis/M/V"]
+custom_minimum_size = Vector2(0, 34)
+layout_mode = 2
+theme_type_variation = &"Birincil"
+theme_override_font_sizes/font_size = 16
+text = "Tekrar"
 
 [node name="Menu" type="Button" parent="HUD/Bitis/M/V"]
 layout_mode = 2
@@ -534,7 +558,6 @@ text = "Menüye dön"
 
 [node name="Uyari" type="PanelContainer" parent="HUD"]
 visible = false
-theme_override_styles/panel = SubResource("Panel_1")
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -556,12 +579,15 @@ theme_override_constants/separation = 8
 
 [node name="Metin" type="Label" parent="HUD/Uyari/M/V"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.46, 0.48, 1)
+theme_type_variation = &"Govde"
 text = "..."
 horizontal_alignment = 1
 
 [node name="Tamam" type="Button" parent="HUD/Uyari/M/V"]
+custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
+theme_type_variation = &"Birincil"
+theme_override_font_sizes/font_size = 14
 text = "Tamam"
 
 [node name="Dokunmatik" type="CanvasLayer" parent="."]
@@ -603,15 +629,3 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-
-[node name="Gecis" type="CanvasLayer" parent="."]
-layer = 10
-
-[node name="Karartma" type="ColorRect" parent="Gecis"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0, 0, 0, 1)
-mouse_filter = 2

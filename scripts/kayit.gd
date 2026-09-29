@@ -28,6 +28,8 @@ const AYAR_VARSAYILAN := {
 	"muzik_ses": 0.7, "efekt_ses": 0.85,
 	"muzik_acik": true, "efekt_acik": true,
 	"tam_ekran": false, "sarsinti": true,
+	"sade_gecis": false,   ## hareket azaltma: ekran geçişleri efektsiz ve anında (v0.9)
+	"dil": "",   ## "" = otomatik (isletim sistemi/tarayici dili), "tr" ya da "en" (v0.8)
 }
 
 static func _cfg() -> ConfigFile:
@@ -146,3 +148,15 @@ static func ayar_yukle() -> Dictionary:
 
 static func ayar_kaydet(d: Dictionary) -> void:
 	_yaz("ayar", d)
+
+## Etkin dil kodu: kullanici secmisse o, degilse sistem dili (OS.get_locale_language;
+## web'de navigator.language): tr ise "tr", digerleri "en". Eski kayitta "dil" yok = otomatik.
+static func dil_etkin(ayar: Dictionary) -> String:
+	var d := String(ayar.get("dil", ""))
+	if d == "tr" or d == "en":
+		return d
+	return "tr" if OS.get_locale_language() == "tr" else "en"
+
+static func dil_uygula(ayar: Dictionary) -> void:
+	Ceviri.kur()
+	TranslationServer.set_locale(dil_etkin(ayar))

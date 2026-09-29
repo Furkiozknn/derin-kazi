@@ -1,5 +1,8 @@
-## Tüm pixel art'ı koddan üretir. GUI aracı yok; bu betik tek kaynak.
-## Palet: Endesga 32 (EDG32) — oyunun tamamı bu 32 renge bağlı.
+## Tüm görselleri koddan üretir: DÜZ renk, gölgesiz, dış çizgisiz, geometrik.
+## GUI aracı yok; bu betik tek kaynak. v0.8'e kadar burada Endesga 32 pixel art vardı;
+## tanıtım videosundaki dünyaya (koyu kahve zemin, toprak bantları, kağıt matkap,
+## kırmızı uç, amber maden kareleri) geçildi. Boyutlar/düzen AYNI kaldı (atlas sütunları,
+## 9 karelik araç, yüzey varyantları): motor tarafı ve testler bunlara bağlı.
 ##
 ##   godot --headless --path . --script res://tools/sprite_uret.gd
 ##
@@ -7,22 +10,35 @@
 extends SceneTree
 
 const K := 16   ## karo kenarı
-## Taban kayası varyantlarının dikey degrade yönü. Yön değiştiği için yan yana
-## duran karolar 16 px'lik çizgiler oluşturmuyor.
-const EGIM := [0.55, 0.0, -0.45]
 
-# --- Endesga 32 -----------------------------------------------------------
-const EDG := [
-	"be4a2f", "d77643", "ead4aa", "e4a672", "b86f50", "733e39", "3e2731", "a22633",
-	"e43b44", "f77622", "feae34", "fee761", "63c74d", "3e8948", "265c42", "193c3e",
-	"124e89", "0099db", "2ce8f5", "ffffff", "c0cbdc", "8b9bb4", "5a6988", "3a4466",
-	"262b44", "181425", "ff0044", "68386c", "b55088", "f6757a", "e8b796", "c28569",
+# --- palet (docs/TASARIM.md; scripts/tema.gd ile aynı değerler) -------------
+const INK := Color("1c130d")
+const ZEMIN := Color("2d2019")
+const KAGIT := Color("f3e8d7")
+const AMBER := Color("f3a33d")
+const TEHLIKE := Color("e94f36")
+const UC := Color("e2552c")
+const KIRMIZI := Color("571d13")
+const CAM := Color("7dd4e7")
+const YESIL := Color("6fc38a")
+
+## Taban kayaları (yüzeyden çekirdeğe): video örneklerinden — toprak #896843, koyulaşan
+## kahveler, en dipte çekirdek kabuğunun kırmızısı #571d13.
+const TABAN := [
+	Color("896843"),   # toprak
+	Color("6d4f33"),   # taş
+	Color("55402c"),   # sert taş
+	Color("3b2b20"),   # bazalt
+	Color("571d13"),   # çekirdek kabuğu (obsidyen)
 ]
-
-var rng := RandomNumberGenerator.new()
-
-static func c(i: int) -> Color:
-	return Color(EDG[i])
+## Maden kareleri: damarın rengi (zemin katmanın taban kayası).
+const MADEN := [
+	Color("d9773a"),   # bakır
+	Color("b7b1a6"),   # demir
+	Color("f3a33d"),   # altın
+	Color("7dd4e7"),   # elmas
+	Color("f3e8d7"),   # platin
+]
 
 func _initialize() -> void:
 	var kok := ProjectSettings.globalize_path("res://assets/sprites/")
@@ -62,518 +78,286 @@ static func nokta(im: Image, x: int, y: int, renk: Color) -> void:
 	if x >= 0 and y >= 0 and x < im.get_width() and y < im.get_height():
 		im.set_pixel(x, y, renk)
 
-## Dolu elips (maden damarı, yumuşak lekeler için).
-static func elips(im: Image, cx: int, cy: int, rx: float, ry: float, renk: Color) -> void:
-	for j in range(int(cy - ry) - 1, int(cy + ry) + 2):
-		for i in range(int(cx - rx) - 1, int(cx + rx) + 2):
-			var dx := (float(i - cx) + 0.5) / maxf(rx, 0.5)
-			var dy := (float(j - cy) + 0.5) / maxf(ry, 0.5)
-			if dx * dx + dy * dy <= 1.0:
+## Dolu daire (keskin kenarlı, yumuşatmasız — düz renk dili).
+static func daire(im: Image, cx: int, cy: int, r: float, renk: Color) -> void:
+	for j in range(int(cy - r) - 1, int(cy + r) + 2):
+		for i in range(int(cx - r) - 1, int(cx + r) + 2):
+			var dx := float(i - cx) + 0.5
+			var dy := float(j - cy) + 0.5
+			if dx * dx + dy * dy <= r * r:
 				nokta(im, i, j, renk)
+
+## Köşesi 1 px kırpılmış dikdörtgen: videodaki yuvarlatılmış kare hissi.
+static func yuvarlak_kutu(im: Image, x: int, y: int, g: int, yy: int, renk: Color) -> void:
+	kutu(im, x + 1, y, g - 2, yy, renk)
+	kutu(im, x, y + 1, g, yy - 2, renk)
 
 # --- karo atlası ----------------------------------------------------------
 
-## [koyu, ana, açık] üçlüsü ile gürültülü kaya dokusu.
-## Sert kenar çizgisi YOK: 16 px'lik karo ekranda tekrarladığı için düz bir üst/alt
-## şerit duvarı tuğlaya çeviriyordu.
-## v0.3: degradenin kendisi de şerit yapıyordu — her karo üstte açık, altta koyu
-## olunca duvar 16 px'de bir çizgileniyordu. Karşıtlık düşürüldü ve `egim`
-## varyanttan varyanta YÖN değiştiriyor, böylece çizgiler hizalanmıyor.
-func _kaya_dokusu(im: Image, ox: int, koyu: Color, ana: Color, acik: Color,
-		egim := 0.55) -> void:
-	for y in K:
-		var t := float(y) / float(K - 1)
-		var g := (t - 0.5) * egim
-		var zemin := Color(ana).lerp(acik, clampf(-g * 1.6, 0.0, 1.0)) \
-			.lerp(koyu, clampf(g * 1.6, 0.0, 1.0))
-		for x in K:
-			var r := rng.randi() % 100
-			var renk := zemin
-			if r < 18:
-				renk = Color(zemin).lerp(koyu, 0.75)
-			elif r < 32:
-				renk = Color(zemin).lerp(acik, 0.6)
-			im.set_pixel(ox + x, y, renk)
-	# birkaç çakıl: tekrar eden dokuyu kırar
-	for i in 3:
-		var cx := 2 + rng.randi() % (K - 4)
-		var cy := 2 + rng.randi() % (K - 4)
-		elips(im, ox + cx, cy, 1.8, 1.4, Color(ana).lerp(koyu, 0.6))
-		nokta(im, ox + cx - 1, cy - 1, Color(ana).lerp(acik, 0.7))
+## Taban kayası: tek düz renk + varyanta göre 0-2 küçük koyu benek (videodaki toprak
+## benekleri). Beneklerin konumu varyant ve türden belirlenimci — yan yana karolar
+## 16 px'lik desen oluşturmasın diye her satırda farklı.
+func _kaya(im: Image, ox: int, oy: int, renk: Color, v: int, tur: int) -> void:
+	kutu(im, ox, oy, K, K, renk)
+	var koyu := renk.darkened(0.22)
+	var adet := (v + tur) % 3
+	for i in adet:
+		var x := 2 + ((v * 5 + tur * 3 + i * 7) % 11)
+		var y := 2 + ((v * 3 + tur * 5 + i * 5) % 11)
+		kutu(im, ox + x, oy + y, 2, 2, koyu)
 
-## Maden damarı: koyu dış hat + parlak çekirdek. 16 px'te okunur olsun diye
-## üç ayrı küme ve her kümede bir beyaz parıltı pikseli var.
-func _damar(im: Image, ox: int, renk: Color, parlak: Color) -> void:
-	var koyu := renk.darkened(0.45)
-	var kumeler := [Vector3i(4, 4, 2), Vector3i(11, 7, 2), Vector3i(6, 11, 2)]
-	for kume in kumeler:
-		elips(im, ox + kume.x, kume.y, float(kume.z) + 0.6, float(kume.z) + 0.6, koyu)
-	for kume in kumeler:
-		elips(im, ox + kume.x, kume.y, float(kume.z) - 0.2, float(kume.z) - 0.2, renk)
-		nokta(im, ox + kume.x - 1, kume.y - 1, parlak)
-
-## Atlas: her karo türünün VARYANT_SAYISI satırı var. 0. satır ana doku;
-## 1. ve 2. satırlar YALNIZ taban kayaları için farklı gürültüyle yeniden çizilir,
-## kalan sütunlar 0. satırın kopyasıdır (madenin ve gazın deseni tanınabilir kalmalı).
 func _karolar() -> Image:
-	var satir := _karolar_satir()
 	var im := _bos(K * Ayarlar.KARO_SAYISI, K * Ayarlar.VARYANT_SAYISI)
-	var kaynak := Rect2i(0, 0, satir.get_width(), K)
 	for v in Ayarlar.VARYANT_SAYISI:
-		im.blit_rect(satir, kaynak, Vector2i(0, v * K))
-	for v in range(1, Ayarlar.VARYANT_SAYISI):
-		var alt := _bos(K * Ayarlar.KARO_SAYISI, K)
-		var tb := _tabanlar()
-		for i in tb.size():
-			_kaya_dokusu(alt, i * K, tb[i][0], tb[i][1], tb[i][2], EGIM[v % EGIM.size()])
-			im.blit_rect(alt, Rect2i(i * K, 0, K, K), Vector2i(i * K, v * K))
-		# Maden damarları: v. satır = v. katman (Ayarlar.varyant → katman(y)).
-		_maden_satiri(alt, v)
-		for i in MADENLER.size():
+		var oy := v * K
+		# 5 taban kayası: her satırda benek düzeni farklı
+		for t in 5:
+			_kaya(im, t * K, oy, TABAN[t], v, t)
+		# 5 maden: zemin = v. katmanın kayası, damar iki düz kare
+		for i in 5:
 			var ox := (Ayarlar.BAKIR + i) * K
-			im.blit_rect(alt, Rect2i(ox, 0, K, K), Vector2i(ox, v * K))
+			_kaya(im, ox, oy, TABAN[v], v, 5 + i)
+			kutu(im, ox + 3, oy + 3, 6, 6, MADEN[i])
+			kutu(im, ox + 10, oy + 9, 4, 4, MADEN[i])
+		# özel karolar: tehlikeler ve hedefler satırdan bağımsız (0. satırın kopyası)
+		_kazilamaz(im, Ayarlar.KAYA * K, oy)
+		_cekirdek(im, Ayarlar.CEKIRDEK * K, oy)
+		_gaz(im, Ayarlar.GAZ * K, oy)
+		_gevsek(im, Ayarlar.GEVSEK * K, oy)
+		_lav(im, Ayarlar.LAV * K, oy)
+		_sandik(im, Ayarlar.SANDIK * K, oy)
+		_eser(im, Ayarlar.ESER * K, oy)
 	return im
 
-## Damar renkleri — zemin değil, damar tanıtır madeni.
-const MADENLER := [
-	[9, 10],     # bakır  — turuncu
-	[20, 19],    # demir  — gümüş
-	[10, 11],    # altın  — sarı
-	[18, 19],    # elmas  — camgöbeği
-	[12, 11],    # platin — yeşil
-]
+func _kazilamaz(im: Image, ox: int, oy: int) -> void:
+	# "Matkap işlemez": koyu, içine gömülü bir kare. Tünel zeminiyle karışmasın diye
+	# tünelden (#1c130d) açık bir zemin.
+	kutu(im, ox, oy, K, K, Color("2b2018"))
+	kutu(im, ox + 3, oy + 3, 10, 10, Color("15100b"))
+	kutu(im, ox + 6, oy + 6, 4, 4, Color("3a2c22"))
 
-## 5 maden karosunu tek satıra çizer. Zemin `katman`ın taban kayası: bakır
-## toprakta kahverengi, bazaltta gece mavisi bir zeminle çıkar — damar aynı kalır.
-func _maden_satiri(im: Image, katman: int) -> void:
-	var tb: Array = _tabanlar()[clampi(katman, 0, 4)]
-	for i in MADENLER.size():
-		var ox := (Ayarlar.BAKIR + i) * K
-		_kaya_dokusu(im, ox, tb[0], tb[1], tb[2], EGIM[katman % EGIM.size()])
-		_damar(im, ox, c(int(MADENLER[i][0])), c(int(MADENLER[i][1])))
+func _cekirdek(im: Image, ox: int, oy: int) -> void:
+	kutu(im, ox, oy, K, K, KIRMIZI)
+	daire(im, ox + 8, oy + 8, 6.0, UC)
+	kutu(im, ox + 6, oy + 6, 4, 4, KAGIT)
 
-## Taban kayası paleti — 5 katman, yüzeyden çekirdeğe doğru koyulaşır.
-func _tabanlar() -> Array:
-	return [
-		[c(6), c(5), c(4)],       # toprak  — koyu kahve (bakır üstünde okunsun)
-		[c(22), c(21), c(20)],    # taş     — mavi gri
-		[c(15), c(23), c(22)],    # sert taş— soğuk teal aralık
-		[c(25), c(24), c(23)],    # bazalt  — gece mavisi
-		[c(25), c(27), c(23)],    # obsidyen— mor siyah
-	]
+func _gaz(im: Image, ox: int, oy: int) -> void:
+	# Uyarı karosu: tas zemininde yeşil kareler. Kazmadan görülmeli.
+	kutu(im, ox, oy, K, K, TABAN[1])
+	kutu(im, ox + 3, oy + 4, 5, 5, YESIL)
+	kutu(im, ox + 9, oy + 8, 4, 4, YESIL)
+	kutu(im, ox + 9, oy + 2, 3, 3, YESIL)
 
-## 0. satır: bütün karo türlerinin ana dokusu (K yüksekliğinde tek şerit).
-func _karolar_satir() -> Image:
-	rng.seed = 20260916
-	var im := _bos(K * Ayarlar.KARO_SAYISI, K)
-	var tabanlar := _tabanlar()
-	for i in tabanlar.size():
-		_kaya_dokusu(im, i * K, tabanlar[i][0], tabanlar[i][1], tabanlar[i][2])
+func _gevsek(im: Image, ox: int, oy: int) -> void:
+	# Çatlamış kaya: toprak zemininde iki koyu yarık — altı boşalınca düşer.
+	kutu(im, ox, oy, K, K, Color("7c5c3b"))
+	kutu(im, ox + 2, oy + 4, 8, 2, INK)
+	kutu(im, ox + 6, oy + 10, 8, 2, INK)
+	kutu(im, ox + 4, oy + 6, 2, 2, INK)
+	kutu(im, ox + 10, oy + 8, 2, 2, INK)
 
-	# 5 maden. 0. satır = 0. katman (toprak): damarın zemini bulunduğu katmanın
-	# kayası, geri kalan satırlar _karolar() içinde diğer katmanlar için çiziliyor.
-	_maden_satiri(im, 0)
+func _lav(im: Image, ox: int, oy: int) -> void:
+	kutu(im, ox, oy, K, K, TEHLIKE)
+	kutu(im, ox, oy, K, 2, AMBER)
+	kutu(im, ox + 3, oy + 6, 4, 4, AMBER)
+	kutu(im, ox + 10, oy + 10, 3, 3, AMBER)
 
-	_kazilamaz_kaya(im, Ayarlar.KAYA * K)
-	_cekirdek(im, Ayarlar.CEKIRDEK * K)
-	_gaz(im, Ayarlar.GAZ * K)
-	_gevsek(im, Ayarlar.GEVSEK * K)
-	_lav(im, Ayarlar.LAV * K)
-	_sandik(im, Ayarlar.SANDIK * K)
-	_eser(im, Ayarlar.ESER * K)
-	return im
+func _sandik(im: Image, ox: int, oy: int) -> void:
+	kutu(im, ox, oy, K, K, TABAN[3])
+	yuvarlak_kutu(im, ox + 2, oy + 4, 12, 9, AMBER)
+	kutu(im, ox + 2, oy + 7, 12, 1, KIRMIZI)
+	kutu(im, ox + 7, oy + 6, 2, 4, INK)
 
-func _kazilamaz_kaya(im: Image, ox: int) -> void:
-	# Köşeli, parlak kenarlı: "buraya matkap işlemez" hissi.
-	_kaya_dokusu(im, ox, c(26 - 1), c(25), c(24))
-	for y in K:
-		for x in K:
-			if (x + y) % 7 == 0:
-				im.set_pixel(ox + x, y, c(23))
-	kutu(im, ox + 2, 2, 12, 1, c(22))
-	kutu(im, ox + 2, 13, 12, 1, c(26 - 1))
-	kutu(im, ox + 2, 3, 1, 10, c(22))
-	kutu(im, ox + 13, 3, 1, 10, c(26 - 1))
+func _eser(im: Image, ox: int, oy: int) -> void:
+	kutu(im, ox, oy, K, K, TABAN[3])
+	kutu(im, ox + 4, oy + 4, 8, 8, KAGIT)
+	kutu(im, ox + 6, oy + 6, 4, 4, AMBER)
+	kutu(im, ox + 3, oy + 13, 10, 2, AMBER)
 
-func _cekirdek(im: Image, ox: int) -> void:
-	_kaya_dokusu(im, ox, c(25), c(27), c(28))
-	elips(im, ox + 8, 8, 6.2, 6.2, c(28))
-	elips(im, ox + 8, 8, 4.6, 4.6, c(26))
-	elips(im, ox + 8, 8, 3.0, 3.0, c(9))
-	elips(im, ox + 8, 8, 1.6, 1.6, c(11))
-	nokta(im, ox + 7, 7, c(19))
-	for i in 4:
-		nokta(im, ox + 8, i + 1, c(28))
-		nokta(im, ox + 8, 14 - i, c(28))
-
-func _gaz(im: Image, ox: int) -> void:
-	# Uyarı karosu: kayanın içinde parlak yeşil kabarcıklar. Kazmadan görülmeli.
-	_kaya_dokusu(im, ox, c(22), c(21), c(20))
-	var kabarcik := [Vector3i(5, 6, 3), Vector3i(10, 9, 2), Vector3i(7, 12, 2)]
-	for k in kabarcik:
-		elips(im, ox + k.x, k.y, float(k.z), float(k.z), c(14))
-		elips(im, ox + k.x, k.y, float(k.z) - 1.0, float(k.z) - 1.0, c(12))
-		nokta(im, ox + k.x - 1, k.y - 1, c(11))
-	nokta(im, ox + 2, 3, c(12))
-	nokta(im, ox + 13, 4, c(12))
-
-func _gevsek(im: Image, ox: int) -> void:
-	# Çatlamış kaya: altı boşalınca düşer. Çatlaklar görünür uyarı.
-	_kaya_dokusu(im, ox, c(6), c(5), c(4))
-	var catlak := [[1, 4], [2, 5], [3, 5], [4, 6], [5, 7], [6, 7], [7, 8], [8, 8],
-		[9, 9], [10, 9], [11, 10], [12, 10], [13, 11], [4, 2], [5, 3], [6, 3],
-		[10, 2], [11, 3], [2, 11], [3, 12], [9, 13], [10, 13], [11, 12]]
-	for p in catlak:
-		nokta(im, ox + p[0], p[1], c(26 - 1))
-		nokta(im, ox + p[0], p[1] + 1, c(6))
-	kutu(im, ox, 0, K, 1, c(3))
-
-func _lav(im: Image, ox: int) -> void:
-	for y in K:
-		for x in K:
-			var r := rng.randi() % 100
-			var renk := c(9)
-			if r < 22:
-				renk = c(10)
-			elif r < 34:
-				renk = c(0)
-			im.set_pixel(ox + x, y, renk)
-	# Üstte parlak, altta karanlık: derinlik hissi.
-	for x in K:
-		im.set_pixel(ox + x, 0, c(11))
-		im.set_pixel(ox + x, 1, c(10))
-		im.set_pixel(ox + x, K - 1, c(7))
-	for i in 3:
-		elips(im, ox + 3 + i * 5, 6 + (i % 2) * 4, 1.6, 1.2, c(11))
-
-func _sandik(im: Image, ox: int) -> void:
-	_kaya_dokusu(im, ox, c(23), c(22), c(21))   ## karo kayanın içinde durur
-	kutu(im, ox + 1, 4, 14, 11, c(6))
-	kutu(im, ox + 2, 5, 12, 9, c(5))
-	kutu(im, ox + 2, 5, 12, 3, c(4))
-	kutu(im, ox + 1, 3, 14, 2, c(6))
-	kutu(im, ox + 2, 3, 12, 1, c(4))
-	kutu(im, ox + 7, 7, 2, 4, c(11))     # kilit
-	nokta(im, ox + 7, 8, c(10))
-	kutu(im, ox + 2, 9, 12, 1, c(6))
-	for x in range(2, 14):
-		nokta(im, ox + x, 14, c(26 - 1))
-
-func _eser(im: Image, ox: int) -> void:
-	_kaya_dokusu(im, ox, c(25), c(24), c(23))   ## karo kayanın içinde durur
-	kutu(im, ox + 3, 12, 10, 3, c(22))   # kaide
-	kutu(im, ox + 4, 12, 8, 1, c(21))
-	elips(im, ox + 8, 7, 4.2, 4.6, c(10))
-	elips(im, ox + 8, 7, 2.8, 3.2, c(11))
-	kutu(im, ox + 7, 3, 2, 3, c(10))
-	kutu(im, ox + 5, 4, 6, 1, c(11))
-	nokta(im, ox + 6, 5, c(19))
-	nokta(im, ox + 10, 9, c(19))
-	for i in 3:                           # parıltı
-		nokta(im, ox + 2, 3 + i * 4, c(11))
-		nokta(im, ox + 13, 5 + i * 3, c(11))
-
-# --- yüzey karosu (v0.7) --------------------------------------------------
+# --- yüzey karosu ---------------------------------------------------------
 
 ## 0. satırın toprağı için ayrı "üst" karo seti: YUZEY_VARYANT sütun, tek satır.
-## Üstte çimen, altında ince kum sınırı, gerisi toprak dokusu. İlk iki piksel
-## satırı kırık: çimen yaprakları ve çukurlar gökyüzüne açılıyor — v0.6'ya kadar
-## yüzeyle gök arasındaki birleşim ekran boyunca dümdüz tek bir çizgiydi.
-## Karo türü hâlâ TOPRAK (üretici, kazı, kayıt değişmedi); yalnız görünüm
-## (Dunya._tileset_kur ikinci atlas kaynağı olarak bağlıyor).
+## Üstte iki piksellik açık toprak bandı (satır 2-3), geri kalanı toprak. İlk iki
+## piksel satırı basamaklı: her varyantta çıkıntılar farklı yerde, gökle birleşim
+## ekran boyunca düz tek çizgi olmasın. Karo türü hâlâ TOPRAK.
 func _yuzey() -> Image:
-	rng.seed = 707
 	var im := _bos(K * Ayarlar.YUZEY_VARYANT, K)
-	var tb: Array = _tabanlar()[0]
+	const BANT := Color("b58a55")
 	for v in Ayarlar.YUZEY_VARYANT:
 		var ox := v * K
-		_kaya_dokusu(im, ox, tb[0], tb[1], tb[2], EGIM[v % EGIM.size()])
-		# Çimen bandı (2-3. satır) ve kum sınırı (4. satır): sınır da düz değil.
-		kutu(im, ox, 2, K, 2, c(13))
-		for x in K:
-			if rng.randi() % 3 == 0:
-				nokta(im, ox + x, 2, c(12))
-			if rng.randi() % 4 == 0:
-				nokta(im, ox + x, 3, c(14))
-			var kum := c(31) if rng.randi() % 5 != 0 else c(3)
-			nokta(im, ox + x, 4 if rng.randi() % 6 != 0 else 5, kum)
-		# İlk iki satır: gökyüzü + yaprak/tutam. Her varyantta başka yerde.
-		kutu(im, ox, 0, K, 2, Color(0, 0, 0, 0))
-		var tutam := 3 + rng.randi() % 3
-		for i in tutam:
-			var x := rng.randi() % K
-			nokta(im, ox + x, 1, c(13))
-			if rng.randi() % 2 == 0:
-				nokta(im, ox + x, 0, c(12))
-		# Bir çukur: çimen bandının kendisi de bir yerde bir piksel çöker.
-		var cukur := 1 + rng.randi() % (K - 4)
-		kutu(im, ox + cukur, 2, 2 + rng.randi() % 2, 1, Color(0, 0, 0, 0))
-		nokta(im, ox + cukur, 3, c(14))
+		kutu(im, ox, 2, K, K - 2, TABAN[0])
+		kutu(im, ox, 2, K, 2, BANT)
+		# Satır 0-1: 2 px'lik basamaklar (her varyant farklı: konum ve sayı v'den)
+		var baslangic := (v * 5 + 1) % 6
+		var say := 2 + v % 2
+		for i in say:
+			var x := ox + (baslangic + i * 5) % (K - 3)
+			kutu(im, x, 1, 3, 1, BANT)
+			if (v + i) % 2 == 0:
+				kutu(im, x + 1, 0, 2, 1, BANT)
+		# Bir çukur: bandın kendisi de bir yerde iki piksel çöker.
+		kutu(im, ox + 8 + v, 2, 2, 1, Color(0, 0, 0, 0))
+		kutu(im, ox + 8 + v, 3, 2, 1, TABAN[0])
+		# Kökler: toprak beneği
+		kutu(im, ox + 3 + v, 9, 2, 2, TABAN[0].darkened(0.22))
 	return im
 
 # --- araç -----------------------------------------------------------------
 
 ## 9 kare (scripts/arac.gd KARE_* sabitleri ve oyun.tscn hframes ile aynı düzen):
 ##   0     bekle
-##   1-2   kazma: matkap dişleri kayar
-##   3-5   palet dönüşü (v0.7): 3 px periyotlu desen her karede 1 px kayar, 3. kare
-##         0. kareye döner (dikişsiz); bekle/kazma karelerinde desen 0. konumda
-##   6-8   uçuş (v0.7): pervane alevi boy ve çekirdek değiştirir, gövde 1 px yukarıda
+##   1-2   kazma: uç sağa-sola titrer, renk değişir
+##   3-5   palet dönüşü: 3 px periyotlu amber dişler her karede 1 px kayar, 3. kare
+##         0. kareye döner (dikişsiz)
+##   6-8   uçuş: pervane alevi boy ve renk değiştirir, gövde 1 px yukarıda
+## Videodaki matkap: kağıt rengi yuvarlak kare gövde + altında kırmızı-turuncu üçgen uç.
 func _arac() -> Image:
 	var im := _bos(K * 9, K)
 	for k in 9:
 		var ox := k * K
 		var ucus := k >= 6
-		var yy := -1 if ucus else 0     # uçarken hafif yukarı kayar
-		# gövde
-		kutu(im, ox + 2, 4 + yy, 12, 7, c(6))
-		kutu(im, ox + 3, 5 + yy, 10, 5, c(10))
-		kutu(im, ox + 3, 5 + yy, 10, 1, c(11))
-		# kabin
-		kutu(im, ox + 4, 3 + yy, 6, 3, c(6))
-		kutu(im, ox + 5, 4 + yy, 4, 2, c(17))
-		nokta(im, ox + 5, 4 + yy, c(18))
-		# paletler: desen 3 px periyotlu, palet karelerinde kayar
+		var yy := -1 if ucus else 0
+		# gövde: kağıt + koyu göz
+		yuvarlak_kutu(im, ox + 3, 2 + yy, 10, 7, KAGIT)
+		kutu(im, ox + 9, 4 + yy, 2, 2, INK)
+		# palet: koyu şerit + amber dişler (3 px periyot)
 		var kayma := (k - 3) if k >= 3 and k <= 5 else 0
-		kutu(im, ox + 2, 11 + yy, 12, 3, c(24))
-		kutu(im, ox + 3, 12 + yy, 10, 1, c(22))
+		kutu(im, ox + 2, 9 + yy, 12, 2, INK)
 		for i in 4:
-			nokta(im, ox + 2 + (i * 3 + kayma) % 12, 12 + yy, c(20))
-			nokta(im, ox + 2 + (i * 3 + kayma + 1) % 12, 11 + yy, c(23))
-		# matkap (aşağı bakar): koyu dış hat + parlak dişler, kazma karelerinde kayar
+			nokta(im, ox + 2 + (i * 3 + kayma) % 12, 9 + yy, AMBER)
+		# uç: aşağı bakan üçgen
 		var kaziyor := k == 1 or k == 2
-		kutu(im, ox + 5, 10 + yy, 6, 5, c(25))
-		kutu(im, ox + 6, 10 + yy, 4, 4, c(21))
-		kutu(im, ox + 6, 10 + yy, 1, 4, c(20))
-		var d := c(19) if kaziyor else c(20)
-		var dis := k if kaziyor else 0
-		for i in 4:
-			if (i + dis) % 2 == 0:
-				nokta(im, ox + 6 + i, 14 + yy, d)
-			else:
-				nokta(im, ox + 6 + i, 13 + yy, d)
-		# pervane alevi: matkabın iki yanındaki egzozdan aşağı, üç ayrı kare
+		var kx := ox + ((k - 1) * 2 - 1 if kaziyor else 0)   # kazarken ±1 px titrer
+		var uc := AMBER if (kaziyor and k == 2) else UC
+		kutu(im, kx + 5, 11 + yy, 6, 1, uc)
+		kutu(im, kx + 6, 12 + yy, 4, 1, uc)
+		kutu(im, kx + 7, 13 + yy, 2, 1, uc)
+		# pervane alevi: gövdenin iki yanında
 		if ucus:
-			_alev(im, ox + 3, k - 6)
-			_alev(im, ox + 11, k - 6)
+			_alev(im, ox + 1, k - 6)
+			_alev(im, ox + 13, k - 6)
 	return im
 
-## Egzoz alevi (2 px geniş, 13-15. satırlar). 0: kısa · 1: uzun, parlak çekirdek · 2: alçak, kıvılcımlı
+## Egzoz alevi (2 px geniş). 0: kısa · 1: uzun, amber çekirdek · 2: alçak, kıvılcımlı
 func _alev(im: Image, x: int, kare: int) -> void:
 	match kare:
 		0:
-			kutu(im, x, 13, 2, 2, c(9))
-			nokta(im, x, 13, c(10))
+			kutu(im, x, 10, 2, 2, UC)
 		1:
-			kutu(im, x, 13, 2, 3, c(9))
-			nokta(im, x + 1, 13, c(11))
-			nokta(im, x, 14, c(10))
-			nokta(im, x + 1, 15, c(8))
+			kutu(im, x, 10, 2, 4, UC)
+			kutu(im, x, 10, 2, 2, AMBER)
 		2:
-			kutu(im, x, 14, 2, 2, c(9))
-			nokta(im, x + 1, 13, c(11))
-			nokta(im, x, 15, c(8))
+			kutu(im, x, 11, 2, 3, TEHLIKE)
+			nokta(im, x + 1, 14, AMBER)
 
-## Işınlama işareti (v0.7): direk + pembe flama, dibi ışıklı. Işınlanma panelinden
-## tek seferlik dönüş noktası; istasyondan ayrı okunmalı (istasyon mavi, bu pembe).
+## Işınlama işareti: kağıt direk + amber flama. İstasyondan ayrı okunmalı (istasyon camgöbeği).
 func _isaret() -> Image:
 	var im := _bos(K, K)
-	kutu(im, 7, 2, 2, 13, c(21))
-	kutu(im, 8, 2, 1, 13, c(23))
-	nokta(im, 7, 1, c(19))
-	# flama: sağa açılan üçgen
-	for i in 4:
-		kutu(im, 9, 3 + i, 5 - i, 1, c(28))
-	nokta(im, 9, 3, c(29))
-	nokta(im, 10, 4, c(29))
-	# taban ve ışık
-	kutu(im, 5, 14, 6, 2, c(24))
-	kutu(im, 6, 14, 4, 1, c(22))
-	nokta(im, 4, 15, c(28))
-	nokta(im, 11, 15, c(28))
+	kutu(im, 7, 2, 2, 13, KAGIT)
+	kutu(im, 9, 3, 5, 4, AMBER)
+	kutu(im, 5, 14, 6, 2, KAGIT)
 	return im
 
-# --- yüzey kasabası -------------------------------------------------------
+# --- yüzey ----------------------------------------------------------------
 
-## Üs binası: satış terazisi + geliştirme dükkânı, 120x56, zemini y=56'da.
+## Üs binası: satış + geliştirme dükkânı + asansör kulesi, 120x56, zemini y=56'da.
 func _us() -> Image:
 	var g := 120
 	var y := 56
 	var im := _bos(g, y)
-	# zemin platformu
-	kutu(im, 0, y - 6, g, 6, c(5))
-	kutu(im, 0, y - 6, g, 1, c(3))
-	# sol bina: satış (teraziye benzer çatı)
-	kutu(im, 6, 20, 34, 30, c(23))
-	kutu(im, 7, 21, 32, 28, c(22))
-	kutu(im, 4, 16, 38, 5, c(0))
-	kutu(im, 4, 16, 38, 1, c(1))
-	kutu(im, 12, 28, 8, 8, c(17))
-	kutu(im, 26, 28, 8, 8, c(17))
-	kutu(im, 18, 38, 10, 12, c(6))
-	kutu(im, 19, 39, 8, 11, c(5))
-	nokta(im, 25, 44, c(11))
-	# baca
-	kutu(im, 32, 8, 6, 9, c(6))
-	kutu(im, 31, 6, 8, 3, c(5))
-	# sağ bina: geliştirme dükkânı (dişli tabelası)
-	kutu(im, 56, 14, 40, 36, c(23))
-	kutu(im, 57, 15, 38, 34, c(22))
-	kutu(im, 54, 10, 44, 5, c(13))
-	kutu(im, 54, 10, 44, 1, c(12))
-	kutu(im, 62, 22, 10, 9, c(17))
-	kutu(im, 80, 22, 10, 9, c(17))
-	kutu(im, 70, 36, 12, 14, c(6))
-	kutu(im, 71, 37, 10, 13, c(5))
-	nokta(im, 79, 43, c(11))
-	# dişli tabelası
-	elips(im, 100, 22, 7.0, 7.0, c(21))
-	elips(im, 100, 22, 4.5, 4.5, c(10))
-	elips(im, 100, 22, 2.0, 2.0, c(23))
-	for i in 6:
-		var a := TAU * float(i) / 6.0
-		kutu(im, 100 + int(cos(a) * 8.0) - 1, 22 + int(sin(a) * 8.0) - 1, 3, 3, c(21))
-	# asansör kulesi (araç buradan iner)
-	kutu(im, 44, 4, 10, 46, c(24))
-	kutu(im, 45, 5, 8, 44, c(23))
-	for i in 8:
-		kutu(im, 45, 8 + i * 5, 8, 1, c(21))
-	kutu(im, 42, 0, 14, 5, c(8))
-	kutu(im, 42, 0, 14, 1, c(9))
+	kutu(im, 0, y - 6, g, 6, TABAN[0])
+	kutu(im, 0, y - 6, g, 2, Color("b58a55"))
+	# sol bina: kağıt, amber çatı, koyu pencere ve kapı
+	kutu(im, 6, 20, 34, 30, KAGIT)
+	kutu(im, 4, 16, 38, 5, AMBER)
+	kutu(im, 12, 28, 8, 8, INK)
+	kutu(im, 26, 28, 8, 8, INK)
+	kutu(im, 18, 38, 10, 12, ZEMIN)
+	kutu(im, 32, 6, 6, 10, ZEMIN)
+	# sağ bina: amber, kağıt çatı
+	kutu(im, 56, 14, 40, 36, AMBER)
+	kutu(im, 54, 10, 44, 5, KAGIT)
+	kutu(im, 62, 22, 10, 9, INK)
+	kutu(im, 80, 22, 10, 9, INK)
+	kutu(im, 70, 36, 12, 14, ZEMIN)
+	daire(im, 100, 22, 7.0, KAGIT)
+	daire(im, 100, 22, 3.0, AMBER)
+	# asansör kulesi
+	kutu(im, 44, 4, 10, 46, ZEMIN)
+	kutu(im, 46, 8, 6, 2, KAGIT)
+	kutu(im, 46, 16, 6, 2, KAGIT)
+	kutu(im, 46, 24, 6, 2, KAGIT)
+	kutu(im, 42, 0, 14, 5, TEHLIKE)
 	return im
 
 func _gok() -> Image:
-	# Alacakaranlık gök: 4 bantlı degrade, 1 px genişliğinde uzatılır.
-	var y := 180
-	var im := _bos(8, y)
-	var bantlar := [c(23), c(22), c(28), c(4)]
-	for j in y:
-		var t := float(j) / float(y - 1)
-		var i := clampi(int(t * float(bantlar.size())), 0, bantlar.size() - 1)
-		var sonraki: Color = bantlar[mini(i + 1, bantlar.size() - 1)]
-		var f := t * float(bantlar.size()) - float(i)
-		kutu(im, 0, j, 8, 1, Color(bantlar[i]).lerp(sonraki, f))
-	# Yıldız yok: 8 px'lik şerit ekrana yayıldığı için tek piksel uzun bir
-	# yatay çizgiye dönüşüyordu.
+	# Düz gök: video zemini. 8 px'lik şerit ekrana yayılır.
+	var im := _bos(8, 180)
+	im.fill(ZEMIN)
 	return im
 
 func _tepeler() -> Image:
-	# Uzak tepe silueti, yatayda tekrar eder (320x64).
+	# Uzak tepe: basamaklı geometrik siluet (320x64), yatayda tekrar eder. Düz renk.
 	var g := 320
 	var y := 64
 	var im := _bos(g, y)
-	rng.seed = 31
-	var yuks := PackedInt32Array()
-	var h := 34
-	for x in g:
-		if x % 16 == 0:
-			h = clampi(h + rng.randi_range(-5, 5), 20, 46)
-		yuks.append(h)
-	# başı ve sonu eşitle (tekrar dikişsiz olsun)
-	for x in range(g - 24, g):
-		var f := float(x - (g - 24)) / 24.0
-		yuks[x] = int(lerpf(float(yuks[x]), float(yuks[0]), f))
-	for x in g:
-		kutu(im, x, yuks[x], 1, y - yuks[x], c(23))
-		nokta(im, x, yuks[x], c(22))
+	var yuks := [34, 28, 40, 30, 24, 36, 42, 32, 26, 38, 30, 34, 28, 40, 34, 34]   # 16 sütun x 20 px, başı = sonu
+	for s in yuks.size():
+		kutu(im, s * 20, int(yuks[s]), 20, y - int(yuks[s]), Color("362820"))
 	return im
 
 func _kasaba() -> Image:
-	# Yakın plan kasaba silueti (320x48), yatayda tekrar eder.
+	# Yakın plan kasaba: düz koyu bloklar, birkaç amber pencere (320x48), yatayda tekrar eder.
 	var g := 320
 	var y := 48
 	var im := _bos(g, y)
-	rng.seed = 91
 	var x := 0
-	while x < g:
-		var bg := rng.randi_range(14, 26)
-		var by := rng.randi_range(16, 34)
-		kutu(im, x, y - by, bg, by, c(24))
-		kutu(im, x, y - by, bg, 1, c(23))
-		for p in range(2, bg - 3, 5):
-			for q in range(3, by - 4, 6):
-				nokta(im, x + p, y - by + q, c(10) if rng.randi() % 3 == 0 else c(23))
-		x += bg + rng.randi_range(1, 4)
-	kutu(im, 0, y - 4, g, 4, c(24))
+	var i := 0
+	var genis := [18, 24, 16, 22, 20, 26, 14, 24, 18, 22, 20, 24]
+	var yuk := [22, 30, 18, 34, 26, 20, 32, 24, 28, 18, 30, 22]
+	while x < g and i < genis.size():
+		var bg: int = genis[i]
+		var by: int = yuk[i]
+		kutu(im, x, y - by, bg, by, INK)
+		if i % 3 == 0:
+			kutu(im, x + 4, y - by + 5, 3, 3, AMBER)
+		if i % 4 == 1:
+			kutu(im, x + bg - 7, y - by + 9, 3, 3, AMBER)
+		x += bg + 4
+		i += 1
+	kutu(im, 0, y - 4, g, 4, INK)
 	return im
 
 func _fon_kaya() -> Image:
-	# Yeraltı parallaks dokusu (64x64, tekrar eder). Oyunda katman rengiyle boyanır.
-	var g := 64
-	var im := _bos(g, g)
-	rng.seed = 404
-	for y in g:
-		for x in g:
-			var r := rng.randi() % 100
-			var t := 0.55 if r < 20 else (0.85 if r < 60 else 1.0)
-			im.set_pixel(x, y, Color(t, t, t, 1.0))
-	# yatay tabakalar: derinlik hissi
-	for j in range(0, g, 8):
-		for x in g:
-			im.set_pixel(x, j, Color(0.4, 0.4, 0.4, 1.0))
-			im.set_pixel(x, (j + 1) % g, Color(0.7, 0.7, 0.7, 1.0))
+	# Yeraltı arka planı: düz beyaz, oyunda katman rengiyle boyanır (oyun.gd → _arkaplan_yenile).
+	var im := _bos(64, 64)
+	im.fill(Color(1, 1, 1, 1))
 	return im
 
 # --- arayüz ---------------------------------------------------------------
 
-## 9 simge x 16 px: yakıt, yük, para, can, derinlik, radar, dinamit, istasyon, eser
+## 9 simge x 16 px (yedek): yakıt, yük, para, can, derinlik, radar, dinamit, istasyon, eser.
+## Düz geometri; oyunda kullanılan asıl simgeler yazı tipinden gelir.
 func _simgeler() -> Image:
 	var im := _bos(K * 9, K)
-	# 0 yakıt bidonu
-	kutu(im, 3, 4, 10, 10, c(9))
-	kutu(im, 4, 5, 8, 8, c(10))
-	kutu(im, 6, 2, 4, 2, c(6))
-	kutu(im, 5, 7, 6, 4, c(6))
-	# 1 yük sandığı
-	kutu(im, K + 2, 5, 12, 9, c(5))
-	kutu(im, K + 3, 6, 10, 7, c(4))
-	kutu(im, K + 2, 8, 12, 2, c(6))
-	# 2 para
-	elips(im, K * 2 + 8, 8, 6.0, 6.0, c(10))
-	elips(im, K * 2 + 8, 8, 4.4, 4.4, c(11))
-	kutu(im, K * 2 + 7, 4, 2, 9, c(10))
-	# 3 can
-	elips(im, K * 3 + 5, 6, 3.0, 3.0, c(8))
-	elips(im, K * 3 + 11, 6, 3.0, 3.0, c(8))
-	for i in 7:
-		kutu(im, K * 3 + 2 + i, 7 + i, 12 - i * 2, 1, c(8))
-	nokta(im, K * 3 + 5, 5, c(29))
-	# 4 derinlik (aşağı ok)
-	kutu(im, K * 4 + 7, 2, 2, 8, c(18))
-	for i in 5:
-		kutu(im, K * 4 + 3 + i, 10 + i, 10 - i * 2, 1, c(18))
-	# 5 radar
-	elips(im, K * 5 + 8, 9, 7.0, 7.0, c(14))
-	elips(im, K * 5 + 8, 9, 5.0, 5.0, c(12))
-	elips(im, K * 5 + 8, 9, 2.5, 2.5, c(14))
-	kutu(im, K * 5 + 8, 3, 1, 6, c(12))
-	# 6 dinamit
-	kutu(im, K * 6 + 4, 6, 8, 8, c(8))
-	kutu(im, K * 6 + 4, 8, 8, 2, c(3))
-	kutu(im, K * 6 + 7, 2, 2, 4, c(21))
-	nokta(im, K * 6 + 8, 1, c(11))
-	# 7 istasyon
-	kutu(im, K * 7 + 3, 5, 10, 9, c(21))
-	kutu(im, K * 7 + 4, 6, 8, 7, c(23))
-	kutu(im, K * 7 + 6, 2, 4, 3, c(12))
-	kutu(im, K * 7 + 6, 8, 4, 4, c(12))
-	# 8 eser
-	elips(im, K * 8 + 8, 7, 4.0, 4.5, c(10))
-	elips(im, K * 8 + 8, 7, 2.4, 2.8, c(11))
-	kutu(im, K * 8 + 4, 12, 8, 2, c(21))
+	kutu(im, 3, 4, 10, 10, AMBER)
+	kutu(im, K + 2, 5, 12, 9, TABAN[0])
+	daire(im, K * 2 + 8, 8, 6.0, AMBER)
+	kutu(im, K * 3 + 3, 4, 10, 9, TEHLIKE)
+	kutu(im, K * 4 + 7, 2, 2, 8, CAM)
+	daire(im, K * 5 + 8, 9, 6.0, YESIL)
+	kutu(im, K * 6 + 4, 6, 8, 8, TEHLIKE)
+	kutu(im, K * 7 + 3, 5, 10, 9, KAGIT)
+	kutu(im, K * 8 + 4, 4, 8, 8, AMBER)
 	return im
 
 func _istasyon() -> Image:
 	var im := _bos(16, 24)
-	kutu(im, 2, 8, 12, 15, c(23))
-	kutu(im, 3, 9, 10, 13, c(22))
-	kutu(im, 1, 5, 14, 4, c(21))
-	kutu(im, 1, 5, 14, 1, c(20))
-	kutu(im, 5, 12, 6, 6, c(18))
-	kutu(im, 6, 13, 4, 4, c(12))
-	kutu(im, 7, 0, 2, 6, c(21))
-	nokta(im, 8, 0, c(19))
-	kutu(im, 2, 22, 12, 2, c(24))
+	kutu(im, 2, 8, 12, 15, KAGIT)
+	kutu(im, 1, 5, 14, 4, AMBER)
+	kutu(im, 5, 12, 6, 6, CAM)
+	kutu(im, 7, 0, 2, 6, KAGIT)
+	kutu(im, 2, 22, 12, 2, ZEMIN)
 	return im
 
 func _benek() -> Image:
@@ -582,16 +366,12 @@ func _benek() -> Image:
 	return im
 
 func _logo() -> Image:
-	# Kapak görselinde ve menüde kullanılan matkap amblemi (48x48).
+	# Kapak görselinde ve menüde: kağıt gövde + kırmızı uç (48x48), amber zemin karesi.
 	var im := _bos(48, 48)
-	elips(im, 24, 24, 22.0, 22.0, c(25))
-	elips(im, 24, 24, 19.0, 19.0, c(24))
-	for i in 5:
-		kutu(im, 6, 10 + i * 7, 36, 3, c(23))
-	kutu(im, 20, 4, 8, 22, c(21))
-	kutu(im, 21, 5, 6, 20, c(20))
-	for i in 11:
-		kutu(im, 18 - (i % 2), 26 + i, 12 + (i % 2) * 2, 1, c(20) if i % 2 == 0 else c(21))
-	kutu(im, 22, 40, 4, 4, c(19))
-	elips(im, 24, 44, 5.0, 3.0, c(10))
+	yuvarlak_kutu(im, 0, 0, 48, 48, ZEMIN)
+	yuvarlak_kutu(im, 12, 8, 24, 18, KAGIT)
+	kutu(im, 28, 13, 5, 5, INK)
+	for i in 8:
+		kutu(im, 14 + i, 27 + i, 20 - i * 2, 1, UC)
+	kutu(im, 22, 40, 4, 3, AMBER)
 	return im

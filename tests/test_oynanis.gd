@@ -24,6 +24,8 @@ func _kare(n: int) -> void:
 
 func _calis() -> void:
 	print("== Oynanış testi ==")
+	await process_frame
+	TranslationServer.set_locale("tr")   ## metin sınamaları Türkçe kaynağı okur (CI'da sistem dili İngilizce olabilir)
 	# Temiz başlangıç + SABİT TOHUM. Kayıt yokken oyun sahnesi randi() ile tohum
 	# seçiyor; o zaman bu test her çalıştırmada başka bir dünyada oynuyor ve
 	# arada bir kararsız hata veriyordu (derinlik, deprem ve varyant sınamaları
@@ -739,7 +741,7 @@ func _calis() -> void:
 	var kod := TohumKodu.kodla(4242)
 	dogru(String(menu.get_node("Bilgi").text).contains(kod),
 		"menü kayıtlı dünyanın tohum kodunu yazıyor (%s)" % kod)
-	dogru(menu.get_node("M/V/Derin").visible, "çekirdek çıkarıldıysa Derin Mod düğmesi açık")
+	dogru(menu.get_node("M/V/Ikincil/Derin").visible, "çekirdek çıkarıldıysa Derin Mod düğmesi açık")
 	dogru(not menu.get_node("Rozet").visible, "Derin Mod'a hiç girilmediyse rozet yok")
 
 	# --- Derin Mod yuvası ayrı (v0.6) ----------------------------------------
@@ -758,12 +760,12 @@ func _calis() -> void:
 	menu.call("_bilgi_yenile")
 	dogru(menu.get_node("Rozet").visible and String(menu.get_node("Rozet").text).contains("x1"),
 		"menüde Derin Mod rozeti (%s)" % menu.get_node("Rozet").text)
-	dogru(String(menu.get_node("M/V/Derin").text).contains("devam"),
-		"Derin Mod düğmesi süren tura devam diyor (%s)" % menu.get_node("M/V/Derin").text)
+	dogru(String(menu.get_node("M/V/Ikincil/Derin").text).contains("devam"),
+		"Derin Mod düğmesi süren tura devam diyor (%s)" % menu.get_node("M/V/Ikincil/Derin").text)
 	Kayit.kaydet({"kazandi": true, "eserler": PackedInt32Array([0, 2, 6])}, Kayit.DERIN)
 	menu.call("_bilgi_yenile")
-	dogru(String(menu.get_node("M/V/Derin").text).contains("x2"),
-		"Derin Mod bitince x2 sunuluyor (%s)" % menu.get_node("M/V/Derin").text)
+	dogru(String(menu.get_node("M/V/Ikincil/Derin").text).contains("x2"),
+		"Derin Mod bitince x2 sunuluyor (%s)" % menu.get_node("M/V/Ikincil/Derin").text)
 	dogru(String(menu.get_node("Rozet").text).contains("bulundu"), "rozet 7. eserin bulunduğunu yazıyor")
 	var d3 := Kayit.derin_mod_hazirla()
 	dogru(int(d3["derin_seviye"]) == 2 and PackedInt32Array(d3["eserler"]) == PackedInt32Array([0, 2, 6])
@@ -796,6 +798,9 @@ func _calis() -> void:
 	menu.queue_free()
 	await process_frame
 
+	# --- v0.8: menü, duraklat, oyun sonu, dil ve girdi toleransı -----------------
+	await _yeni_arayuz_testleri()
+
 	print(ozet)
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	Kayit.sil()
@@ -805,3 +810,359 @@ func _calis() -> void:
 
 static func _renk_uzaklik(a: Color, b: Color) -> float:
 	return (a.r - b.r) * (a.r - b.r) + (a.g - b.g) * (a.g - b.g) + (a.b - b.b) * (a.b - b.b)
+
+# --- v0.8: arayüz yenilemesi sahne testleri -----------------------------------
+
+func _tus(eylem: String) -> InputEventAction:
+	var ev := InputEventAction.new()
+	ev.action = StringName(eylem)
+	ev.pressed = true
+	return ev
+
+func _yeni_arayuz_testleri() -> void:
+	print("- v0.8 arayüz: menü, duraklat, oyun sonu, dil, girdi toleransı")
+	TranslationServer.set_locale("tr")
+	var ses = root.get_node("Ses")
+	var eski_ayar: Dictionary = ses.ayar.duplicate()
+	ses.ayarla("dil", "tr")   ## kayıtlı tercih: CI'da sistem dili İngilizce olabilir, düğme metni buna bağlı
+
+	# --- menü: tek büyük Oyna, tek satır yardım, küçük ikincil düğmeler ---------
+	Kayit.sil()
+	Kayit.sil(Kayit.DERIN)
+	Kayit.kaydet({"tohum": 5150, "para": 321, "en_derin": 64})
+	var menu: Node = load("res://scenes/menu.tscn").instantiate()
+	root.add_child(menu)
+	await _kare(5)
+	var oyna: Button = menu.get_node("M/V/Basla")
+	dogru(oyna.text == "Oyna" and oyna.theme_type_variation == &"Birincil" and oyna.has_focus(),
+		"menüde büyük birincil Oyna düğmesi, odak orada (%s)" % oyna.text)
+	var yardim: Label = menu.get_node("M/V/Kontroller")
+	dogru(yardim.text != "" and not yardim.text.contains("\n"), "nasıl oynanır tek satır (%s)" % yardim.text)
+	var ikincil: Node = menu.get_node("M/V/Ikincil")
+	var gorunen := 0
+	for b in ikincil.get_children():
+		if b.visible:
+			gorunen += 1
+	dogru(gorunen >= 4 and gorunen <= 5 and not menu.get_node("M/V/Ikincil/Derin").visible,
+		"ikincil düğmeler küçük sırada (%d görünür), Derin Mod kilitliyken gizli" % gorunen)
+	dogru(String(menu.get_node("Bilgi").text).contains("321") and String(menu.get_node("Bilgi").text).contains("64 m"),
+		"kayıtlı para ve en derin metre menüde")
+	# Yeni dünya iki adımlı: ilk basış ilerlemeyi silmez.
+	var tohum_once := int(Kayit.yukle(Kayit.ANA).get("tohum", 0))
+	menu.call("_yeni_iste")
+	await _kare(2)
+	dogru(int(Kayit.yukle(Kayit.ANA).get("tohum", 0)) == tohum_once
+		and String(menu.get_node("M/V/Ikincil/Yeni").text).contains("Emin"),
+		"Yeni dünya ilk basışta silmiyor, onay istiyor (%s)" % menu.get_node("M/V/Ikincil/Yeni").text)
+	menu.set("_yeni_bekliyor", false)
+
+	# --- dil: Ayarlar'da düğme, anında yeniden kurulur, tercih kaydedilir ----------
+	menu.call("_ayar_ac")
+	await _kare(2)
+	var liste: VBoxContainer = menu.get_node("Ayar/M/V/Kaydir/Liste")
+	var dil_dugme: Button = null
+	for c in liste.get_children():
+		for cc in c.get_children():
+			if cc is Button and (cc.text == "English" or cc.text == "Türkçe"):
+				dil_dugme = cc
+	dogru(dil_dugme != null and dil_dugme.text == "English", "ayarlarda dil düğmesi (Türkçe iken 'English' önerir)")
+	dil_dugme.pressed.emit()
+	await _kare(45)   ## glitch örtüsü ~0,18 sn'de kapanır, metin o zaman değişir
+	dogru(TranslationServer.get_locale().begins_with("en") and String(ses.ayar.get("dil", "")) == "en"
+		and String(Kayit.ayar_yukle()["dil"]) == "en", "dil değişti ve kayda yazıldı")
+	dogru(oyna.atr(oyna.text) == "Play", "menü İngilizceye döndü (%s)" % oyna.atr(oyna.text))
+	dogru(String(menu.get_node("M/V/Kontroller").text).contains("dig down"),
+		"nasıl oynanır satırı İngilizce (%s)" % menu.get_node("M/V/Kontroller").text)
+	dogru(String(menu.get_node("Bilgi").text).contains("DEEPEST"), "menü bilgi satırı İngilizce (%s)" % menu.get_node("Bilgi").text)
+	dogru(int(Kayit.yukle(Kayit.ANA).get("para", 0)) == 321 and int(Kayit.yukle(Kayit.ANA).get("en_derin", 0)) == 64,
+		"dil değişince kayıtlı ilerleme bozulmadı")
+	menu.call("_ayar_kapat")
+	menu.queue_free()
+	await process_frame
+
+	# --- oyun sahnesi: HUD, duraklat, oyun sonu (İngilizce) --------------------
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242})
+	var sahne: Node = load("res://scenes/oyun.tscn").instantiate()
+	root.add_child(sahne)
+	await process_frame
+	await _kare(30)
+	var arac: Arac = sahne.get_node("Arac")
+	var durum: Durum = sahne.durum
+	dogru(String(sahne.get_node("HUD/Ust/Yakit").text).begins_with("FUEL"), "HUD İngilizce: yakıt etiketi (%s)" % sahne.get_node("HUD/Ust/Yakit").text)
+	dogru(String(sahne.get_node("HUD/Katman").text).begins_with("01 / SOIL"), "HUD katman etiketi 01 / SOIL (%s)" % sahne.get_node("HUD/Katman").text)
+	# HUD yalnız gerekli bilgi: yakıt/yük/can/para + derinlik + katman; renk yalnız uyarıda.
+	durum.yakit = durum.yakit_kapasitesi() * 0.1
+	await _kare(3)
+	var yakit_renk: Color = sahne.get_node("HUD/Ust/Yakit").get_theme_color("font_color")
+	dogru(yakit_renk.is_equal_approx(Tema.TEHLIKE), "yakıt %25'in altına inince etiket uyarı renginde")
+	durum.yakit = durum.yakit_kapasitesi()
+	arac.global_position = Vector2(arac.global_position.x, 125.0 * Ayarlar.KARO)
+	await _kare(3)
+	var dolu: ColorRect = sahne.get_node("HUD/Ilerleme/Dolu")
+	dogru(absf(dolu.size.x - 48.0) < 4.0, "katman çubuğu 125 m'de yarıda (%.0f/96 px)" % dolu.size.x)
+	arac.usse_don()
+	await _kare(60)
+
+	# duraklat: Esc → panel, tam tuş listesi, odak Devam'da; ikinci Esc → kapanır
+	sahne.call("_unhandled_input", _tus("duraklat"))
+	await _kare(2)
+	var pause: PanelContainer = sahne.get_node("HUD/Duraklat")
+	var devam: Button = sahne.get_node("HUD/Duraklat/M/V/Devam")
+	dogru(pause.visible and arac.kilitli, "Esc duraklatıyor, araç kilitli")
+	dogru(devam.has_focus() and devam.theme_type_variation == &"Birincil", "odak birincil Devam düğmesinde")
+	dogru(String(sahne.get_node("HUD/Duraklat/M/V/Tuslar").text).contains("Space")
+		and sahne.get_node("HUD/Duraklat/M/V/Baslik").atr("Duraklatıldı") == "Paused",
+		"duraklatma ekranı başlığı ve tam tuş listesi İngilizce")
+	dogru(pause.size.x <= Ayarlar.EKRAN_G and pause.size.y <= Ayarlar.EKRAN_Y, "duraklat paneli 640×360'a sığıyor (%.0f×%.0f)" % [pause.size.x, pause.size.y])
+	sahne.call("_unhandled_input", _tus("duraklat"))
+	await _kare(2)
+	dogru(not pause.visible and not arac.kilitli, "ikinci Esc devam ettiriyor")
+	# ayarlar duraklatmadan: dil düğmesi orada da var
+	sahne.call("_unhandled_input", _tus("duraklat"))
+	await _kare(2)
+	sahne.call("_ayar_ac")
+	await _kare(2)
+	var var_dil := false
+	for c in sahne.get_node("HUD/Ayar/M/V/Kaydir/Liste").get_children():
+		for cc in c.get_children():
+			if cc is Button and cc.text == "Türkçe":
+				var_dil = true
+	dogru(var_dil, "duraklat → ayarlar içinde de dil düğmesi (İngilizce iken 'Türkçe')")
+	sahne.call("_panelleri_kapat")
+	await _kare(2)
+
+	# oyun sonu: skor + en iyi + tek dokunuşla tekrar
+	durum.en_derin = 250
+	sahne.call("_kazandi")
+	await _kare(3)
+	var bitis: PanelContainer = sahne.get_node("HUD/Bitis")
+	var tekrar: Button = sahne.get_node("HUD/Bitis/M/V/Tekrar")
+	dogru(bitis.visible and tekrar.has_focus() and tekrar.theme_type_variation == &"Birincil",
+		"oyun sonunda ilk odak Tekrar düğmesinde")
+	dogru(tekrar.text.begins_with("Again"), "Tekrar düğmesi bir üst Derin Mod turunu sunuyor (%s)" % tekrar.text)
+	dogru(String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("DEEPEST 250 m"),
+		"oyun sonu paneli süre / en derin / para satırı (%s)" % String(sahne.get_node("HUD/Bitis/M/V/Metin").text).left(60))
+	dogru(tekrar.pressed.get_connections().size() > 0 and sahne.get_node("HUD/Bitis/M/V/Menu").pressed.get_connections().size() > 0,
+		"Tekrar ve Menü düğmeleri bağlı")
+	dogru(bitis.size.x <= Ayarlar.EKRAN_G and bitis.size.y <= Ayarlar.EKRAN_Y, "oyun sonu paneli 640×360'a sığıyor (%.0f×%.0f)" % [bitis.size.x, bitis.size.y])
+	sahne.queue_free()
+	await process_frame
+
+	# --- girdi toleransı: kojot + dinamit tamponu (sahnede, gerçek fizik) -----------
+	TranslationServer.set_locale("tr")
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242})
+	var s2: Node = load("res://scenes/oyun.tscn").instantiate()
+	root.add_child(s2)
+	await process_frame
+	await _kare(40)
+	var a2: Arac = s2.get_node("Arac")
+	var d2: Durum = s2.durum
+	d2.dinamit = 20
+	dogru(a2.is_on_floor() and a2.yerde_gibi(), "yerdeyken yerde_gibi")
+	# 1) havadayken basılan F, kojot penceresi dışındaysa tamponlanır ve inince atılır
+	var zemin_y := a2.global_position.y
+	a2.global_position = Vector2(a2.global_position.x, zemin_y - 40.0)
+	a2.velocity = Vector2.ZERO
+	await _kare(10)
+	dogru(not a2.is_on_floor() and not a2.yerde_gibi(), "ışınlanıp 0,17 sn havada kalınca kojot bitti")
+	for i in 60:                      ## inişe ~12 px kalana dek (≈0,07 sn < tampon) bekle
+		await physics_frame
+		if a2.global_position.y > zemin_y - 12.0:
+			break
+	var ilk := d2.dinamit
+	dogru(not a2.is_on_floor(), "iniş anına yakın hâlâ havada")
+	dogru(not a2.dinamit_at() and a2.dinamit_bekliyor(), "havada F: hemen atılmaz ama tamponlanır")
+	for i in 120:
+		await physics_frame
+		if d2.dinamit < ilk:
+			break
+	dogru(d2.dinamit == ilk - 1, "inişten sonra tamponlanan dinamit atıldı (%d → %d)" % [ilk, d2.dinamit])
+	dogru(not a2.dinamit_bekliyor(), "tampon tüketildi")
+	# 2) tampon süresi geçince düşer: çok erken basılan F atılmaz
+	await _kare(40)
+	a2.global_position = Vector2(a2.global_position.x, a2.global_position.y - 90.0)
+	a2.velocity = Vector2.ZERO
+	await _kare(9)                   ## kojot penceresi (0,12 sn) dolsun
+	var ilk2 := d2.dinamit
+	a2.dinamit_at()
+	await _kare(12)                   ## 0,2 sn > DINAMIT_TAMPON, hâlâ havada
+	dogru(not a2.dinamit_bekliyor() and d2.dinamit == ilk2, "çok erken basılan F tampon süresi dolunca boşa düşüyor (atılmadı)")
+	# 3) kojot: zeminden yeni ayrılmışken dinamit hemen atılır
+	for i in 200:
+		await physics_frame
+		if a2.is_on_floor():
+			break
+	await _kare(5)
+	a2.velocity = Vector2(0, -80.0)
+	await physics_frame
+	await physics_frame
+	dogru(not a2.is_on_floor() and a2.yerde_gibi(), "zeminden yeni ayrılan araç kojot penceresinde")
+	var ilk3 := d2.dinamit
+	dogru(a2.dinamit_at() and d2.dinamit == ilk3 - 1, "kojot içinde F hemen atılıyor")
+	s2.queue_free()
+	await process_frame
+
+	# --- günlük video imkânları (v0.9): geçişler, derinlik sayacı renk akışı, rekor damgası ---
+	await _gecis_testleri(ses)
+	# Dil ve ayarı önceki değerine döndür.
+	ses.ayar = eski_ayar
+	Kayit.ayar_kaydet(eski_ayar)
+	Kayit.sil()
+	TranslationServer.set_locale("tr")
+
+## Günlük video imkânları: geçiş aileleri (shader), sırayla tekrar yok, hareket azaltmada anında,
+## bekletmeyen vuruşlar, oyundaki kullanım yerleri (çekilme, deprem, çekirdek, oyun sonu, duraklat, ışınlanma),
+## derinlik sayacı renk akışı ve YENİ REKOR damgası.
+func _gecis_testleri(ses) -> void:
+	print("— günlük video geçişleri —")
+	var g = root.get_node("Gecis")
+	ses.ayar["sade_gecis"] = false
+	# --- her aile örtüyor ve açılıyor ---
+	for tur in Tema.GECIS_TURLERI:
+		await g.kapat(tur, 0, 0.05)
+		var p: float = g._mat.get_shader_parameter("p")
+		dogru(g._kaplama.visible and is_equal_approx(p, 1.0) and g.son_tur == tur, "%s: tam örtüyor (p=%.2f)" % [tur, p])
+		await g.ac(0.05)
+		dogru(not g._kaplama.visible, "%s: açılıyor, kaplama gizli" % tur)
+	# --- sırayla: art arda tekrar yok, havuzun hepsi kullanılıyor ---
+	for t in Tema.AKIS.size():
+		var havuz: Array = Tema.AKIS[t]["gecis"]
+		var onceki: StringName = &""
+		var tekrar := 0
+		var disari := 0
+		var gorulen := {}
+		for i in 40:
+			var s: StringName = g.sec(t)
+			if s == onceki:
+				tekrar += 1
+			if not s in havuz:
+				disari += 1
+			gorulen[s] = true
+			onceki = s
+			g.son_tur = s
+		dogru(tekrar == 0 and disari == 0 and gorulen.size() == havuz.size(), "tema %d: 40 seçimde tekrar yok, hepsi havuzda, hepsi kullanıldı" % t)
+	# --- süre: örtme ~260 ms ---
+	var t0 := Time.get_ticks_msec()
+	await g.kapat(&"itme", 0)
+	var ms := Time.get_ticks_msec() - t0
+	dogru(ms >= 240 and ms < 500, "örtme %d ms (rehber ~260)" % ms)
+	await g.ac()
+	# --- ara(): değişim örtünün altında bir kez; meşgulken de değişiklik kaybolmaz ---
+	var cagri := [0]
+	await g.ara(&"glitch", 0, func() -> void: cagri[0] += 1)
+	dogru(cagri[0] == 1 and not g.mesgul_mu() and not g._kaplama.visible, "ara(): değiştir bir kez çağrıldı, geçiş bitti")
+	g._mesgul = true
+	await g.ara(&"glitch", 0, func() -> void: cagri[0] += 1)
+	g._mesgul = false
+	dogru(cagri[0] == 2, "ara(): geçiş sürerken de değişiklik yapıldı (dil düğmesi kaybolmaz)")
+	# --- vuruş: bekletmez, kilitlemez, kendiliğinden söner ---
+	g.vurus(&"glitch", 1, 0.5, 0.2)
+	dogru(g._kaplama.visible and not g.mesgul_mu() and g.son_tur == &"glitch", "vuruş: hemen görünür, sahne değişimini kilitlemez")
+	await create_timer(0.4).timeout
+	dogru(not g._kaplama.visible, "vuruş: söndü")
+	g.vurus(&"flas", 0, 0.3, 0.2)
+	var ilk_tur: StringName = g.son_tur
+	g.vurus(&"iris", 0, 0.3, 0.2)
+	dogru(g.son_tur == ilk_tur, "vuruş sürerken ikinci vuruş yok sayıldı")
+	await create_timer(0.4).timeout
+	# --- hareket azaltma: anında, bekleme yok, kaplama hiç açılmaz ---
+	ses.ayar["sade_gecis"] = true
+	dogru(g.sade(), "sade geçişler ayarı = sade")
+	t0 = Time.get_ticks_msec()
+	await g.kapat(&"iris", 0)
+	await g.ara(&"bloklar", 1, func() -> void: cagri[0] += 1)
+	await g.acilis(&"perde", 0)
+	g.vurus(&"glitch", 0)
+	await g.yanip_son()
+	var gecen := Time.get_ticks_msec() - t0
+	dogru(gecen < 100 and cagri[0] == 3 and not g._kaplama.visible, "hareket azaltma: geçiş anında, kaplama hiç açılmadı (%d ms)" % gecen)
+	ses.ayar["sade_gecis"] = false
+
+	# --- oyun içi kullanım yerleri ---
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242, "en_derin": 60})
+	var s3: Node = load("res://scenes/oyun.tscn").instantiate()
+	root.add_child(s3)
+	await process_frame
+	await _kare(20)
+	var arac3: Arac = s3.get_node("Arac")
+	var durum3: Durum = s3.durum
+	var lbl: Label = s3.get_node("HUD/Ust/Derinlik")
+	# derinlik sayacı: her yeni 25 m kademesinde akış rengi, okunur yazı, kendiliğinden geri döner
+	s3.call("_derinlik_vurgula")
+	var v: Color = Tema.akis_rengi(Tema.derinlik_temasi(arac3.derinlik()), int(s3.get("_akis_i")))
+	var kutu := lbl.get_theme_stylebox("normal") as StyleBoxFlat
+	var yazi: Color = lbl.get_theme_color("font_color")
+	dogru(lbl.has_theme_stylebox_override("normal") and kutu != null and kutu.bg_color.is_equal_approx(v), "derinlik sayacı akış rengine döndü")
+	dogru(Tema.kontrast(v, yazi) >= Tema.ESIK, "sayaç yazısı vurgu üzerinde %.2f:1" % Tema.kontrast(v, yazi))
+	var i0: int = s3.get("_akis_i")
+	s3.call("_derinlik_vurgula")
+	dogru(int(s3.get("_akis_i")) == i0, "vurgu sürerken ikinci tetik yok sayıldı (hız sınırı)")
+	await create_timer(0.45).timeout
+	dogru(not lbl.has_theme_stylebox_override("normal"), "vurgu bitti, sayaç eski haline döndü")
+	ses.ayar["sade_gecis"] = true
+	i0 = int(s3.get("_akis_i"))
+	s3.call("_derinlik_vurgula")
+	dogru(int(s3.get("_akis_i")) == i0 and not lbl.has_theme_stylebox_override("normal"), "sade geçişlerde sayaç vurgusu kapalı")
+	ses.ayar["sade_gecis"] = false
+	# kademe: yeni 25 m'de tetiklenir, aynı kademede yinelenmez
+	arac3.global_position = Vector2(Ayarlar.US_X, 30.5 * Ayarlar.KARO)
+	s3.set("_kademe_max", 0)
+	i0 = int(s3.get("_akis_i"))
+	s3.call("_derinlik_izle", 30)
+	dogru(int(s3.get("_akis_i")) == i0 + 1 and int(s3.get("_kademe_max")) == 1, "30 m: yeni 25 m kademesi vurguyu tetikledi")
+	await create_timer(0.45).timeout
+	s3.call("_derinlik_izle", 31)
+	dogru(int(s3.get("_akis_i")) == i0 + 1, "aynı kademede tekrar vurgu yok")
+	# yeni rekor damgası: en derin 60 iken 61 m'de
+	s3.set("_rekor_esigi", 60)
+	s3.set("_rekor_verildi", false)
+	arac3.global_position = Vector2(Ayarlar.US_X, 61.5 * Ayarlar.KARO)
+	s3.call("_derinlik_izle", 61)
+	var damga: Panel = s3.get("_damga")
+	var dyazi: Label = s3.get("_damga_yazi")
+	dogru(damga != null and damga.visible and dyazi.text == "YENİ REKOR", "en derin aşılınca YENİ REKOR damgası")
+	var dv: Color = (damga.get_theme_stylebox("panel") as StyleBoxFlat).bg_color
+	dogru(Tema.kontrast(dv, dyazi.get_theme_color("font_color")) >= Tema.ESIK, "damga yazısı okunuyor (%.2f:1)" % Tema.kontrast(dv, dyazi.get_theme_color("font_color")))
+	await create_timer(0.9).timeout
+	dv = (damga.get_theme_stylebox("panel") as StyleBoxFlat).bg_color
+	dogru(dv.is_equal_approx(Tema.akis_rengi(Tema.derinlik_temasi(61), 0)), "damga renk akışından sonra ilk renkte durdu")
+	dogru(bool(s3.get("_rekor_verildi")), "damga bu inişte bir kez")
+	# çekilme: kırmızı flaş
+	await create_timer(0.4).timeout
+	s3.call("_kosu_bitti")
+	dogru(g._kaplama.visible and g.son_tur == &"flas" and Color(g._mat.get_shader_parameter("renk")).is_equal_approx(Tema.TEHLIKE),
+		"yüzeye çekilme: tehlike renginde flaş")
+	dogru(not g.mesgul_mu(), "çekilme flaşı girdiyi/geçişi kilitlemiyor")
+	await create_timer(0.45).timeout
+	# deprem: glitch vuruşu
+	s3.call("_uyari_kapat")
+	s3.set("_deprem_uyari_derinlik", 40)
+	s3.call("_deprem_uygula")
+	dogru(g.son_tur == &"glitch", "deprem: glitch vuruşu")
+	await create_timer(0.45).timeout
+	# duraklatma: perde
+	s3.call("_duraklat_ac")
+	dogru(g._kaplama.visible and g.son_tur == &"perde", "duraklat: perde geçişi başladı")
+	await create_timer(0.45).timeout
+	dogru(not g._kaplama.visible, "duraklat: perde açıldı")
+	s3.call("_duraklat_kapat")
+	# ışınlanma: blok örtüsünün altında yer değişir
+	arac3.global_position = Vector2(Ayarlar.US_X, 30.5 * Ayarlar.KARO)
+	s3.call("_isinla", Vector2(Ayarlar.US_X, -24.0))
+	dogru(g.son_tur == &"bloklar", "ışınlanma: bloklar geçişi")
+	await create_timer(0.7).timeout
+	dogru(arac3.usste_mi() and not g._kaplama.visible, "ışınlanma örtü altında bitti, geçiş açıldı")
+	# çekirdek: flaş vuruşu; oyun sonu: iris ile kart
+	s3.call("_cekirdege_ulasildi")
+	dogru(g.son_tur == &"flas", "çekirdeğe dokunuş: flaş vuruşu")
+	await create_timer(0.6).timeout
+	s3.call("_kazandi")
+	dogru(g.son_tur == &"iris" and s3.get_node("HUD/Bitis").visible, "oyun sonu: iris ile kart açıldı")
+	await create_timer(0.6).timeout
+	dogru(not g._kaplama.visible, "oyun sonu iris'i açıldı")
+	s3.queue_free()
+	await process_frame
+	Kayit.sil()

@@ -8,6 +8,11 @@ const SANDIK_ODUL := [
 ]
 const SARSINTI_SONUM := 9.0
 const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
+const VURGU_SURESI := 0.30     ## derinlik sayacı renk akışı vurgusu (her yeni 25 m kademesi)
+const VURGU_ARALIK := 0.12     ## vurgu bitmeden tekrar tetiklenmez (saniyede ~3 renk değişimi en fazla)
+const KADEME := 25             ## sayaç vurgusunun metre adımı
+const REKOR_ESIK := 25         ## en derin bundan azsa rekor damgası yok (ilk inişte her metre rekor olurdu)
+const DAMGA_SURESI := 2.6
 
 @onready var dunya: Dunya = $Dunya
 @onready var sis: Sis = $Sis
@@ -32,6 +37,8 @@ const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
 @onready var _lbl_kacis: Label = $HUD/Deprem/Kacis
 @onready var _lbl_kal: Label = $HUD/Deprem/Kal
 @onready var _isaret: ColorRect = $HUD/Isaret
+@onready var _ilerleme_dolu: ColorRect = $HUD/Ilerleme/Dolu
+@onready var _lbl_tuslar: Label = $HUD/Duraklat/M/V/Tuslar
 
 @onready var _magaza: PanelContainer = $HUD/Magaza
 @onready var _muze: PanelContainer = $HUD/Muze
@@ -40,7 +47,6 @@ const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
 @onready var _duraklat: PanelContainer = $HUD/Duraklat
 @onready var _bitis: PanelContainer = $HUD/Bitis
 @onready var _uyari: PanelContainer = $HUD/Uyari
-@onready var _karartma: ColorRect = $Gecis/Karartma
 
 @onready var _fon_gok: TextureRect = $Arkaplan/Gok
 @onready var _fon_tepe: TextureRect = $Arkaplan/Tepeler
@@ -49,6 +55,7 @@ const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
 @onready var _fon_renk: ColorRect = $Arkaplan/Renk
 
 var durum: Durum
+var yazi_gizli := false   ## yalnız kayıt aracı açar (uçan "+10 ₺" yazıları)
 var _sarsinti := 0.0
 var _radar_acik := false
 var _titreyen := []     ## {"h": Vector2i, "t": float, "s": Sprite2D}
@@ -70,11 +77,30 @@ var _dgm_dinamit: Button                       ## dokunmatik alet düğmeleri (y
 var _dgm_radar: Button
 var _dgm_isaret: Button
 var _isaret_ogretildi := false                 ## işaret ipucu oturumda bir kez (30 m'yi ilk geçişte)
+var _deprem_bant: ColorRect
 var _ambiyans: CPUParticles2D                  ## banda göre toz / kıvılcım (araca bağlı)
 var _bant := -1                                ## şu anki ambiyans bandı (Ayarlar.AMBIYANS)
+var _vurgu_kalan := 0.0                        ## >0 iken derinlik sayacı akış renginde
+var _akis_i := 0                               ## renk akışı sırası (Tema.AKIS)
+var _kademe_max := 0                           ## bu inişte geçilen en yüksek 25 m kademesi
+var _rekor_esigi := 0                          ## inişe başlarken en derin (aşılınca damga)
+var _rekor_verildi := false
+var _damga: Panel = null                       ## "YENİ REKOR" damgası (üst şeridin altında, orta)
+var _damga_yazi: Label = null
+var _damga_tween: Tween = null
+var _damga_kalan := 0.0
 
 func _ready() -> void:
 	_karo_doku = load("res://assets/sprites/karolar.png")
+	# Deprem panosunun arkası: yazı dünyanın üstünde okunsun (düz koyu bant).
+	_deprem_bant = ColorRect.new()
+	_deprem_bant.color = Color(Tema.MUREKKEP, 0.8)
+	_deprem_bant.position = Vector2(126, 58)
+	_deprem_bant.size = Vector2(388, 74)
+	_deprem_bant.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_deprem_bant.visible = false
+	$HUD.add_child(_deprem_bant)
+	$HUD.move_child(_deprem_bant, _deprem_pano.get_index())
 	var kayitli := Kayit.yukle()
 	durum = Durum.new(int(kayitli.get("tohum", randi())))
 	durum.sozlukten(kayitli)
@@ -102,6 +128,7 @@ func _ready() -> void:
 	$HUD/Duraklat/M/V/Ayar.pressed.connect(_ayar_ac)
 	$HUD/Duraklat/M/V/Menu.pressed.connect(_menuye)
 	$HUD/Bitis/M/V/Menu.pressed.connect(_menuye)
+	$HUD/Bitis/M/V/Tekrar.pressed.connect(_tekrar)
 	$HUD/Uyari/M/V/Tamam.pressed.connect(_uyari_kapat)
 
 	_dokunmatik = DisplayServer.is_touchscreen_available()
@@ -115,7 +142,12 @@ func _ready() -> void:
 	_hud_yenile()
 	_ambiyans_kur()
 	_ambiyans_yenile()
-	_karart(false)
+	# sahne Gecis autoload'ının örtüsünün ALTINDAN açılır (eski oyun içi siyah solma kalktı)
+	_kademe_max = arac.derinlik() / KADEME
+	_rekor_esigi = durum.en_derin
+	# Alt ipucu şeridi: düz koyu bant (yalnız yazı varken görünür).
+	_lbl_ipucu.add_theme_stylebox_override("normal", Tema.kutu(Color(Tema.MUREKKEP, 0.72), 0, 8, 4))
+	UI.dugmeleri_bagla($HUD)
 
 # --- ana döngü ------------------------------------------------------------
 
@@ -130,6 +162,14 @@ func _process(delta: float) -> void:
 	_sandik_kontrol()
 	_kacis_kontrol()
 	_isaret_ogret()
+	if _vurgu_kalan > 0.0:
+		_vurgu_kalan -= delta
+		if _vurgu_kalan <= 0.0:
+			_derinlik_boya(false)
+	if _damga_kalan > 0.0:
+		_damga_kalan -= delta
+		if _damga_kalan <= 0.0:
+			_damga.visible = false
 	if _ipucu_sure > 0.0:
 		_ipucu_sure -= delta
 	_harita_zaman -= delta
@@ -146,9 +186,7 @@ func _unhandled_input(olay: InputEvent) -> void:
 		if _panel_acik():
 			_panelleri_kapat()
 		else:
-			_duraklat.visible = true
-			arac.kilitli = true
-			Ses.cal("menu")
+			_duraklat_ac()
 		get_viewport().set_input_as_handled()
 	elif olay.is_action_pressed("etkilesim") and arac.usste_mi() and not _panel_acik():
 		_magaza_ac()
@@ -179,13 +217,15 @@ func _dinamit_kullan() -> void:
 	if arac.dinamit_at():
 		Ses.cal("patlama")
 	elif durum.dinamit <= 0:
-		_ipucu_goster("Dinamit yok — üsten al.", 1.5)
+		_ipucu_goster(Ceviri.t("Dinamit yok — üsten al."), 1.5)
+	elif arac.dinamit_bekliyor():
+		pass   ## havada basıldı: inince atılacak (Arac.DINAMIT_TAMPON), uyarı gerekmez
 	else:
-		_ipucu_goster("Dinamit için zemine bas.", 1.5)
+		_ipucu_goster(Ceviri.t("Dinamit için zemine bas."), 1.5)
 
 func _radar_degistir() -> void:
 	if not durum.alet_var("radar"):
-		_ipucu_goster("Maden radarı yok — üsten al.", 1.5)
+		_ipucu_goster(Ceviri.t("Maden radarı yok — üsten al."), 1.5)
 		return
 	_radar_acik = not _radar_acik
 	Ses.cal("menu")
@@ -199,7 +239,7 @@ func _radar_degistir() -> void:
 
 func _isaret_koy() -> void:
 	if arac.usste_mi():
-		_ipucu_goster("İşaret üste konmaz — yeraltında koy.", 1.5)
+		_ipucu_goster(Ceviri.t("İşaret üste konmaz — yeraltında koy."), 1.5)
 		return
 	durum.isaret = arac.hucre()
 	Ses.cal("menu")
@@ -276,28 +316,115 @@ func _hud_yenile() -> void:
 		$Dokunmatik/Izler.visible = not panel
 	_harita.visible = _harita.visible and not panel
 	_deprem_pano.visible = _deprem_uyari > 0.0 and not panel
+	_deprem_bant.visible = _deprem_pano.visible
+	if _damga != null:
+		_damga.visible = _damga_kalan > 0.0 and not panel
 	if _deprem_pano.visible:
 		_deprem_panosu()
 	if panel:
 		_lbl_ipucu.text = ""
+		_lbl_ipucu.visible = false
 		return
 	var d := arac.derinlik()
 	_lbl_derinlik.text = "%d m" % d
-	_lbl_yakit.text = "Yakıt %d/%d" % [ceili(durum.yakit), int(durum.yakit_kapasitesi())]
-	_lbl_yuk.text = "Yük %d/%d" % [durum.yuk_toplam(), durum.yuk_kapasitesi()]  ## ağırlık
-	_lbl_can.text = "Can %d/%d" % [durum.can, durum.can_kapasitesi()]
+	_derinlik_izle(d)
+	var yakit_az := durum.yakit < durum.yakit_kapasitesi() * 0.25
+	_lbl_yakit.text = Ceviri.t("YAKIT %d/%d") % [ceili(durum.yakit), int(durum.yakit_kapasitesi())]
+	_lbl_yuk.text = Ceviri.t("YÜK %d/%d") % [durum.yuk_toplam(), durum.yuk_kapasitesi()]  ## ağırlık
+	_lbl_can.text = Ceviri.t("CAN %d/%d") % [durum.can, durum.can_kapasitesi()]
 	_lbl_para.text = "%d ₺" % durum.para
+	# Yalnız uyarı rengi: yakıt azalınca ve can 1'e inince kırmızı, yük dolunca amber.
+	_lbl_yakit.add_theme_color_override("font_color", Tema.TEHLIKE if yakit_az else Tema.KAGIT)
+	_lbl_can.add_theme_color_override("font_color", Tema.TEHLIKE if durum.can <= 1 else Tema.KAGIT)
+	_lbl_yuk.add_theme_color_override("font_color", Tema.AMBER if durum.yuk_dolu() else Tema.KAGIT)
 	var k := Ayarlar.katman(d)
 	var ilerleme := clampf(float(d) / float(Ayarlar.CEKIRDEK_DERINLIK), 0.0, 1.0)
-	_lbl_katman.text = "%s  •  Çekirdek %d m  [%s]%s" % [
-		Ayarlar.KATMANLAR[k]["ad"], Ayarlar.CEKIRDEK_DERINLIK, _cubuk(ilerleme), _mod_etiketi()]
+	_lbl_katman.text = Tema.kisa_baslik(k + 1, String(Ayarlar.KATMANLAR[k]["ad"])) + "  ·  " \
+		+ Ceviri.t("ÇEKİRDEK %d m") % Ayarlar.CEKIRDEK_DERINLIK + _mod_etiketi()
+	_ilerleme_dolu.size.x = 96.0 * ilerleme
 	if durum.zincir_adet >= int(Ayarlar.ZINCIR_ESIK[0]):
-		_lbl_zincir.text = "ZİNCİR x%d  ×%.2f" % [durum.zincir_adet, durum.zincir_carpani()]
+		_lbl_zincir.text = Ceviri.t("ZİNCİR x%d  ×%.2f") % [durum.zincir_adet, durum.zincir_carpani()]
 	else:
 		_lbl_zincir.text = ""
 	_lbl_radar.text = _radar_metni()
 	_lbl_ipucu.text = _ipucu(d)
+	_lbl_ipucu.visible = _lbl_ipucu.text != ""
 	_alet_dugmeleri()
+
+## Derinlik sayacı: her yeni 25 m kademesinde günlük videonun renk akışından sıradaki vurgu
+## rengine dönüp 0,3 sn'de eski haline gelir (yazı rengi vurgunun üstünde kodla seçilir, >= 4,5:1);
+## inişte en derin aşılınca "YENİ REKOR" damgası. Sade geçişlerde renk vurgusu yok.
+func _derinlik_izle(d: int) -> void:
+	if arac.usste_mi():
+		_kademe_max = 0
+		_rekor_esigi = durum.en_derin
+		_rekor_verildi = false
+		return
+	var kademe := d / KADEME
+	if kademe > _kademe_max:
+		_kademe_max = kademe
+		_derinlik_vurgula()
+	if not _rekor_verildi and _rekor_esigi >= REKOR_ESIK and d > _rekor_esigi:
+		_rekor_verildi = true
+		_damga_goster()
+
+func _derinlik_vurgula() -> void:
+	if Gecis.sade() or _vurgu_kalan > VURGU_SURESI - VURGU_ARALIK:
+		return
+	_akis_i += 1
+	_vurgu_kalan = VURGU_SURESI
+	_derinlik_boya(true)
+
+func _derinlik_boya(acik: bool) -> void:
+	if not acik:
+		_lbl_derinlik.remove_theme_stylebox_override("normal")
+		_lbl_derinlik.remove_theme_color_override("font_color")
+		return
+	var t := Tema.derinlik_temasi(arac.derinlik())
+	var v := Tema.akis_rengi(t, _akis_i)
+	_lbl_derinlik.add_theme_stylebox_override("normal", Tema.kutu(v, 3, 3, 0))
+	_lbl_derinlik.add_theme_color_override("font_color", Tema.yazi_rengi(v, t))
+
+## "Yeni rekor" damgası: video renk akışında (vurgu renkleri 90 ms adımla döner, sonra ilk renkte
+## durur). Yazı rengi her adımda >= 4,5:1. Sade geçişlerde sabit tek renk.
+func _damga_goster() -> void:
+	var t := Tema.derinlik_temasi(arac.derinlik())
+	if _damga == null:
+		_damga = Panel.new()
+		_damga.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_damga_yazi = Label.new()
+		_damga_yazi.theme_type_variation = &"Vurgu"
+		_damga_yazi.add_theme_font_size_override("font_size", 9)
+		_damga_yazi.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_damga_yazi.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_damga_yazi.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_damga.add_child(_damga_yazi)
+		$HUD.add_child(_damga)
+	_damga_yazi.text = Tema.buyuk(tr("YENİ REKOR"))
+	var w := _damga_yazi.get_minimum_size().x + 16.0
+	_damga.size = Vector2(w, 14.0)
+	_damga.position = Vector2((640.0 - w) * 0.5, 44.0)
+	_damga_yazi.size = _damga.size
+	_damga.pivot_offset = _damga.size * 0.5
+	_damga.scale = Vector2.ONE
+	_damga.visible = true
+	_damga_kalan = DAMGA_SURESI
+	if _damga_tween != null and _damga_tween.is_valid():
+		_damga_tween.kill()
+	_damga_boya(t, 0)
+	if Gecis.sade():
+		return
+	_damga.scale = Vector2(1.5, 1.5)
+	_damga_tween = create_tween()
+	_damga_tween.tween_property(_damga, "scale", Vector2.ONE, 0.16).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	for k in range(1, 7):
+		_damga_tween.tween_callback(_damga_boya.bind(t, k)).set_delay(0.09)
+	_damga_tween.tween_callback(_damga_boya.bind(t, 0)).set_delay(0.09)
+
+func _damga_boya(t: int, k: int) -> void:
+	var v := Tema.akis_rengi(t, k)
+	_damga.add_theme_stylebox_override("panel", Tema.kutu(v, 3))
+	_damga_yazi.add_theme_color_override("font_color", Tema.yazi_rengi(v, t))
 
 ## Deprem uyarı panosu: geri sayım + kararın iki ucu. Son 3 saniyede sayaç
 ## yanıp söner — v0.4'te geri sayım 13 px'lik alt ipucu şeridindeydi ve
@@ -314,23 +441,23 @@ func _deprem_panosu() -> void:
 func _alet_dugmeleri() -> void:
 	if _dgm_dinamit == null:
 		return
-	_dgm_dinamit.text = "DİNAMİT %d" % durum.dinamit
+	_dgm_dinamit.text = Ceviri.t("DİNAMİT %d") % durum.dinamit
 	_dgm_dinamit.disabled = durum.dinamit <= 0
 	var radar_var := durum.alet_var("radar")
 	if not radar_var:
-		_dgm_radar.text = "RADAR yok"
+		_dgm_radar.text = Ceviri.t("RADAR yok")
 	else:
-		_dgm_radar.text = "RADAR KAPA" if _radar_acik else "RADAR AÇ"
+		_dgm_radar.text = Ceviri.t("RADAR KAPA") if _radar_acik else Ceviri.t("RADAR AÇ")
 	_dgm_radar.disabled = not radar_var
-	_dgm_isaret.text = ("İŞARET %d m" % durum.isaret.y) if durum.isaret_var() else "İŞARET KOY"
+	_dgm_isaret.text = (Ceviri.t("İŞARET %d m") % durum.isaret.y) if durum.isaret_var() else Ceviri.t("İŞARET KOY")
 
 ## Ana oyun dışındaki modun HUD etiketi (günlük dünya / Derin Mod).
 func _mod_etiketi() -> String:
 	var e := ""
 	if Kayit.aktif == Kayit.GUNLUK:
-		e += "  •  GÜNLÜK"
+		e += "  ·  " + Ceviri.t("GÜNLÜK")
 	if durum.derin_seviye > 0:
-		e += "  •  DERİN MOD x%d" % durum.derin_seviye
+		e += "  ·  " + Ceviri.t("DERİN MOD x%d") % durum.derin_seviye
 	return e
 
 static func _cubuk(oran: float) -> String:
@@ -342,7 +469,7 @@ func _radar_metni() -> String:
 		return ""
 	var bulunan := dunya.en_yakin_maden(arac.hucre())
 	if bulunan.is_empty():
-		return "Radar: yakında maden yok"
+		return Ceviri.t("Radar: yakında maden yok")
 	var h: Vector2i = bulunan[0]
 	var fark := h - arac.hucre()
 	var ok := ""
@@ -356,8 +483,8 @@ func _radar_metni() -> String:
 		ok += "←"
 	if ok == "":
 		ok = "•"
-	var ad: String = Ayarlar.MADEN_AD.get(dunya.karo_tur(h), "?")
-	return "Radar %s %s %d m" % [ok, ad, int(Vector2(fark).length())]
+	var ad: String = Ceviri.t(String(Ayarlar.MADEN_AD.get(dunya.karo_tur(h), "?")))
+	return Ceviri.t("Radar %s %s %d m") % [ok, ad, int(Vector2(fark).length())]
 
 func _ipucu_goster(metin: String, sure := 2.0) -> void:
 	_ipucu_sabit = metin
@@ -492,6 +619,8 @@ func _toz(konum: Vector2, renk: Color, adet := 8, hiz := 60.0) -> void:
 	get_tree().create_timer(1.0).timeout.connect(p.queue_free)
 
 func _ucan_yazi(konum: Vector2, metin: String, renk: Color) -> void:
+	if yazi_gizli:
+		return   ## tools/kayit.gd: ham oynanış klibinde ekranda yazı olmaz
 	var l := Label.new()
 	l.text = metin
 	l.add_theme_color_override("font_color", renk)
@@ -508,19 +637,19 @@ func _ucan_yazi(konum: Vector2, metin: String, renk: Color) -> void:
 ## Karo türünün atlastaki renginden parçacık rengi (palet tek kaynak).
 static func _karo_renk(tur: int) -> Color:
 	match tur:
-		Ayarlar.BAKIR: return Color("be4a2f")
-		Ayarlar.DEMIR: return Color("c0cbdc")
-		Ayarlar.ALTIN: return Color("feae34")
-		Ayarlar.ELMAS: return Color("2ce8f5")
-		Ayarlar.PLATIN: return Color("63c74d")
-		Ayarlar.GAZ: return Color("63c74d")
-		Ayarlar.LAV: return Color("f77622")
-		Ayarlar.TOPRAK: return Color("b86f50")
-		Ayarlar.TAS: return Color("8b9bb4")
-		Ayarlar.SERT: return Color("5a6988")
-		Ayarlar.BAZALT: return Color("3a4466")
-		Ayarlar.OBSIDYEN: return Color("68386c")
-	return Color("8b9bb4")
+		Ayarlar.BAKIR: return Color("d9773a")
+		Ayarlar.DEMIR: return Color("b7b1a6")
+		Ayarlar.ALTIN: return Color("f3a33d")
+		Ayarlar.ELMAS: return Color("7dd4e7")
+		Ayarlar.PLATIN: return Color("f3e8d7")
+		Ayarlar.GAZ: return Color("6fc38a")
+		Ayarlar.LAV: return Color("e94f36")
+		Ayarlar.TOPRAK: return Color("896843")
+		Ayarlar.TAS: return Color("6d4f33")
+		Ayarlar.SERT: return Color("55402c")
+		Ayarlar.BAZALT: return Color("3b2b20")
+		Ayarlar.OBSIDYEN: return Color("571d13")
+	return Color("6d4f33")
 
 # --- olaylar --------------------------------------------------------------
 
@@ -534,7 +663,7 @@ func _karo_kirildi(tur: int, konum: Vector2) -> void:
 
 func _maden_toplandi(tur: int, alindi: bool, konum: Vector2) -> void:
 	if not alindi:
-		_ipucu_goster("Yük dolu, maden alınmadı!", 1.5)
+		_ipucu_goster(Ceviri.t("Yük dolu, maden alınmadı!"), 1.5)
 		return
 	var carpan := durum.zincir_carpani()
 	var deger := int(round(float(durum.maden_degeri(tur)) * carpan))
@@ -543,10 +672,10 @@ func _maden_toplandi(tur: int, alindi: bool, konum: Vector2) -> void:
 	# Zincir uzadıkça ses tizleşir (rakip analizi: "kombo arttıkça perde yükselir").
 	Ses.cal("maden", 1.0 + 0.08 * float(mini(durum.zincir_adet - 1, 8)))
 	if durum.zincir_adet == int(Ayarlar.ZINCIR_ESIK[0]):
-		_ipucu_goster("Kazı zinciri! Aynı madeni sürdür.", 1.5)
+		_ipucu_goster(Ceviri.t("Kazı zinciri! Aynı madeni sürdür."), 1.5)
 
 func _matkap_yetersiz(gereken: int) -> void:
-	_ipucu_goster("Bu kaya için Matkap Sv%d gerekli." % gereken, 1.8)
+	_ipucu_goster(Ceviri.t("Bu kaya için Matkap Sv%d gerekli.") % gereken, 1.8)
 	Ses.cal("uyari")
 
 func _hasar_alindi(miktar: int, konum: Vector2) -> void:
@@ -577,14 +706,14 @@ func _sandik_acildi(tur: int, konum: Vector2) -> void:
 			metin = "+%d ₺" % miktar
 		"dinamit":
 			durum.dinamit += miktar
-			metin = "+%d dinamit" % miktar
+			metin = Ceviri.t("+%d dinamit") % miktar
 		"yakit":
 			durum.yakit = minf(durum.yakit_kapasitesi(), durum.yakit + float(miktar))
-			metin = "+%d yakıt" % miktar
+			metin = Ceviri.t("+%d yakıt") % miktar
 	_ucan_yazi(konum, metin, Color("fee761"))
 	_toz(konum, Color("feae34"), 18, 120.0)
 	Ses.cal("sandik")
-	_ipucu_goster("Sandık: %s" % metin, 2.0)
+	_ipucu_goster(Ceviri.t("Sandık: %s") % metin, 2.0)
 
 func _eser_bul(konum: Vector2) -> void:
 	# Sıra Durum.sonraki_eser'de: Derin Mod'da 7. eser ilk odada gelir, ilk oyunda hiç.
@@ -599,8 +728,8 @@ func _eser_bul(konum: Vector2) -> void:
 	_toz(konum, Color("feae34"), 26, 140.0)
 	Ses.cal("sat")
 	sars(3.0)
-	_uyari_goster("ESER BULUNDU  (%d/%d)\n\n%s — %s\n\n%s\n\nMüzeye eklendi (üs menüsünden okuyabilirsin)."
-		% [durum.eser_toplanan(), durum.eser_sayisi(), e["ad"], e["metin"], e["hikaye"]])
+	_uyari_goster(Ceviri.t("ESER BULUNDU  (%d/%d)\n\n%s — %s\n\n%s\n\nMüzeye eklendi (üs menüsünden okuyabilirsin).")
+		% [durum.eser_toplanan(), durum.eser_sayisi(), Ceviri.t(e["ad"]), Ceviri.t(e["metin"]), Ceviri.t(e["hikaye"])])
 	_kesif_yenile(true)   ## 7. eser ışığı büyütüyor
 
 func _cekirdege_ulasildi() -> void:
@@ -610,10 +739,11 @@ func _cekirdege_ulasildi() -> void:
 	durum.kacis = true
 	durum.yakit = durum.yakit_kapasitesi()
 	sars(10.0)
+	Gecis.vurus(&"flas", 1, 0.5, 0.45)   ## çekirdeğe dokunuş: tek flaş vuruşu (bekletmez)
 	_toz(arac.global_position, Color("b55088"), 40, 200.0)
 	Ses.cal("patlama")
 	_kaydet()
-	_uyari_goster("ÇEKİRDEĞE DOKUNDUN!\n\nKabuk çöküyor — yüzeye kaç!\nDepo dolduruldu, tüm aletler açık.\nSüre yakıtın kadar.")
+	_uyari_goster(Ceviri.t("ÇEKİRDEĞE DOKUNDUN!\n\nKabuk çöküyor — yüzeye kaç!\nDepo dolduruldu, tüm aletler açık.\nSüre yakıtın kadar."))
 
 func _kacis_kontrol() -> void:
 	if durum.kacis and not durum.kazandi and arac.usste_mi():
@@ -631,12 +761,14 @@ func _kosu_bitti() -> void:
 	durum.onar()
 	_kaydet()
 	Ses.cal("uyari")
+	Gecis.yanip_son()   ## v0.8: yüzeye çekilme tehlike rengiyle kısa flaş + sarsıntı (girdiyi kilitlemez)
+	sars(6.0)
 	var satirlar := PackedStringArray()
-	satirlar.append("Yüzeye çekildin." if not kacisti else "Kaçış başarısız — yüzeye çekildin.")
-	satirlar.append("Çekme ücreti: %d ₺" % int(sonuc["ucret"]))
+	satirlar.append(Ceviri.t("Yüzeye çekildin.") if not kacisti else Ceviri.t("Kaçış başarısız — yüzeye çekildin."))
+	satirlar.append(Ceviri.t("Çekme ücreti: %d ₺") % int(sonuc["ucret"]))
 	if not Dictionary(sonuc["birakilan"]).is_empty():
-		satirlar.append("Yükün yarısı %d m'de sandıkta kaldı — geri alabilirsin." % h.y)
-	satirlar.append("Yakıt doldurmak için üs menüsünü aç.")
+		satirlar.append(Ceviri.t("Yükün yarısı %d m'de sandıkta kaldı — geri alabilirsin.") % h.y)
+	satirlar.append(Ceviri.t("Yakıt doldurmak için üs menüsünü aç."))
 	_uyari_goster("\n".join(satirlar))
 
 func _kazandi() -> void:
@@ -649,27 +781,32 @@ func _kazandi() -> void:
 	_kaydet()
 	Ses.cal("sat")
 	Ses.muzik_cal("bitis")
-	var son := "Bütün eserleri topladın — çekirdeğin hikâyesi müzede tamam."
+	var son := Ceviri.t("Bütün eserleri topladın — çekirdeğin hikâyesi müzede tamam.")
 	if durum.eser_toplanan() < durum.eser_sayisi():
-		son = "Eksik eserler çekirdeğin hikâyesinin kalan parçalarını taşıyor."
-	var sonraki_mod := "Menüde DERİN MOD açıldı: yeni tohum, sert kaya, dar ışık, sık deprem ve yalnız orada bulunan 7. eser — eser bonusların kalır."
+		son = Ceviri.t("Eksik eserler çekirdeğin hikâyesinin kalan parçalarını taşıyor.")
+	var sonraki_mod := Ceviri.t("Menüde DERİN MOD açıldı: yeni tohum, sert kaya, dar ışık, sık deprem ve yalnız orada bulunan 7. eser — eser bonusların kalır.")
 	if durum.derin_mi():
-		sonraki_mod = "Derin Mod x%d tamamlandı. Menüde x%d açıldı — eserlerin seninle gelir." % [
+		sonraki_mod = Ceviri.t("Derin Mod x%d tamamlandı. Menüde x%d açıldı — eserlerin seninle gelir.") % [
 			durum.derin_seviye, durum.derin_seviye + 1]
 	$HUD/Bitis/M/V/Metin.text = bitis_metni(durum, Kayit.oyuncu_yukle(), son, sonraki_mod)
+	$HUD/Bitis/M/V/Tekrar.text = Ceviri.t("Tekrar — Derin Mod x%d") % (Kayit.derin_seviyesi() + 1)
 	_bitis.visible = true
+	Gecis.acilis(&"iris", 1, 0.45)   ## oyun sonu: kart ortadan açılır (sade kipte anında)
+	$HUD/Bitis/M/V/Tekrar.grab_focus()
 
 ## Bitiş ekranının dökümü (v0.7): bu dünyanın sayaçları + [oyuncu] toplamı. Saf —
 ## test sahne kurmadan metni sınıyor. `toplam` _kaydet'ten SONRA okunmalı ki bu koşu
 ## toplama girmiş olsun. Satırlar 480 px'e sarılır (oyun.tscn autowrap), 640×360'a sığar.
 static func bitis_metni(d: Durum, toplam: Dictionary, son: String, sonraki_mod: String) -> String:
 	var s := d.istatistik()
-	return "ÇEKİRDEK ÇIKARILDI!\n\nSüre %s  •  En derin %d m  •  Para %d ₺  •  Eser %d/%d  •  Tohum %s\n\nBu dünya:  %d karo kazıldı  •  %d deprem  •  %d yüzeye çekilme  •  %d ₺ satış\nToplam (bütün dünyalar):  %d karo  •  %d deprem  •  %d çekilme  •  %d ₺ satış  •  %s oyun\n\n%s\n\n%s" % [
-		_sure_metni(d.sure), d.en_derin, d.para, d.eser_toplanan(), d.eser_sayisi(), TohumKodu.kodla(d.tohum),
-		int(s["kazilan_karo"]), int(s["deprem"]), int(s["olum"]), int(s["satis_toplam"]),
-		int(toplam.get("kazilan_karo", 0)), int(toplam.get("deprem", 0)), int(toplam.get("olum", 0)),
-		int(toplam.get("satis_toplam", 0)), _sure_metni(float(toplam.get("sure", 0.0))),
-		son, sonraki_mod]
+	return Ceviri.t("SÜRE %s  ·  EN DERİN %d m  ·  PARA %d ₺  ·  ESER %d/%d  ·  TOHUM %s") % [
+			_sure_metni(d.sure), d.en_derin, d.para, d.eser_toplanan(), d.eser_sayisi(), TohumKodu.kodla(d.tohum)] \
+		+ "\n\n" + Ceviri.t("Bu dünya:  %d karo kazıldı  ·  %d deprem  ·  %d yüzeye çekilme  ·  %d ₺ satış") % [
+			int(s["kazilan_karo"]), int(s["deprem"]), int(s["olum"]), int(s["satis_toplam"])] \
+		+ "\n" + Ceviri.t("Toplam (bütün dünyalar):  %d karo  ·  %d deprem  ·  %d çekilme  ·  %d ₺ satış  ·  %s oyun") % [
+			int(toplam.get("kazilan_karo", 0)), int(toplam.get("deprem", 0)), int(toplam.get("olum", 0)),
+			int(toplam.get("satis_toplam", 0)), _sure_metni(float(toplam.get("sure", 0.0)))] \
+		+ "\n\n" + son + "\n" + sonraki_mod
 
 static func _sure_metni(s: float) -> String:
 	return "%d:%02d" % [int(s) / 60, int(s) % 60]
@@ -733,6 +870,7 @@ func _deprem_uygula() -> void:
 	_harita_guncelle(kapanan)
 	_harita_guncelle(yeni.keys())
 	sars(12.0)
+	Gecis.vurus(&"glitch", Tema.derinlik_temasi(arac.derinlik()), 0.5, 0.35)   ## deprem: yatay dilimler kayar, renk yarıklarıyla söner
 	Ses.cal("deprem")   ## v0.7: düşük frekanslı sarsıntı + çatırtı (tools/ses_uret.gd), patlama değil
 	_toz(arac.global_position, _karo_renk(Ayarlar.TOPRAK), 30, 160.0)
 	# Oyuncunun kararının karşılığı: yüzeye çıktıysa ikramiye, derinde kaldıysa hasar.
@@ -742,12 +880,12 @@ func _deprem_uygula() -> void:
 		durum.para += int(k["odul"])
 		_ucan_yazi(arac.global_position, "+%d ₺" % int(k["odul"]), Color("fee761"))
 		Ses.cal("sat")
-		son = "  Kabuk nöbeti ikramiyesi +%d ₺." % int(k["odul"])
+		son = Ceviri.t("  Kabuk nöbeti ikramiyesi +%d ₺.") % int(k["odul"])
 	elif int(k["hasar"]) > 0:
 		arac.hasar(int(k["hasar"]), arac.global_position)
-		son = "  Derinde kaldın: -%d can." % int(k["hasar"])
+		son = Ceviri.t("  Derinde kaldın: -%d can.") % int(k["hasar"])
 	_kaydet()
-	_ipucu_goster("DEPREM! %d karo tünel kapandı, %d yeni damar/gaz çıktı.%s"
+	_ipucu_goster(Ceviri.t("DEPREM! %d karo tünel kapandı, %d yeni damar/gaz çıktı.%s")
 		% [kapanan.size(), yeni.size() - kapanan.size(), son], 4.0)
 
 # --- tehlikeler -----------------------------------------------------------
@@ -815,9 +953,9 @@ func _sandik_kontrol() -> void:
 		var adet := 0
 		for tur in alinan:
 			adet += int(alinan[tur])
-		_ucan_yazi(arac.global_position, "+%d parça" % adet, Color("63c74d"))
+		_ucan_yazi(arac.global_position, Ceviri.t("+%d parça") % adet, Color("63c74d"))
 		Ses.cal("sandik")
-		_ipucu_goster("Düşürdüğün yükü geri aldın (%d parça)." % adet, 2.0)
+		_ipucu_goster(Ceviri.t("Düşürdüğün yükü geri aldın (%d parça).") % adet, 2.0)
 		_nesne_yenile()
 		return
 
@@ -827,6 +965,7 @@ func _dugme(kap: VBoxContainer, metin: String, kapali: bool, geri: Callable) -> 
 	var b := Button.new()
 	b.text = metin
 	b.disabled = kapali
+	b.theme_type_variation = &"Kucuk"
 	b.add_theme_font_size_override("font_size", 11)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.pressed.connect(func():
@@ -847,49 +986,49 @@ func _magaza_ac() -> void:
 	_magaza_yenile()
 
 func _magaza_yenile() -> void:
-	var satirlar := PackedStringArray(["Yük: %d/%d ağırlık (%d parça)"
+	var satirlar := PackedStringArray([Ceviri.t("Yük: %d/%d ağırlık (%d parça)")
 		% [durum.yuk_toplam(), durum.yuk_kapasitesi(), durum.yuk_adet()]])
 	for tur in Ayarlar.MADEN_AD:
 		var adet := int(durum.yuk.get(tur, 0))
 		if adet > 0:
-			satirlar.append("   %s x%d = %d ₺  (%d ağırlık)" % [Ayarlar.MADEN_AD[tur], adet,
+			satirlar.append(Ceviri.t("   %s x%d = %d ₺  (%d ağırlık)") % [Ceviri.t(Ayarlar.MADEN_AD[tur]), adet,
 				adet * durum.maden_degeri(tur), adet * int(Ayarlar.MADEN_AGIRLIK[tur])])
 	if durum.yuk_bonus > 0:
-		satirlar.append("   zincir ikramiyesi +%d ₺" % durum.yuk_bonus)
-	satirlar.append("Para: %d ₺   •   Dinamit: %d   •   İstasyon kiti: %d"
+		satirlar.append(Ceviri.t("   zincir ikramiyesi +%d ₺") % durum.yuk_bonus)
+	satirlar.append(Ceviri.t("Para: %d ₺   •   Dinamit: %d   •   İstasyon kiti: %d")
 		% [durum.para, durum.dinamit, durum.istasyon_kiti])
 	$HUD/Magaza/M/V/Bilgi.text = "\n".join(satirlar)
 
 	var liste: VBoxContainer = $HUD/Magaza/M/V/Kaydir/Liste
 	_temizle(liste)
-	_dugme(liste, "Sat  (+%d ₺)" % durum.yuk_degeri(), durum.yuk_toplam() == 0, _sat)
+	_dugme(liste, Ceviri.t("Sat  (+%d ₺)") % durum.yuk_degeri(), durum.yuk_toplam() == 0, _sat)
 	var dolum := durum.yakit_dolum_fiyati()
-	_dugme(liste, "Yakıt doldur  (%d ₺)" % dolum, dolum <= 0 or durum.para <= 0, _yakit_al)
+	_dugme(liste, Ceviri.t("Yakıt doldur  (%d ₺)") % dolum, dolum <= 0 or durum.para <= 0, _yakit_al)
 	for alan in Ayarlar.GELISTIRMELER:
 		var s := durum.seviye(alan)
 		var f := durum.fiyat(alan)
 		if f < 0:
-			_dugme(liste, "%s Sv%d — en üst" % [Ayarlar.GELISTIRME_AD[alan], s + 1], true, _bos_islem)
+			_dugme(liste, Ceviri.t("%s Sv%d — en üst") % [Ceviri.t(Ayarlar.GELISTIRME_AD[alan]), s + 1], true, _bos_islem)
 		else:
-			_dugme(liste, "%s Sv%d→Sv%d  (%d ₺)" % [Ayarlar.GELISTIRME_AD[alan], s + 1, s + 2, f],
+			_dugme(liste, Ceviri.t("%s Sv%d→Sv%d  (%d ₺)") % [Ceviri.t(Ayarlar.GELISTIRME_AD[alan]), s + 1, s + 2, f],
 				durum.para < f, _gelistir.bind(alan))
 	# Alet açıklamaları dokunmatikte tuş değil DÜĞME anlatır (Ipucu.MAGAZA).
 	for ad in Ayarlar.ALET_FIYAT:
 		var aciklama := Ipucu.magaza(ad, _dokunmatik)
 		if bool(durum.aletler.get(ad, false)):
-			_dugme(liste, "%s ✔ — %s" % [Ayarlar.ALET_AD[ad], aciklama], true, _bos_islem)
+			_dugme(liste, "%s ✔ — %s" % [Ceviri.t(Ayarlar.ALET_AD[ad]), aciklama], true, _bos_islem)
 		else:
 			var f2 := int(Ayarlar.ALET_FIYAT[ad])
-			_dugme(liste, "%s  (%d ₺) — %s" % [Ayarlar.ALET_AD[ad], f2, aciklama],
+			_dugme(liste, "%s  (%d ₺) — %s" % [Ceviri.t(Ayarlar.ALET_AD[ad]), f2, aciklama],
 				durum.para < f2, _alet_al.bind(ad))
-	_dugme(liste, "Dinamit x1  (%d ₺) — %s"
+	_dugme(liste, Ceviri.t("Dinamit x1  (%d ₺) — %s")
 		% [Ayarlar.DINAMIT_FIYAT, Ipucu.magaza("dinamit", _dokunmatik)],
 		durum.para < Ayarlar.DINAMIT_FIYAT, _dinamit_al)
-	_dugme(liste, "İstasyon kiti  (%d ₺) — %s"
+	_dugme(liste, Ceviri.t("İstasyon kiti  (%d ₺) — %s")
 		% [Ayarlar.ISTASYON_FIYAT, Ipucu.magaza("istasyon", _dokunmatik)],
 		durum.para < Ayarlar.ISTASYON_FIYAT, _istasyon_kiti_al)
-	_dugme(liste, "Müze  (%d/%d eser)" % [durum.eser_toplanan(), durum.eser_sayisi()], false, _muze_ac)
-	_dugme(liste, "Kapat  (Esc)", false, _panelleri_kapat)
+	_dugme(liste, Ceviri.t("Müze  (%d/%d eser)") % [durum.eser_toplanan(), durum.eser_sayisi()], false, _muze_ac)
+	_dugme(liste, Ceviri.t("Kapat  (Esc)"), false, _panelleri_kapat)
 
 func _sat() -> void:
 	durum.sat()
@@ -926,7 +1065,7 @@ func _muze_ac() -> void:
 	_magaza.visible = false
 	_muze.visible = true
 	arac.kilitli = true
-	$HUD/Muze/M/V/Bilgi.text = "Her eser hem kalıcı bir bonus verir hem de çekirdeğin\nsırrından bir parça anlatır — %d/%d parça toplandı." % [
+	$HUD/Muze/M/V/Bilgi.text = Ceviri.t("Her eser hem kalıcı bir bonus verir hem de çekirdeğin\nsırrından bir parça anlatır — %d/%d parça toplandı.") % [
 		durum.eser_toplanan(), durum.eser_sayisi()]
 	var liste: VBoxContainer = $HUD/Muze/M/V/Kaydir/Liste
 	_temizle(liste)
@@ -936,21 +1075,21 @@ func _muze_ac() -> void:
 		var e: Dictionary = Ayarlar.ESERLER[i]
 		var bulundu := durum.eserler.has(i)
 		var l := Label.new()
-		l.text = ("✔ %d. %s — %s" % [i + 1, e["ad"], e["metin"]]) if bulundu \
-			else "%d. %s" % [i + 1, Ayarlar.ESER_KILITLI]
+		l.text = ("✔ %d. %s — %s" % [i + 1, Ceviri.t(e["ad"]), Ceviri.t(e["metin"])]) if bulundu \
+			else "%d. %s" % [i + 1, Ceviri.t(Ayarlar.ESER_KILITLI)]
 		l.add_theme_font_size_override("font_size", 13)
 		l.add_theme_color_override("font_color", Color("fee761") if bulundu else Color("5a6988"))
 		liste.add_child(l)
 		if not bulundu:
 			continue
 		var hk := Label.new()
-		hk.text = String(e["hikaye"])
+		hk.text = Ceviri.t(String(e["hikaye"]))
 		hk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		hk.custom_minimum_size = Vector2(380, 0)
 		hk.add_theme_font_size_override("font_size", 11)
 		hk.add_theme_color_override("font_color", Color("c0cbdc"))
 		liste.add_child(hk)
-	_dugme(liste, "Geri", false, _muze_geri)
+	_dugme(liste, Ceviri.t("Geri"), false, _muze_geri)
 
 # --- ışınlanma ve istasyon ------------------------------------------------
 
@@ -968,26 +1107,26 @@ func _isinlanma_yenile() -> void:
 	$HUD/Isinlanma/M/V/Bilgi.text = "Derinlik %d m  •  İstasyon kiti: %d  •  Yolculuk %d yakıt
 %s" % [
 		h.y, durum.istasyon_kiti, int(Ayarlar.ISINLAMA_YAKIT),
-		"Bağlısın." if hub else "Yolculuk için üste ya da bir istasyona gel."]
+		Ceviri.t("Bağlısın.") if hub else Ceviri.t("Yolculuk için üste ya da bir istasyona gel.")]
 	var liste: VBoxContainer = $HUD/Isinlanma/M/V/Kaydir/Liste
 	_temizle(liste)
-	_dugme(liste, "Yüzeye dön (üs)", arac.usste_mi() or not hub,
+	_dugme(liste, Ceviri.t("Yüzeye dön (üs)"), arac.usste_mi() or not hub,
 		_isinla.bind(Vector2(Ayarlar.US_X, -24.0)))
 	for i in durum.istasyonlar:
 		var hedef: Vector2i = i
-		_dugme(liste, "İstasyon — %d m" % hedef.y, not hub or absi(hedef.y - h.y) < 2,
+		_dugme(liste, Ceviri.t("İstasyon — %d m") % hedef.y, not hub or absi(hedef.y - h.y) < 2,
 			_isinla.bind(dunya.hucre_merkezi(hedef)))
 	if durum.isaret_var():
-		_dugme(liste, "İşarete ışınlan — %d m  (tek kullanımlık, sonra silinir)" % durum.isaret.y,
+		_dugme(liste, Ceviri.t("İşarete ışınlan — %d m  (tek kullanımlık, sonra silinir)") % durum.isaret.y,
 			not hub or durum.isaret.distance_squared_to(h) <= 2, _isaret_isinla)
 	if durum.istasyon_kiti <= 0:
-		_dugme(liste, "İstasyon kiti yok — üsten al", true, _bos_islem)
+		_dugme(liste, Ceviri.t("İstasyon kiti yok — üsten al"), true, _bos_islem)
 	elif durum.istasyon_kurulabilir(h):
-		_dugme(liste, "Buraya istasyon kur (%d m)" % h.y, false, _istasyon_kur.bind(h))
+		_dugme(liste, Ceviri.t("Buraya istasyon kur (%d m)") % h.y, false, _istasyon_kur.bind(h))
 	else:
-		_dugme(liste, "Buraya kurulamaz — en az %d m, istasyonlar %d m aralıklı"
+		_dugme(liste, Ceviri.t("Buraya kurulamaz — en az %d m, istasyonlar %d m aralıklı")
 			% [Ayarlar.ISTASYON_EN_SIG, Ayarlar.ISTASYON_ARALIK], true, _bos_islem)
-	_dugme(liste, "Kapat  (Esc)", false, _panelleri_kapat)
+	_dugme(liste, Ceviri.t("Kapat  (Esc)"), false, _panelleri_kapat)
 
 func _bos_islem() -> void:
 	pass
@@ -1001,12 +1140,10 @@ func _istasyon_kur(h: Vector2i) -> void:
 func _isinla(hedef: Vector2) -> void:
 	_panelleri_kapat()
 	Ses.cal("isinlan")
-	_karart(true, 0.2)
-	await get_tree().create_timer(0.2).timeout
-	arac.isinlan(hedef)
-	dunya.hazirla(arac.global_position)
-	kamera.reset_smoothing()
-	_karart(false, 0.2)
+	await Gecis.ara(&"bloklar", Tema.derinlik_temasi(maxi(0, floori(hedef.y / Ayarlar.KARO))), func() -> void:   ## ışınlanma: blok örtüsünün altında yer değişir
+		arac.isinlan(hedef)
+		dunya.hazirla(arac.global_position)
+		kamera.reset_smoothing())
 
 ## İstasyon ve düşen sandık görsellerini yeniden kurar.
 func _nesne_yenile() -> void:
@@ -1105,6 +1242,15 @@ func _uyari_kapat() -> void:
 	_uyari.visible = false
 	arac.kilitli = _panel_acik()
 
+## Duraklatma: Devam / Ayarlar / Menü + tam tuş listesi (menüde tek satır vardı).
+func _duraklat_ac() -> void:
+	_lbl_tuslar.text = tr(Ipucu.TUSLAR_DOKUNMA if _dokunmatik else Ipucu.TUSLAR)
+	_duraklat.visible = true
+	arac.kilitli = true
+	Ses.cal("menu")
+	Gecis.acilis(&"perde", Tema.derinlik_temasi(arac.derinlik()), 0.22)   ## duraklatma: perde açılır
+	$HUD/Duraklat/M/V/Devam.grab_focus()
+
 func _duraklat_kapat() -> void:
 	_duraklat.visible = false
 	arac.kilitli = false
@@ -1141,7 +1287,7 @@ func dokunmatik_kur() -> void:
 	kutu.position = Vector2(452, 4)
 	kutu.add_theme_constant_override("separation", 4)
 	$Dokunmatik.add_child(kutu)
-	for veri in [["Üs", _dokun_us], ["Harita", _dokun_harita], ["■", _dokun_duraklat]]:
+	for veri in [[Ceviri.t("Üs"), _dokun_us], [Ceviri.t("Harita"), _dokun_harita], ["■", _dokun_duraklat]]:
 		var b := Button.new()
 		b.text = String(veri[0])
 		b.add_theme_font_size_override("font_size", 11)
@@ -1154,11 +1300,11 @@ func dokunmatik_kur() -> void:
 	alet.position = ALET_KONUM
 	alet.add_theme_constant_override("separation", 6)
 	$Dokunmatik.add_child(alet)
-	_dgm_dinamit = _alet_dugme(alet, "DİNAMİT 0", _dinamit_kullan)
-	_dgm_radar = _alet_dugme(alet, "RADAR AÇ", _radar_degistir)
-	_dgm_isaret = _alet_dugme(alet, "İŞARET KOY", _isaret_koy)
+	_dgm_dinamit = _alet_dugme(alet, Ceviri.t("DİNAMİT 0"), _dinamit_kullan)
+	_dgm_radar = _alet_dugme(alet, Ceviri.t("RADAR AÇ"), _radar_degistir)
+	_dgm_isaret = _alet_dugme(alet, Ceviri.t("İŞARET KOY"), _isaret_koy)
 	for veri in [[Vector2(0, 250), Vector2(150, 110), "◀"], [Vector2(490, 250), Vector2(150, 110), "▶"],
-			[Vector2(150, 250), Vector2(150, 110), "▼ KAZ"], [Vector2(150, 120), Vector2(150, 110), "▲ UÇ"]]:
+			[Vector2(150, 250), Vector2(150, 110), Ceviri.t("▼ KAZ")], [Vector2(150, 120), Vector2(150, 110), Ceviri.t("▲ UÇ")]]:
 		var p := Panel.new()
 		p.position = veri[0]
 		p.size = veri[1]
@@ -1200,18 +1346,17 @@ func _dokun_duraklat() -> void:
 	if _panel_acik():
 		_panelleri_kapat()
 		return
-	Ses.cal("menu")
-	_duraklat.visible = true
-	arac.kilitli = true
-
-func _karart(kapali: bool, sure := 0.45) -> void:
-	create_tween().tween_property(_karartma, "color:a", 1.0 if kapali else 0.0, sure)
+	_duraklat_ac()
 
 func _menuye() -> void:
 	_kaydet()
-	_karart(true, 0.3)
-	await get_tree().create_timer(0.3).timeout
-	get_tree().change_scene_to_file("res://scenes/menu.tscn")
+	Gecis.git("res://scenes/menu.tscn", Tema.derinlik_temasi(arac.derinlik()), &"perde")
+
+## Oyun sonunda tek dokunuşla tekrar: bir üst Derin Mod turu (yeni tohum, eserler kalır).
+func _tekrar() -> void:
+	_kaydet()
+	Kayit.derin_mod_hazirla()
+	Gecis.git("res://scenes/oyun.tscn", 1, &"bloklar")
 
 func _kaydet() -> void:
 	var d := durum.sozluge()
