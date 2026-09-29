@@ -17,12 +17,15 @@ topla, yakıt bitmeden yüzeye dön, sat, aracını geliştir, 250 m'deki çekir
 
 ![Menü](docs/ekran/menu_en.png)
 
-Durum: **v0.8** — arayüz yenilemesi. Oyun tanıtım videosundaki dünyayla aynı
+Durum: **v0.9** — günlük video imkânları (renk akışı + sekiz geçiş ailesi) v0.8'in arayüz
+yenilemesinin üstüne. Oyun tanıtım videosundaki dünyayla aynı
 dilde: düz renk toprak bantları, kağıt rengi matkap, amber maden kareleri, Instrument
 Sans + JetBrains Mono, tek büyük **Oyna**, yeni duraklat / oyun sonu / ayarlar
 ekranları ve **Türkçe / İngilizce** arayüz (varsayılan: tarayıcı dili). Çekirdek
 mekanik ve denge aynı; iki oynanış düzeltmesi: dinamit için kojot + tampon, deliğe
-düşerken kenara asılmayı önleyen kazı hizalama. Her push'ta **333 birim + 191
+düşerken kenara asılmayı önleyen kazı hizalama. Menü açılışı, sahne geçişleri, ışınlanma,
+derinlik sayacı, yeni rekor, deprem ve oyun sonu günlük videolardaki geçiş ve renk akışıyla;
+ayarlarda **Sade geçişler** (hareket azaltma). Her push'ta **358 birim + 238
 oynanış + 17 ölçüm** testinin ve fay hattı kapısının koştuğu CI. Denetim
 [`docs/DENETIM.md`](docs/DENETIM.md), tasarım ve ölçümler
 [`docs/TASARIM.md`](docs/TASARIM.md).
@@ -508,7 +511,7 @@ scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar (dil dahil)
 scripts/tema.gd           video paleti, mono etiket / kutu yardımcıları (assets/tema.tres'in kaynağı tools/tema_uret.gd)
 scripts/ceviri.gd         TR/EN: tr("Türkçe metin") anahtar, tablo scripts/ceviri_en.gd
-scripts/gecis.gd          autoload: renk bandı sahne geçişi, yüzeye çekilme flaşı
+scripts/gecis.gd          autoload: sekiz geçiş ailesi (assets/gecis.gdshader), sahne geçişi, vuruşlar, sade kip
 scripts/ui.gd             menü öğelerinin sıralı girişi, düğme basış hareketi
 scripts/ses.gd            autoload: efekt/müzik (iki oyuncu, crossfade)/döngü sesi/ayar
 tools/                    varlık üretimi (düz renk görseller, tema, müzik, sentez efekt), ekran/kanıt/kayıt araçları, ölçüm (his_olc, fps), kayıt fikstürü
@@ -523,7 +526,7 @@ Kayıt dosyası: `user://kayit.cfg`
 kazılan ve depremle değişen hücreler, keşif haritası (`kesif`: 17.408 bayt,
 deflate + base64) · `[gunluk]` günlük dünyanın ayrı yuvası · `[derin]` Derin
 Mod'un ayrı yuvası (v0.6) · `[oyuncu]` bütün yuvaların birikimli istatistiği (v0.7)
-· `[ayar]` ses/tam ekran/sarsıntı ve dil (v0.8) tercihleri.
+· `[ayar]` ses/tam ekran/sarsıntı, dil (v0.8) ve sade geçişler (v0.9) tercihleri.
 
 ## Varlıklar
 

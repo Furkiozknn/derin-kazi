@@ -4,13 +4,24 @@
 ## Gerçek oyun sahnesi oynanır; araç "insan bandında" sürülür: karar her 0,14-0,30 sn'de bir
 ## verilir (tepki gecikmesi), yakındaki madene yanal sapar, gaz/lav/kazılamaz kayayı gördüğünde
 ## yön değiştirir, ara sıra yanlış yöne basar. Ortada bir ölüm (can 0 → yüzeye çekilme, tehlike
-## flaşı) bilerek tetiklenir; klip gerçek bir sahne geçişiyle (Gecis renk bandı) açılır.
+## flaşı) bilerek tetiklenir; klip gerçek bir sahne geçişiyle (Gecis: itme) açılır ve süresince
+## sekiz geçiş ailesinin hepsi görünür (v0.9, OLAYLAR: bloklar, zoom, glitch, çekilme flaşı, perde, iris, kararma).
 ## Arayüz katmanı ve uçan yazılar gizli. BU BİR BOT KAYDIDIR: insan hissinin kanıtı değil.
 extends Node
 
 const SURE := 19.0          ## saniye (oyun zamanı; --fixed-fps ile kare = 1/fps)
 const OLUM_ZAMANI := 11.0   ## sn: bu anda can 0'a iner (yüzeye çekilme + flaş)
 const HEDEF_DERIN := 62
+## Geçiş programı: [saniye, aile, derinlik teması, vuruş mu]. Vuruş = örtü tepeden söner (glitch),
+## değilse tam örtülü başlayıp açılır (Gecis.acilis). Çekilme flaşı OLUM_ZAMANI'nda oyunun kendisinden gelir.
+const OLAYLAR := [
+	[3.4, &"bloklar", 0, false],
+	[6.0, &"zoom", 0, false],
+	[8.4, &"glitch", 1, true],
+	[13.6, &"perde", 1, false],
+	[15.8, &"iris", 0, false],
+	[17.5, &"kararma", 1, false],
+]
 
 var _sahne: Node
 var _arac: Arac
@@ -24,6 +35,7 @@ var _olum_oldu := false
 var _uyari_kapandi := false
 var _rng := RandomNumberGenerator.new()
 var _bitti := false
+var _olay_i := 0
 
 func _ready() -> void:
 	_rng.seed = 20260929
@@ -33,7 +45,7 @@ func _ready() -> void:
 	Kayit.sil()
 	# Gelişmiş bir kayıt: matkap Sv3 (kazı hızlı, klipte hareket bol), geniş kasa, bol yakıt.
 	Kayit.kaydet({"tohum": 4242, "matkap": 4, "depo": 3, "kasa": 3, "govde": 2, "para": 400})
-	Gecis.kapat_hemen(Tema.AMBER)   ## klip renk bandıyla açılır (bant zaten örtülü başlar)
+	Gecis.kapat_hemen(&"itme", 0)   ## klip renk bandıyla açılır (bant zaten örtülü başlar)
 	_sahne = load("res://scenes/oyun.tscn").instantiate()
 	add_child(_sahne)
 	await get_tree().process_frame
@@ -56,6 +68,13 @@ func _physics_process(delta: float) -> void:
 		print("KAYIT SURUCU BITTI: %.1f sn, en derin %d m, olum %s" % [_zaman, _durum.en_derin, str(_olum_oldu)])
 		get_tree().quit(0)
 		return
+	if _olay_i < OLAYLAR.size() and _zaman >= float(OLAYLAR[_olay_i][0]):
+		var o: Array = OLAYLAR[_olay_i]
+		_olay_i += 1
+		if bool(o[3]):
+			Gecis.vurus(o[1], int(o[2]), 0.6, 0.5)
+		else:
+			Gecis.acilis(o[1], int(o[2]), 0.5)
 	if _olum_oldu and not _uyari_kapandi and _zaman >= OLUM_ZAMANI + 0.9:
 		_uyari_kapandi = true
 		_sahne.call("_uyari_kapat")   ## "yüzeye çekildin" paneli (HUD gizli, ama araç kilitli kalmasın)

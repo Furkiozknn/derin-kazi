@@ -58,7 +58,7 @@ bağlandı (tema üretiminde her yazı tipinin `fallbacks` listesi).
 |---|---|---|
 | Menü öğeleri girişi | 220 ms, 40 ms arayla sırayla | ease-out cubic |
 | Düğme basışı | 90 ms %96'ya küçülür, 120 ms geri | ease-out |
-| Ekran geçişi (menü ⇄ oyun) | amber bant 260 ms örter, 200 ms açar | ease-out / ease-in cubic |
+| Ekran geçişi (menü ⇄ oyun) | sekiz aileden biri (v0.9, §7): 260 ms örter, 200 ms açar | ease-out / ease-in cubic |
 | Yüzeye çekilme | 300 ms tehlike rengi flaş + kısa sarsıntı; **girdiyi kilitlemez** | ease-out |
 | Menü matkabı | 250 m'yi 14 sn'de "iner" (doğrusal), dibe varınca baştan | doğrusal |
 | Araç | kazma / iniş ezilmesi (mevcut), toz parçacığı (mevcut) | rehberin yaylanma istisnası |
@@ -112,8 +112,8 @@ Dokunmatik düzen (732×412):
 - **Renkler**: `scripts/tema.gd` (`Tema`). Dünya renkleri iki yerde aynı değerlerle
   duruyor: `tools/sprite_uret.gd` (görseller) ve `scripts/ayarlar.gd` (katman
   arka plan tonu, parçacık, sis).
-- **Sahne geçişi**: `scripts/gecis.gd` (autoload `Gecis`: `git`, `kapat`, `ac`,
-  `yanip_son`); menü → oyun ve oyun → menü / oyun sonu tekrarı bunu kullanır.
+- **Sahne geçişi**: `scripts/gecis.gd` (autoload `Gecis`: `git`, `kapat`, `ac`, `acilis`, `ara`,
+  `vurus`, `yanip_son`) + `assets/gecis.gdshader`; kullanım yerleri §7'de.
 - **Menü animasyonu**: `scripts/ui.gd` (`UI.sirayla_gir`, `UI.dugmeleri_bagla`).
 - **TR/EN**: `scripts/ceviri.gd` + `scripts/ceviri_en.gd`. Kaynak dil Türkçe:
   `tr("Türkçe metin")` (static metotlarda ve sabit tablolarda `Ceviri.t`);
@@ -170,7 +170,7 @@ bırakıldı. **Kojot, tampon ve hizalama değerleri bir insanla denenmedi.**
 | `index.wasm` | 39.514.754 bayt | 39.514.754 bayt (motor, aynı) |
 | `index.js` | 279.815 bayt | 279.815 bayt |
 | Toplam (pck+wasm+js) | 40.765.321 bayt | 41.014.729 bayt (**+%0,61**) |
-| Testler | 304 birim + 156 oynanış + 7 denge + 10 insan | 333 birim + 191 oynanış + 7 denge + 10 insan |
+| Testler | 304 birim + 156 oynanış + 7 denge + 10 insan | 333 birim + 191 oynanış + 7 denge + 10 insan (v0.9: 358 + 238, §7) |
 
 Hedef 60 FPS'nin çok üstünde. Sonrası ortalamada ~%10 yavaş; nedeni ölçülmedi
 (HUD bandı, tema ile çizilen paneller ya da yeni yazı tipleri olabilir). Efektler
@@ -196,3 +196,98 @@ Hedef 60 FPS'nin çok üstünde. Sonrası ortalamada ~%10 yavaş; nedeni ölçü
 - Canlı (eski) sayfada açılışta `Attachment has zero size` WebGL uyarıları vardı;
   yeni yapıda yerel oturumda görülmedi; menü matkabındaki `Polygon2D` iki WebGL uyarısı
   veriyordu, basamaklı `ColorRect` satırlarına çevrilince kayboldu.
+
+## 7. Günlük video imkânlarından alınanlar (v0.9)
+
+İstek: günlük videolarda kullanılan renk ve geçiş imkânları oyunda da kullanılsın, kısıtlanmasın;
+**oyunun kendi kimliği ağır bassın**. Dünya değişmedi: hâlâ düz renk, gölgesiz, koyu kahve zemin.
+Videodan yalnız *hareket ve renk akışının yapısı* alındı; renklerin kendisi derin-kazi'nin
+tanıtım videosundan örneklenmiş dünya renkleridir (§1).
+
+### Neyi nereden aldım
+
+| Alınan | Kaynak | Oyunda |
+|---|---|---|
+| Renk akışı yapısı (sırayla dönen vurgu paleti, yazı rengi kodla seçilir) | `sosyal/uret/tema.mjs` → `TEMALAR.*.akis` (`renkAkisi`, `ESIK`) | `Tema.AKIS`, `Tema.akis_rengi`, `Tema.yazi_rengi` |
+| Palet 0 (toprak + kaya) | `klasik` akışı: sakin yoğunluk, 5 vurgu (sarı, camgöbeği, turuncu, mercan, krem) | derin-kazi renkleriyle: amber `#f3a33d`, elmas camgöbeği `#7dd4e7`, uç turuncusu `#e2552c`, gaz yeşili `#6fc38a`, kâğıt `#f3e8d7`; zemin `#1c130d` |
+| Palet 1 (bazalt + çekirdek) | `klasik` + `harita` (sıcak turuncu / kum) ailesi | uç turuncusu, sarı `#ffc21a`, tehlike `#e94f36`, amber, kâğıt |
+| Kontrast kuralı | `tema.mjs` `ESIK = 5` | **4,5:1**, kodla hesaplanıp testte sınanıyor (oyunda doku/vinyet payı yok, istek 4,5). Yazı/vurgu en düşük **4,85** (uç turuncusu üstünde koyu yazı), vurgu/koyu dünya en düşük 4,85 |
+| Geçiş aileleri | `sosyal/uret/sahne.js` `GECIS` + `tema.mjs` `gecis` havuzları | `assets/gecis.gdshader`: **iris, glitch, bloklar, itme, perde, flaş, kararma, zoom** (sekizi de) |
+| Havuzun sırayla gezilmesi (art arda tekrar yok) | `gecisHavuz` mantığı | `Gecis.sec(tema)` |
+
+Alınmayanlar: `kes`, `yatay`, `tarama` (itme/perde ile aynı iş), `warp` ve `çöküş` (uzay ve CRT
+temalarının imzası; bu dünyada karşılığı yok), `piksel` (bloklar zaten maden karelerini anlatıyor).
+`kes` (sert kesme) zaten **Sade geçişler** kipinin kendisi.
+
+### Havuzlar ve gerekçeleri
+
+| Palet | Havuz (sırayla) | Neden bu oyunda |
+|---|---|---|
+| 0 toprak + kaya (0-149 m) | itme, bloklar, iris, perde | itme = eski amber bandın devamı; bloklar = maden kareleri; iris = matkap deliği; perde = tünel |
+| 1 bazalt + çekirdek (150 m+) | glitch, zoom, flaş, kararma | derinde gerilim: yarıklar, dalış, çekirdek ışığı, karanlık |
+
+`Tema.derinlik_temasi(d)` bandı `Ayarlar.AMBIYANS`'tan okur (bazalt bandı = 150 m).
+
+### Kullanım yerleri
+
+| An | Geçiş | Süre | Bekletir mi |
+|---|---|---|---|
+| Menü açılışı (yalnız ilk açılış) | iris | 0,5 sn | hayır |
+| Menü → oyun (Oyna, Yeni dünya, Günlük, Derin Mod, tohum kodu) | zoom | 260 + 200 ms | sahne değişimi süresince (eskisiyle aynı) |
+| Oyun → menü | perde | 260 + 200 ms | aynı |
+| Oyun sonundan "Tekrar" | bloklar (çekirdek paleti) | 260 + 200 ms | aynı |
+| Işınlanma | bloklar (varış derinliğinin paleti) | ~180 + 200 ms | ışınlanma eskiden 200 + 200 ms'ydi; girdi kilidi yok |
+| Duraklatma açılışı | perde | 0,22 sn | hayır |
+| Oyun sonu kartı | iris | 0,45 sn | hayır |
+| Çekirdeğe dokunuş | flaş (tek vuruş) | 0,45 sn, tepe %50 | hayır |
+| Deprem | glitch (tek vuruş) | 0,35 sn, tepe %50 | hayır |
+| Yüzeye çekilme | tehlike renginde flaş | 0,30 sn, tepe %34 | hayır (eskiden de öyleydi) |
+| Dil değişimi (ayarlar) | glitch, örtü altında metin değişir | ~0,18 + 0,20 sn | hayır; geçiş sürüyorsa değişiklik efektsiz yapılır (kaybolmaz) |
+| Derinlik sayacı | her yeni 25 m'de akış rengi, 0,3 sn | 0,3 sn | hayır |
+| YENİ REKOR damgası | en derin (25 m ve üstü) aşılınca; renkler 90 ms adımla döner, sonra ilk renkte durur | 2,6 sn | hayır |
+
+Tek vuruşlar (`Gecis.vurus`) oyun akışını ve girdiyi hiç kilitlemez; başka bir geçiş sürerken yok sayılır.
+Oyun içindeki eski siyah solma (`Karartma`) kaldırıldı; sahne artık `Gecis` örtüsünün altından açılıyor.
+
+### Hareket azaltma
+
+Ayarlarda **Sade geçişler** (`[ayar] sade_gecis`, varsayılan kapalı) ve tarayıcıda
+`prefers-reduced-motion: reduce`: geçişler **anında** (efekt yok, bekleme yok), sayaç ve damga
+renk akışı yok (damga tek renk). Tek vuruşlar da kapanır. Testte: sade kipte üç geçiş + vuruş + çekilme
+flaşı 100 ms altında bitiyor ve kaplama hiç açılmıyor.
+
+### Ölçüm (Intel UHD 620 sınıfı tümleşik, `tools/fps.gd`, 60 m, vsync kapalı)
+
+| | Ort. ms | %99 ms | FPS |
+|---|---|---|---|
+| Önce (v0.8, geçişsiz) — üç koşu medyanı | 3,15 | 4,88 | ≈317 |
+| Sonra (v0.9, geçişsiz) — üç koşu medyanı | 2,68 | 4,00 | ≈373 |
+| Sonra, geçiş sürerken (`fps.gd ... gecis`, 8 ailenin hepsi, ~1000 kare) — iki koşu | 3,41-3,43 | 4,84-5,05 | ≈292 |
+
+Önce/sonra koşuları aynı makinede ama farklı zamanlarda; makinede başka Godot süreçleri de çalışıyordu,
+"sonra"nın daha hızlı çıkması gerçek hızlanma sayılmaz (fark gürültü içinde). Geçiş sürerken kare
+süresi ~0,7 ms artıyor, 60 FPS hedefinin (16,7 ms) çok altında. İki koşudan birinde tek kare 139,6 ms
+çıktı (ilk kullanımda bir kez; öbür koşuda en kötü kare 7,5 ms): tek seferlik, bir geçiş ilk kez
+çizilirken olası bir takılma; tekrar üretilmedi, nedeni ölçülmedi. `index.pck` 1.220.160 → 1.224.432 bayt.
+
+### Kanıt
+
+Kareler `docs/ekran/gecis-*.png` (`tools/gecis_kanit.gd`; sekiz aile yarım örtüde, YENİ REKOR,
+çekilme flaşı, deprem glitch'i), ham klip `sosyal/medya/oyunlar/derin-kazi.mp4` (19 sn, sekiz ailenin
+hepsi; `tools/kayit.gd` `OLAYLAR`).
+
+| | |
+|---|---|
+| ![itme](ekran/gecis-itme.png) | ![bloklar](ekran/gecis-bloklar.png) |
+| ![glitch](ekran/gecis-glitch.png) | ![zoom](ekran/gecis-zoom.png) |
+| ![yeni rekor](ekran/yeni-rekor-damga.png) | ![deprem](ekran/deprem-glitch.png) |
+
+### Sınırlar
+
+- Geçişlerin gerçek telefon, Safari ve Firefox'ta görünümü denenmedi; Chromium'da menü → oyun,
+  duraklat açıldı, konsol temiz. `prefers-reduced-motion` yolu tarayıcıda emüle edilmedi (kod
+  `JavaScriptBridge.eval` ile okuyor; birim testi ayar yolunu sınıyor).
+- Flaş ve glitch fotosensitif kişiler için rahatsız edici olabilir: en parlak vuruş çekirdek flaşı (%50
+  krem, 0,45 sn, oyunda bir kez). **Sade geçişler** bunu kapatır; ayar ayarlar ekranında görünür.
+- `Gecis.git` (sahne değişimi) `--script` testinde koşmaz (SceneTree'de mevcut sahne yok); tarayıcıda
+  gözle doğrulandı.

@@ -1,39 +1,44 @@
 extends CanvasLayer
-## Sahne gecisi (autoload "Gecis"): tam ekran renk bandi soldan girer (~260 ms),
-## sahne degisir, bant saga cikar (~200 ms). Stil rehberi: amber bant.
-## Olumde sahne degismez: ekran kisa bir tehlike rengi flasiyla yanip soner.
-## Duraklatma sirasinda da calisir (PROCESS_MODE_ALWAYS).
+## Sahne geçişi (autoload "Gecis"). Günlük videolardaki geçiş aileleri ekran-uzayı
+## shader'ı ile (assets/gecis.gdshader): iris, glitch, bloklar, itme, perde, flaş,
+## kararma, zoom. Örtme ~260 ms, açma ~200 ms (stil rehberi). Renkler derinlik
+## temasının video akış paletinden (Tema.AKIS) sırayla döner; tür, temanın havuzundan
+## art arda tekrarlanmadan seçilir. Bant sırasında ikinci çağrı yok sayılır.
+## Hareket azaltma ("Sade geçişler" ayarı ya da tarayıcıda prefers-reduced-motion)
+## açıkken geçiş ANINDA: efekt yok, bekleme yok. Duraklatma sırasında da çalışır.
 
 const ORTME := 0.26
 const ACMA := 0.20
-const GENISLIK := 660.0
-const FLAS := 0.30
+const SHADER := preload("res://assets/gecis.gdshader")
 
-var _bant: ColorRect
-var _flas: ColorRect
+var son_tur: StringName = &""        ## test/ölçüm için: en son kullanılan aile
+var acilis_yapildi: bool = false     ## menü açılış iris'i yalnız ilk açılışta
+var _kaplama: ColorRect
+var _mat: ShaderMaterial
 var _mesgul := false
 var _ipucu: Label
 var _dikey_kart: Panel
 var _ipucu_sayac := 0.0
+var _tween: Tween = null
+var _sayac := 0                      ## renk akışı sırası
+var _sistem_azalt := false           ## tarayıcı "hareketi azalt" istiyor
 
 
 func _ready() -> void:
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_bant = ColorRect.new()
-	_bant.color = Tema.AMBER
-	_bant.size = Vector2(GENISLIK, 380.0)
-	_bant.position = Vector2(-GENISLIK, -10.0)
-	_bant.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bant.visible = false
-	add_child(_bant)
-	_flas = ColorRect.new()
-	_flas.color = Color(Tema.TEHLIKE, 0.0)
-	_flas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_flas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_flas)
+	_kaplama = ColorRect.new()
+	_mat = ShaderMaterial.new()
+	_mat.shader = SHADER
+	_kaplama.material = _mat
+	_kaplama.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_kaplama.visible = false
+	add_child(_kaplama)
+	_kaplama.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if OS.has_feature("web"):
+		_sistem_azalt = bool(JavaScriptBridge.eval("window.matchMedia('(prefers-reduced-motion: reduce)').matches"))
 	# Dikey telefon: oyun 16:9'a kilitli, yatay tutmak gerekir. Pencere dikeye
-	# donunce 4 sn'lik bir ipucu cikar.
+	# dönünce 4 sn'lik bir ipucu çıkar.
 	_dikey_kart = Panel.new()
 	_dikey_kart.theme_type_variation = &"Kagit"
 	_dikey_kart.position = Vector2(40.0, 110.0)
@@ -59,50 +64,132 @@ func mesgul_mu() -> bool:
 	return _mesgul
 
 
-## Sahneyi bantla degistirir. Bant sirasinda ikinci cagri yok sayilir (cift tik).
-func git(yol: String, renk: Color = Tema.AMBER) -> void:
+## Hareket azaltma: ayar açıksa ya da tarayıcı istiyorsa geçiş anındadır.
+func sade() -> bool:
+	return bool(Ses.ayar.get("sade_gecis", false)) or _sistem_azalt
+
+
+## Temanın havuzundan sonraki geçiş ailesi (video: gecisHavuz); bir öncekini tekrarlamaz.
+func sec(tema: int) -> StringName:
+	var havuz: Array = Tema.AKIS[clampi(tema, 0, Tema.AKIS.size() - 1)]["gecis"]
+	return havuz[(havuz.find(son_tur) + 1) % havuz.size()]    # havuzu sırayla gezer: tekrar yok, hepsi kullanılır
+
+
+## Örtme öncesi: shader'ı bu geçişin tür ve renkleriyle kurar. Kaplama açma (ac)
+## çağrılana kadar aynı renkte durur. `renk` (alfa > 0) akış rengini ezer (çekilme kırmızısı).
+func _kur(tur: StringName, tema: int, renk: Color = Color(0, 0, 0, 0)) -> void:
+	if tur == &"":
+		tur = sec(tema)
+	son_tur = tur
+	var a: Dictionary = Tema.AKIS[clampi(tema, 0, Tema.AKIS.size() - 1)]
+	var r1: Color = Tema.akis_rengi(tema, _sayac)
+	var r2: Color = Tema.akis_rengi(tema, _sayac + 2)
+	if tur == &"flas":
+		r1 = a["acik"]
+	elif tur == &"kararma":
+		r1 = a["koyu"]
+	if renk.a > 0.0:
+		r1 = renk
+	_sayac += 1
+	_mat.set_shader_parameter("tur", maxi(Tema.GECIS_TURLERI.find(tur), 0))
+	_mat.set_shader_parameter("renk", r1)
+	_mat.set_shader_parameter("renk2", r2)
+	_mat.set_shader_parameter("p", 0.0)
+
+
+func _p_yaz(v: float) -> void:
+	_mat.set_shader_parameter("p", v)
+	_mat.set_shader_parameter("adim", floorf(Time.get_ticks_msec() / 33.0))
+
+
+## Ekranı örter (await edilebilir). Sade kipte hiçbir şey yapmaz ve bekletmez.
+func kapat(tur: StringName = &"", tema: int = 0, sure: float = ORTME) -> void:
+	if sade():
+		return
+	_kur(tur, tema)
+	_kaplama.visible = true
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	_tween.tween_method(_p_yaz, 0.0, 1.0, sure)
+	await _tween.finished
+
+
+## Örtüyü açar; bekletmek istemeyen çağıran await etmez (oyun akışı sürer).
+func ac(sure: float = ACMA, baslangic: float = 1.0) -> void:
+	if not _kaplama.visible:
+		return
+	if _tween != null and _tween.is_valid():
+		_tween.kill()
+	_tween = create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
+	_tween.tween_method(_p_yaz, baslangic, 0.0, sure)
+	await _tween.finished
+	_kaplama.visible = false
+
+
+## Kapalı başla, aç: menü açılışı, duraklatma perdesi, oyun sonu gibi "içerik açılır" anları.
+func acilis(tur: StringName = &"iris", tema: int = 0, sure: float = ACMA + 0.1, baslangic: float = 1.0) -> void:
+	if sade():
+		return
+	_kur(tur, tema)
+	_kaplama.visible = true
+	_p_yaz(baslangic)
+	await ac(sure, baslangic)
+
+
+## Bekletmeyen tek vuruş: kaplama `tepe` örtmeyle belirir, `sure`de söner. Oyun akışını ve
+## girdiyi kilitlemez; başka bir geçiş sürüyorsa hiçbir şey yapmaz. `renk` (alfa > 0) akış rengini ezer.
+func vurus(tur: StringName, tema: int, tepe: float = 0.5, sure: float = 0.3, renk: Color = Color(0, 0, 0, 0)) -> void:
+	if sade() or _mesgul or _kaplama.visible:
+		return
+	_kur(tur, tema, renk)
+	_kaplama.visible = true
+	_p_yaz(tepe)
+	await ac(sure, tepe)
+
+
+## Yüzeye çekilme: tehlike rengiyle kısa flaş (eski API; artık shader'ın flaş ailesi).
+func yanip_son() -> void:
+	await vurus(&"flas", 1, 0.34, 0.30, Tema.TEHLIKE)
+
+
+## Klip başlangıcı gibi "zaten örtülü başla" durumları (tools/kayit.gd): sonra ac() çağrılır.
+func kapat_hemen(tur: StringName = &"itme", tema: int = 0) -> void:
+	_kur(tur, tema)
+	_kaplama.visible = true
+	_p_yaz(1.0)
+
+
+## Yerinde geçiş: ört, `degistir`i çağır (metin/sahne değişimi), aç.
+func ara(tur: StringName, tema: int, degistir: Callable) -> void:
 	if _mesgul:
+		degistir.call()    # başka bir geçiş sürüyor: değişiklik kaybolmasın, efekt yok
 		return
 	_mesgul = true
-	await kapat(renk)
-	get_tree().change_scene_to_file(yol)
-	await get_tree().process_frame
-	await get_tree().process_frame
-	await ac()
+	await kapat(tur, tema, ORTME * 0.7)
+	degistir.call()
+	if not sade():
+		await get_tree().process_frame
+		await get_tree().process_frame
+	await ac(ACMA)
 	_mesgul = false
 
 
-## Bant ekrani soldan ORTER (260 ms, ease-out). tools/rota.gd kayit kipi de bunu
-## sahne degistirmeden kullanir.
-func kapat(renk: Color = Tema.AMBER) -> void:
-	_bant.color = renk
-	_bant.position.x = -GENISLIK
-	_bant.visible = true
-	var t := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	t.tween_property(_bant, "position:x", -10.0, ORTME)
-	await t.finished
-
-
-## Bandi beklemeden ORTULU baslatir (tools/kayit.gd: klip bir gecisle acilsin).
-func kapat_hemen(renk: Color = Tema.AMBER) -> void:
-	_bant.color = renk
-	_bant.position.x = -10.0
-	_bant.visible = true
-
-
-## Bant saga cikip ekrani ACAR (200 ms, ease-in).
-func ac() -> void:
-	var t := create_tween().set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_CUBIC)
-	t.tween_property(_bant, "position:x", GENISLIK, ACMA)
-	await t.finished
-	_bant.visible = false
-
-
-## Sahne degistirmeden kisa flas (olum, bolum basa alma). Girdiyi kilitlemez.
-func yanip_son() -> void:
-	_flas.color = Color(Tema.TEHLIKE, 0.34)
-	var t := create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	t.tween_property(_flas, "color:a", 0.0, FLAS)
+## Sahneyi değiştirir. Bant sırasında ikinci çağrı yok sayılır (çift tık).
+func git(yol: String, tema: int = 0, tur: StringName = &"") -> void:
+	if _mesgul:
+		return
+	_mesgul = true
+	if sade():
+		get_tree().change_scene_to_file(yol)
+		_mesgul = false
+		return
+	await kapat(tur, tema)
+	get_tree().change_scene_to_file(yol)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await ac(ACMA)
+	_mesgul = false
 
 
 ## Pencere dikeyse (telefon) "yatay tut" ipucu; yataya donunce kaybolur.

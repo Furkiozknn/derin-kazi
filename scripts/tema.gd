@@ -72,3 +72,53 @@ static func etiket(metin: String, boyut: int, renk: Color, mono := true, kalin :
 	e.add_theme_color_override("font_color", renk)
 	e.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return e
+
+
+## Günlük video imkânlarından alınan renk akışı ve geçiş aileleri
+## (sosyal/uret/tema.mjs TEMALAR, docs/TASARIM.md "Günlük video imkânlarından alınanlar").
+## Dünya DÜZ kalır; akış yalnız geçişlerde, derinlik sayacında ve rekor damgasında.
+## Dizin = derinlik teması (0 toprak + kaya, 1 bazalt + çekirdek; Ayarlar.AMBIYANS bandına göre).
+## "vurgu" sırayla döner (video: renkAkisi); yazı rengi vurgunun üstünde kodla seçilir (en az ESIK).
+## Renkler videodaki klasik akışın (sarı, camgöbeği, turuncu, mercan, krem) derin-kazi'nin kendi
+## dünyasıyla değiştirilmiş hali: amber, elmas camgöbeği, uç turuncusu, gaz yeşili, kâğıt.
+const GECIS_TURLERI: Array[StringName] = [&"iris", &"glitch", &"bloklar", &"itme", &"perde", &"flas", &"kararma", &"zoom"]
+const ESIK := 4.5                  ## okunurluk alt sınırı (video 5:1, burada 4,5:1)
+const AKIS: Array = [
+	{"kaynak": "klasik", "acik": KAGIT, "koyu": MUREKKEP,
+		"vurgu": [AMBER, CAMGOBEGI, UC, YESIL, KAGIT],
+		"gecis": [&"itme", &"bloklar", &"iris", &"perde"]},
+	{"kaynak": "klasik+harita", "acik": KAGIT, "koyu": MUREKKEP,
+		"vurgu": [UC, SARI, TEHLIKE, AMBER, KAGIT],
+		"gecis": [&"glitch", &"zoom", &"flas", &"kararma"]},
+]
+
+
+## Derinlik teması: bazalt bandından (150 m) itibaren 1.
+static func derinlik_temasi(d: int) -> int:
+	return 1 if Ayarlar.ambiyans(d) >= 2 else 0
+
+
+## WCAG göreli parlaklık.
+static func parlaklik(c: Color) -> float:
+	var k: Array[float] = []
+	for v in [c.r, c.g, c.b]:
+		k.append(v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4))
+	return 0.2126 * k[0] + 0.7152 * k[1] + 0.0722 * k[2]
+
+
+static func kontrast(a: Color, b: Color) -> float:
+	var x := parlaklik(a)
+	var y := parlaklik(b)
+	return (maxf(x, y) + 0.05) / (minf(x, y) + 0.05)
+
+
+## Vurgu rengi üzerindeki yazı: açık ya da koyu, hangisi daha okunuyorsa.
+static func yazi_rengi(zemin: Color, tema: int) -> Color:
+	var a: Dictionary = AKIS[clampi(tema, 0, AKIS.size() - 1)]
+	return a["acik"] if kontrast(zemin, a["acik"]) >= kontrast(zemin, a["koyu"]) else a["koyu"]
+
+
+## Akış paletinden k. renk (sarmal).
+static func akis_rengi(tema: int, k: int) -> Color:
+	var v: Array = AKIS[clampi(tema, 0, AKIS.size() - 1)]["vurgu"]
+	return v[posmod(k, v.size())]

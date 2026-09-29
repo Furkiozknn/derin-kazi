@@ -867,7 +867,7 @@ func _yeni_arayuz_testleri() -> void:
 				dil_dugme = cc
 	dogru(dil_dugme != null and dil_dugme.text == "English", "ayarlarda dil düğmesi (Türkçe iken 'English' önerir)")
 	dil_dugme.pressed.emit()
-	await _kare(3)
+	await _kare(45)   ## glitch örtüsü ~0,18 sn'de kapanır, metin o zaman değişir
 	dogru(TranslationServer.get_locale().begins_with("en") and String(ses.ayar.get("dil", "")) == "en"
 		and String(Kayit.ayar_yukle()["dil"]) == "en", "dil değişti ve kayda yazıldı")
 	dogru(oyna.atr(oyna.text) == "Play", "menü İngilizceye döndü (%s)" % oyna.atr(oyna.text))
@@ -1003,8 +1003,166 @@ func _yeni_arayuz_testleri() -> void:
 	dogru(a2.dinamit_at() and d2.dinamit == ilk3 - 1, "kojot içinde F hemen atılıyor")
 	s2.queue_free()
 	await process_frame
+
+	# --- günlük video imkânları (v0.9): geçişler, derinlik sayacı renk akışı, rekor damgası ---
+	await _gecis_testleri(ses)
 	# Dil ve ayarı önceki değerine döndür.
 	ses.ayar = eski_ayar
 	Kayit.ayar_kaydet(eski_ayar)
 	Kayit.sil()
 	TranslationServer.set_locale("tr")
+
+## Günlük video imkânları: geçiş aileleri (shader), sırayla tekrar yok, hareket azaltmada anında,
+## bekletmeyen vuruşlar, oyundaki kullanım yerleri (çekilme, deprem, çekirdek, oyun sonu, duraklat, ışınlanma),
+## derinlik sayacı renk akışı ve YENİ REKOR damgası.
+func _gecis_testleri(ses) -> void:
+	print("— günlük video geçişleri —")
+	var g = root.get_node("Gecis")
+	ses.ayar["sade_gecis"] = false
+	# --- her aile örtüyor ve açılıyor ---
+	for tur in Tema.GECIS_TURLERI:
+		await g.kapat(tur, 0, 0.05)
+		var p: float = g._mat.get_shader_parameter("p")
+		dogru(g._kaplama.visible and is_equal_approx(p, 1.0) and g.son_tur == tur, "%s: tam örtüyor (p=%.2f)" % [tur, p])
+		await g.ac(0.05)
+		dogru(not g._kaplama.visible, "%s: açılıyor, kaplama gizli" % tur)
+	# --- sırayla: art arda tekrar yok, havuzun hepsi kullanılıyor ---
+	for t in Tema.AKIS.size():
+		var havuz: Array = Tema.AKIS[t]["gecis"]
+		var onceki: StringName = &""
+		var tekrar := 0
+		var disari := 0
+		var gorulen := {}
+		for i in 40:
+			var s: StringName = g.sec(t)
+			if s == onceki:
+				tekrar += 1
+			if not s in havuz:
+				disari += 1
+			gorulen[s] = true
+			onceki = s
+			g.son_tur = s
+		dogru(tekrar == 0 and disari == 0 and gorulen.size() == havuz.size(), "tema %d: 40 seçimde tekrar yok, hepsi havuzda, hepsi kullanıldı" % t)
+	# --- süre: örtme ~260 ms ---
+	var t0 := Time.get_ticks_msec()
+	await g.kapat(&"itme", 0)
+	var ms := Time.get_ticks_msec() - t0
+	dogru(ms >= 240 and ms < 500, "örtme %d ms (rehber ~260)" % ms)
+	await g.ac()
+	# --- ara(): değişim örtünün altında bir kez; meşgulken de değişiklik kaybolmaz ---
+	var cagri := [0]
+	await g.ara(&"glitch", 0, func() -> void: cagri[0] += 1)
+	dogru(cagri[0] == 1 and not g.mesgul_mu() and not g._kaplama.visible, "ara(): değiştir bir kez çağrıldı, geçiş bitti")
+	g._mesgul = true
+	await g.ara(&"glitch", 0, func() -> void: cagri[0] += 1)
+	g._mesgul = false
+	dogru(cagri[0] == 2, "ara(): geçiş sürerken de değişiklik yapıldı (dil düğmesi kaybolmaz)")
+	# --- vuruş: bekletmez, kilitlemez, kendiliğinden söner ---
+	g.vurus(&"glitch", 1, 0.5, 0.2)
+	dogru(g._kaplama.visible and not g.mesgul_mu() and g.son_tur == &"glitch", "vuruş: hemen görünür, sahne değişimini kilitlemez")
+	await create_timer(0.4).timeout
+	dogru(not g._kaplama.visible, "vuruş: söndü")
+	g.vurus(&"flas", 0, 0.3, 0.2)
+	var ilk_tur: StringName = g.son_tur
+	g.vurus(&"iris", 0, 0.3, 0.2)
+	dogru(g.son_tur == ilk_tur, "vuruş sürerken ikinci vuruş yok sayıldı")
+	await create_timer(0.4).timeout
+	# --- hareket azaltma: anında, bekleme yok, kaplama hiç açılmaz ---
+	ses.ayar["sade_gecis"] = true
+	dogru(g.sade(), "sade geçişler ayarı = sade")
+	t0 = Time.get_ticks_msec()
+	await g.kapat(&"iris", 0)
+	await g.ara(&"bloklar", 1, func() -> void: cagri[0] += 1)
+	await g.acilis(&"perde", 0)
+	g.vurus(&"glitch", 0)
+	await g.yanip_son()
+	var gecen := Time.get_ticks_msec() - t0
+	dogru(gecen < 100 and cagri[0] == 3 and not g._kaplama.visible, "hareket azaltma: geçiş anında, kaplama hiç açılmadı (%d ms)" % gecen)
+	ses.ayar["sade_gecis"] = false
+
+	# --- oyun içi kullanım yerleri ---
+	Kayit.sil()
+	Kayit.kaydet({"tohum": 4242, "en_derin": 60})
+	var s3: Node = load("res://scenes/oyun.tscn").instantiate()
+	root.add_child(s3)
+	await process_frame
+	await _kare(20)
+	var arac3: Arac = s3.get_node("Arac")
+	var durum3: Durum = s3.durum
+	var lbl: Label = s3.get_node("HUD/Ust/Derinlik")
+	# derinlik sayacı: her yeni 25 m kademesinde akış rengi, okunur yazı, kendiliğinden geri döner
+	s3.call("_derinlik_vurgula")
+	var v: Color = Tema.akis_rengi(Tema.derinlik_temasi(arac3.derinlik()), int(s3.get("_akis_i")))
+	var kutu := lbl.get_theme_stylebox("normal") as StyleBoxFlat
+	var yazi: Color = lbl.get_theme_color("font_color")
+	dogru(lbl.has_theme_stylebox_override("normal") and kutu != null and kutu.bg_color.is_equal_approx(v), "derinlik sayacı akış rengine döndü")
+	dogru(Tema.kontrast(v, yazi) >= Tema.ESIK, "sayaç yazısı vurgu üzerinde %.2f:1" % Tema.kontrast(v, yazi))
+	var i0: int = s3.get("_akis_i")
+	s3.call("_derinlik_vurgula")
+	dogru(int(s3.get("_akis_i")) == i0, "vurgu sürerken ikinci tetik yok sayıldı (hız sınırı)")
+	await create_timer(0.45).timeout
+	dogru(not lbl.has_theme_stylebox_override("normal"), "vurgu bitti, sayaç eski haline döndü")
+	ses.ayar["sade_gecis"] = true
+	i0 = int(s3.get("_akis_i"))
+	s3.call("_derinlik_vurgula")
+	dogru(int(s3.get("_akis_i")) == i0 and not lbl.has_theme_stylebox_override("normal"), "sade geçişlerde sayaç vurgusu kapalı")
+	ses.ayar["sade_gecis"] = false
+	# kademe: yeni 25 m'de tetiklenir, aynı kademede yinelenmez
+	arac3.global_position = Vector2(Ayarlar.US_X, 30.5 * Ayarlar.KARO)
+	s3.set("_kademe_max", 0)
+	i0 = int(s3.get("_akis_i"))
+	s3.call("_derinlik_izle", 30)
+	dogru(int(s3.get("_akis_i")) == i0 + 1 and int(s3.get("_kademe_max")) == 1, "30 m: yeni 25 m kademesi vurguyu tetikledi")
+	await create_timer(0.45).timeout
+	s3.call("_derinlik_izle", 31)
+	dogru(int(s3.get("_akis_i")) == i0 + 1, "aynı kademede tekrar vurgu yok")
+	# yeni rekor damgası: en derin 60 iken 61 m'de
+	s3.set("_rekor_esigi", 60)
+	s3.set("_rekor_verildi", false)
+	arac3.global_position = Vector2(Ayarlar.US_X, 61.5 * Ayarlar.KARO)
+	s3.call("_derinlik_izle", 61)
+	var damga: Panel = s3.get("_damga")
+	var dyazi: Label = s3.get("_damga_yazi")
+	dogru(damga != null and damga.visible and dyazi.text == "YENİ REKOR", "en derin aşılınca YENİ REKOR damgası")
+	var dv: Color = (damga.get_theme_stylebox("panel") as StyleBoxFlat).bg_color
+	dogru(Tema.kontrast(dv, dyazi.get_theme_color("font_color")) >= Tema.ESIK, "damga yazısı okunuyor (%.2f:1)" % Tema.kontrast(dv, dyazi.get_theme_color("font_color")))
+	await create_timer(0.9).timeout
+	dv = (damga.get_theme_stylebox("panel") as StyleBoxFlat).bg_color
+	dogru(dv.is_equal_approx(Tema.akis_rengi(Tema.derinlik_temasi(61), 0)), "damga renk akışından sonra ilk renkte durdu")
+	dogru(bool(s3.get("_rekor_verildi")), "damga bu inişte bir kez")
+	# çekilme: kırmızı flaş
+	await create_timer(0.4).timeout
+	s3.call("_kosu_bitti")
+	dogru(g._kaplama.visible and g.son_tur == &"flas" and Color(g._mat.get_shader_parameter("renk")).is_equal_approx(Tema.TEHLIKE),
+		"yüzeye çekilme: tehlike renginde flaş")
+	dogru(not g.mesgul_mu(), "çekilme flaşı girdiyi/geçişi kilitlemiyor")
+	await create_timer(0.45).timeout
+	# deprem: glitch vuruşu
+	s3.call("_uyari_kapat")
+	s3.set("_deprem_uyari_derinlik", 40)
+	s3.call("_deprem_uygula")
+	dogru(g.son_tur == &"glitch", "deprem: glitch vuruşu")
+	await create_timer(0.45).timeout
+	# duraklatma: perde
+	s3.call("_duraklat_ac")
+	dogru(g._kaplama.visible and g.son_tur == &"perde", "duraklat: perde geçişi başladı")
+	await create_timer(0.45).timeout
+	dogru(not g._kaplama.visible, "duraklat: perde açıldı")
+	s3.call("_duraklat_kapat")
+	# ışınlanma: blok örtüsünün altında yer değişir
+	arac3.global_position = Vector2(Ayarlar.US_X, 30.5 * Ayarlar.KARO)
+	s3.call("_isinla", Vector2(Ayarlar.US_X, -24.0))
+	dogru(g.son_tur == &"bloklar", "ışınlanma: bloklar geçişi")
+	await create_timer(0.7).timeout
+	dogru(arac3.usste_mi() and not g._kaplama.visible, "ışınlanma örtü altında bitti, geçiş açıldı")
+	# çekirdek: flaş vuruşu; oyun sonu: iris ile kart
+	s3.call("_cekirdege_ulasildi")
+	dogru(g.son_tur == &"flas", "çekirdeğe dokunuş: flaş vuruşu")
+	await create_timer(0.6).timeout
+	s3.call("_kazandi")
+	dogru(g.son_tur == &"iris" and s3.get_node("HUD/Bitis").visible, "oyun sonu: iris ile kart açıldı")
+	await create_timer(0.6).timeout
+	dogru(not g._kaplama.visible, "oyun sonu iris'i açıldı")
+	s3.queue_free()
+	await process_frame
+	Kayit.sil()

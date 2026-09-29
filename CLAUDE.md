@@ -38,7 +38,7 @@ scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/tema.gd           video paleti + mono etiket/kutu yardımcıları (Tema); tema.tres'in kaynağı tools/tema_uret.gd
 scripts/ceviri.gd         TR/EN: kodda tr("Türkçe metin") (static/const bağlamda Ceviri.t), tablo scripts/ceviri_en.gd
-scripts/gecis.gd          autoload Gecis: renk bandı sahne geçişi (git/kapat/ac), yanip_son (çekilme flaşı)
+scripts/gecis.gd          autoload Gecis: 8 geçiş ailesi shader'ı (assets/gecis.gdshader): git/kapat/ac/acilis/ara/vurus, yanip_son; sade() = hareket azaltma
 scripts/ui.gd             menü öğelerinin sıralı girişi, düğme basış hareketi
 scripts/durum.gd          koşu + ilerleme durumu, tüm ekonomi kuralları, istatistik sayaçları, işaret (saf sınıf)
 scripts/arac.gd           hareket, kazma, hasar, aletler, animasyon kareleri (saf seçim)
@@ -170,7 +170,12 @@ ilk oyunla yan yana ölçer (`Bot.INSAN_DERIN`).
 - **Dil:** `Kayit.dil_etkin(ayar)`: `[ayar] dil` "tr"/"en" ise o, değilse `OS.get_locale_language()`. Yeni
   anahtar, eski kayıt bozulmaz. Test betikleri dili `tr`'ye sabitler (CI'da sistem dili İngilizce olabilir);
   `Control.text` özelliği ÇEVRİLMEMİŞ anahtarı döner: sahnede İngilizce metin sınamak için `atr(text)`.
-- **Geçiş:** menü ↔ oyun `Gecis.git(...)` (amber bant); testler düğmeleri bağlantı düzeyinde sınar.
+- **Geçiş (v0.9):** günlük video geçiş aileleri + renk akışı (`Tema.AKIS`, iki derinlik paleti, `Tema.derinlik_temasi`).
+  Menü ↔ oyun `Gecis.git(yol, tema, tur)`; içerik açılışı `Gecis.acilis`; yerinde değişim `Gecis.ara`
+  (meşgulken de değişikliği yapar); bekletmeyen tek vuruş `Gecis.vurus` (deprem glitch'i, çekirdek flaşı).
+  **Sade geçişler** ayarı (`[ayar] sade_gecis`) ya da tarayıcıda `prefers-reduced-motion` = `Gecis.sade()`:
+  efekt ve bekleme yok, sayaç vurgusu yok. Yeni renk eklersen yazı/vurgu ve vurgu/zemin >= 4,5:1
+  (testte hesaplanır). `Gecis.git` (sahne değişimi) `--script` testinde koşmaz; tarayıcıda gözle doğrula.
 - **Girdi toleransı:** `Arac.YER_KOJOT`, `DINAMIT_TAMPON` (0,12 sn), `KAZI_HIZALAMA`. Ölçüm
   `tools/his_olc.gd`; kazma kuralı (havada kazılmaz) DEĞİŞMEDİ. `Polygon2D` kullanma: web'de WebGL uyarısı verdi.
 - **Ham klip:** `tools/kayit.ps1` (`tools/kayit.gd` insan bandında bot sürer; HUD ve uçan yazılar gizli).
@@ -268,8 +273,8 @@ godot --headless --path . --script res://tests/test_oynanis.gd    # oynanış te
 godot --headless --path . --script res://tests/test_denge.gd      # denge simülasyonu
 godot --headless --path . --script res://tests/test_insan.gd      # insan benzeri ölçüm
 godot --headless --path . --script res://tests/test_fay_olcum.gd  # fay ölçümü + bot 12/12 sınaması (sisli insan botu dahil)
-# CI her paketin günlüğünü tests/kapi.sh'a verir (tabanlar: ci.yml → TEST_TABANI_BIRIM 333,
-# _OYNANIS 191, _DENGE 7, _INSAN 10; fay: --fay, FAY_TOHUM_TABANI 12). SCRIPT ERROR olursa kırmızı,
+# CI her paketin günlüğünü tests/kapi.sh'a verir (tabanlar: ci.yml → TEST_TABANI_BIRIM 358,
+# _OYNANIS 238, _DENGE 7, _INSAN 10; fay: --fay, FAY_TOHUM_TABANI 12). SCRIPT ERROR olursa kırmızı,
 # çünkü yarıda kalan test fonksiyonu yine "0 hata" der. Test ekleyince ilgili tabanı yükselt.
 bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 godot --path . --script res://tools/tanitim_al.gd                 # tanıtım kareleri (build/tanitim, ffmpeg ile GIF)

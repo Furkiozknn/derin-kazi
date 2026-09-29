@@ -8,6 +8,11 @@ const SANDIK_ODUL := [
 ]
 const SARSINTI_SONUM := 9.0
 const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
+const VURGU_SURESI := 0.30     ## derinlik sayacı renk akışı vurgusu (her yeni 25 m kademesi)
+const VURGU_ARALIK := 0.12     ## vurgu bitmeden tekrar tetiklenmez (saniyede ~3 renk değişimi en fazla)
+const KADEME := 25             ## sayaç vurgusunun metre adımı
+const REKOR_ESIK := 25         ## en derin bundan azsa rekor damgası yok (ilk inişte her metre rekor olurdu)
+const DAMGA_SURESI := 2.6
 
 @onready var dunya: Dunya = $Dunya
 @onready var sis: Sis = $Sis
@@ -42,7 +47,6 @@ const DUSME_BEKLE := 0.5       ## gevşek kaya kaç saniye titrer
 @onready var _duraklat: PanelContainer = $HUD/Duraklat
 @onready var _bitis: PanelContainer = $HUD/Bitis
 @onready var _uyari: PanelContainer = $HUD/Uyari
-@onready var _karartma: ColorRect = $Gecis/Karartma
 
 @onready var _fon_gok: TextureRect = $Arkaplan/Gok
 @onready var _fon_tepe: TextureRect = $Arkaplan/Tepeler
@@ -76,6 +80,15 @@ var _isaret_ogretildi := false                 ## işaret ipucu oturumda bir kez
 var _deprem_bant: ColorRect
 var _ambiyans: CPUParticles2D                  ## banda göre toz / kıvılcım (araca bağlı)
 var _bant := -1                                ## şu anki ambiyans bandı (Ayarlar.AMBIYANS)
+var _vurgu_kalan := 0.0                        ## >0 iken derinlik sayacı akış renginde
+var _akis_i := 0                               ## renk akışı sırası (Tema.AKIS)
+var _kademe_max := 0                           ## bu inişte geçilen en yüksek 25 m kademesi
+var _rekor_esigi := 0                          ## inişe başlarken en derin (aşılınca damga)
+var _rekor_verildi := false
+var _damga: Panel = null                       ## "YENİ REKOR" damgası (üst şeridin altında, orta)
+var _damga_yazi: Label = null
+var _damga_tween: Tween = null
+var _damga_kalan := 0.0
 
 func _ready() -> void:
 	_karo_doku = load("res://assets/sprites/karolar.png")
@@ -129,7 +142,9 @@ func _ready() -> void:
 	_hud_yenile()
 	_ambiyans_kur()
 	_ambiyans_yenile()
-	_karart(false)
+	# sahne Gecis autoload'ının örtüsünün ALTINDAN açılır (eski oyun içi siyah solma kalktı)
+	_kademe_max = arac.derinlik() / KADEME
+	_rekor_esigi = durum.en_derin
 	# Alt ipucu şeridi: düz koyu bant (yalnız yazı varken görünür).
 	_lbl_ipucu.add_theme_stylebox_override("normal", Tema.kutu(Color(Tema.MUREKKEP, 0.72), 0, 8, 4))
 	UI.dugmeleri_bagla($HUD)
@@ -147,6 +162,14 @@ func _process(delta: float) -> void:
 	_sandik_kontrol()
 	_kacis_kontrol()
 	_isaret_ogret()
+	if _vurgu_kalan > 0.0:
+		_vurgu_kalan -= delta
+		if _vurgu_kalan <= 0.0:
+			_derinlik_boya(false)
+	if _damga_kalan > 0.0:
+		_damga_kalan -= delta
+		if _damga_kalan <= 0.0:
+			_damga.visible = false
 	if _ipucu_sure > 0.0:
 		_ipucu_sure -= delta
 	_harita_zaman -= delta
@@ -294,6 +317,8 @@ func _hud_yenile() -> void:
 	_harita.visible = _harita.visible and not panel
 	_deprem_pano.visible = _deprem_uyari > 0.0 and not panel
 	_deprem_bant.visible = _deprem_pano.visible
+	if _damga != null:
+		_damga.visible = _damga_kalan > 0.0 and not panel
 	if _deprem_pano.visible:
 		_deprem_panosu()
 	if panel:
@@ -302,6 +327,7 @@ func _hud_yenile() -> void:
 		return
 	var d := arac.derinlik()
 	_lbl_derinlik.text = "%d m" % d
+	_derinlik_izle(d)
 	var yakit_az := durum.yakit < durum.yakit_kapasitesi() * 0.25
 	_lbl_yakit.text = Ceviri.t("YAKIT %d/%d") % [ceili(durum.yakit), int(durum.yakit_kapasitesi())]
 	_lbl_yuk.text = Ceviri.t("YÜK %d/%d") % [durum.yuk_toplam(), durum.yuk_kapasitesi()]  ## ağırlık
@@ -324,6 +350,81 @@ func _hud_yenile() -> void:
 	_lbl_ipucu.text = _ipucu(d)
 	_lbl_ipucu.visible = _lbl_ipucu.text != ""
 	_alet_dugmeleri()
+
+## Derinlik sayacı: her yeni 25 m kademesinde günlük videonun renk akışından sıradaki vurgu
+## rengine dönüp 0,3 sn'de eski haline gelir (yazı rengi vurgunun üstünde kodla seçilir, >= 4,5:1);
+## inişte en derin aşılınca "YENİ REKOR" damgası. Sade geçişlerde renk vurgusu yok.
+func _derinlik_izle(d: int) -> void:
+	if arac.usste_mi():
+		_kademe_max = 0
+		_rekor_esigi = durum.en_derin
+		_rekor_verildi = false
+		return
+	var kademe := d / KADEME
+	if kademe > _kademe_max:
+		_kademe_max = kademe
+		_derinlik_vurgula()
+	if not _rekor_verildi and _rekor_esigi >= REKOR_ESIK and d > _rekor_esigi:
+		_rekor_verildi = true
+		_damga_goster()
+
+func _derinlik_vurgula() -> void:
+	if Gecis.sade() or _vurgu_kalan > VURGU_SURESI - VURGU_ARALIK:
+		return
+	_akis_i += 1
+	_vurgu_kalan = VURGU_SURESI
+	_derinlik_boya(true)
+
+func _derinlik_boya(acik: bool) -> void:
+	if not acik:
+		_lbl_derinlik.remove_theme_stylebox_override("normal")
+		_lbl_derinlik.remove_theme_color_override("font_color")
+		return
+	var t := Tema.derinlik_temasi(arac.derinlik())
+	var v := Tema.akis_rengi(t, _akis_i)
+	_lbl_derinlik.add_theme_stylebox_override("normal", Tema.kutu(v, 3, 3, 0))
+	_lbl_derinlik.add_theme_color_override("font_color", Tema.yazi_rengi(v, t))
+
+## "Yeni rekor" damgası: video renk akışında (vurgu renkleri 90 ms adımla döner, sonra ilk renkte
+## durur). Yazı rengi her adımda >= 4,5:1. Sade geçişlerde sabit tek renk.
+func _damga_goster() -> void:
+	var t := Tema.derinlik_temasi(arac.derinlik())
+	if _damga == null:
+		_damga = Panel.new()
+		_damga.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_damga_yazi = Label.new()
+		_damga_yazi.theme_type_variation = &"Vurgu"
+		_damga_yazi.add_theme_font_size_override("font_size", 9)
+		_damga_yazi.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_damga_yazi.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_damga_yazi.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_damga.add_child(_damga_yazi)
+		$HUD.add_child(_damga)
+	_damga_yazi.text = Tema.buyuk(tr("YENİ REKOR"))
+	var w := _damga_yazi.get_minimum_size().x + 16.0
+	_damga.size = Vector2(w, 14.0)
+	_damga.position = Vector2((640.0 - w) * 0.5, 44.0)
+	_damga_yazi.size = _damga.size
+	_damga.pivot_offset = _damga.size * 0.5
+	_damga.scale = Vector2.ONE
+	_damga.visible = true
+	_damga_kalan = DAMGA_SURESI
+	if _damga_tween != null and _damga_tween.is_valid():
+		_damga_tween.kill()
+	_damga_boya(t, 0)
+	if Gecis.sade():
+		return
+	_damga.scale = Vector2(1.5, 1.5)
+	_damga_tween = create_tween()
+	_damga_tween.tween_property(_damga, "scale", Vector2.ONE, 0.16).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	for k in range(1, 7):
+		_damga_tween.tween_callback(_damga_boya.bind(t, k)).set_delay(0.09)
+	_damga_tween.tween_callback(_damga_boya.bind(t, 0)).set_delay(0.09)
+
+func _damga_boya(t: int, k: int) -> void:
+	var v := Tema.akis_rengi(t, k)
+	_damga.add_theme_stylebox_override("panel", Tema.kutu(v, 3))
+	_damga_yazi.add_theme_color_override("font_color", Tema.yazi_rengi(v, t))
 
 ## Deprem uyarı panosu: geri sayım + kararın iki ucu. Son 3 saniyede sayaç
 ## yanıp söner — v0.4'te geri sayım 13 px'lik alt ipucu şeridindeydi ve
@@ -638,6 +739,7 @@ func _cekirdege_ulasildi() -> void:
 	durum.kacis = true
 	durum.yakit = durum.yakit_kapasitesi()
 	sars(10.0)
+	Gecis.vurus(&"flas", 1, 0.5, 0.45)   ## çekirdeğe dokunuş: tek flaş vuruşu (bekletmez)
 	_toz(arac.global_position, Color("b55088"), 40, 200.0)
 	Ses.cal("patlama")
 	_kaydet()
@@ -689,6 +791,7 @@ func _kazandi() -> void:
 	$HUD/Bitis/M/V/Metin.text = bitis_metni(durum, Kayit.oyuncu_yukle(), son, sonraki_mod)
 	$HUD/Bitis/M/V/Tekrar.text = Ceviri.t("Tekrar — Derin Mod x%d") % (Kayit.derin_seviyesi() + 1)
 	_bitis.visible = true
+	Gecis.acilis(&"iris", 1, 0.45)   ## oyun sonu: kart ortadan açılır (sade kipte anında)
 	$HUD/Bitis/M/V/Tekrar.grab_focus()
 
 ## Bitiş ekranının dökümü (v0.7): bu dünyanın sayaçları + [oyuncu] toplamı. Saf —
@@ -767,6 +870,7 @@ func _deprem_uygula() -> void:
 	_harita_guncelle(kapanan)
 	_harita_guncelle(yeni.keys())
 	sars(12.0)
+	Gecis.vurus(&"glitch", Tema.derinlik_temasi(arac.derinlik()), 0.5, 0.35)   ## deprem: yatay dilimler kayar, renk yarıklarıyla söner
 	Ses.cal("deprem")   ## v0.7: düşük frekanslı sarsıntı + çatırtı (tools/ses_uret.gd), patlama değil
 	_toz(arac.global_position, _karo_renk(Ayarlar.TOPRAK), 30, 160.0)
 	# Oyuncunun kararının karşılığı: yüzeye çıktıysa ikramiye, derinde kaldıysa hasar.
@@ -1036,12 +1140,10 @@ func _istasyon_kur(h: Vector2i) -> void:
 func _isinla(hedef: Vector2) -> void:
 	_panelleri_kapat()
 	Ses.cal("isinlan")
-	_karart(true, 0.2)
-	await get_tree().create_timer(0.2).timeout
-	arac.isinlan(hedef)
-	dunya.hazirla(arac.global_position)
-	kamera.reset_smoothing()
-	_karart(false, 0.2)
+	await Gecis.ara(&"bloklar", Tema.derinlik_temasi(maxi(0, floori(hedef.y / Ayarlar.KARO))), func() -> void:   ## ışınlanma: blok örtüsünün altında yer değişir
+		arac.isinlan(hedef)
+		dunya.hazirla(arac.global_position)
+		kamera.reset_smoothing())
 
 ## İstasyon ve düşen sandık görsellerini yeniden kurar.
 func _nesne_yenile() -> void:
@@ -1146,6 +1248,7 @@ func _duraklat_ac() -> void:
 	_duraklat.visible = true
 	arac.kilitli = true
 	Ses.cal("menu")
+	Gecis.acilis(&"perde", Tema.derinlik_temasi(arac.derinlik()), 0.22)   ## duraklatma: perde açılır
 	$HUD/Duraklat/M/V/Devam.grab_focus()
 
 func _duraklat_kapat() -> void:
@@ -1245,18 +1348,15 @@ func _dokun_duraklat() -> void:
 		return
 	_duraklat_ac()
 
-func _karart(kapali: bool, sure := 0.45) -> void:
-	create_tween().tween_property(_karartma, "color:a", 1.0 if kapali else 0.0, sure)
-
 func _menuye() -> void:
 	_kaydet()
-	Gecis.git("res://scenes/menu.tscn")
+	Gecis.git("res://scenes/menu.tscn", Tema.derinlik_temasi(arac.derinlik()), &"perde")
 
 ## Oyun sonunda tek dokunuşla tekrar: bir üst Derin Mod turu (yeni tohum, eserler kalır).
 func _tekrar() -> void:
 	_kaydet()
 	Kayit.derin_mod_hazirla()
-	Gecis.git("res://scenes/oyun.tscn")
+	Gecis.git("res://scenes/oyun.tscn", 1, &"bloklar")
 
 func _kaydet() -> void:
 	var d := durum.sozluge()

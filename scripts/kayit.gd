@@ -28,6 +28,7 @@ const AYAR_VARSAYILAN := {
 	"muzik_ses": 0.7, "efekt_ses": 0.85,
 	"muzik_acik": true, "efekt_acik": true,
 	"tam_ekran": false, "sarsinti": true,
+	"sade_gecis": false,   ## hareket azaltma: ekran geçişleri efektsiz ve anında (v0.9)
 	"dil": "",   ## "" = otomatik (isletim sistemi/tarayici dili), "tr" ya da "en" (v0.8)
 }
 

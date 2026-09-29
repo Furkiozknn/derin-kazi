@@ -5,6 +5,27 @@ README'nin ilk ekranı bir sürüm dökümüyle doluydu. Liste silinmedi, buraya
 Güncel sürümün notları GitHub'da da duruyor:
 <https://github.com/Furkiozknn/derin-kazi/releases>
 
+## v0.9 — günlük video imkânları (29 Eylül 2026)
+
+Günlük videolarda kullanılan **renk akışı** ve **geçiş aileleri** oyuna alındı; oyunun kendi
+dünyası (koyu kahve zemin, amber, elmas camgöbeği, uç turuncusu, gaz yeşili, kâğıt) korundu.
+Çekirdek mekanik, denge ve bot ölçümleri **değişmedi**.
+
+- **Sekiz geçiş ailesi** tek shader'da (`assets/gecis.gdshader`, GL Compatibility): iris, glitch,
+  bloklar, itme, perde, flaş, kararma, zoom. Menü açılışı (iris), menü → oyun (zoom), oyun → menü
+  (perde), ışınlanma (bloklar), duraklatma (perde), oyun sonu (iris), çekirdeğe dokunuş (flaş),
+  deprem (glitch), dil değişimi (glitch), yüzeye çekilme (tehlike renginde flaş).
+- **Renk akışı:** iki derinlik paleti (toprak + kaya, bazalt + çekirdek); yazı rengi vurgunun
+  üstünde kodla seçilir (en düşük 4,85:1, eşik 4,5:1). Derinlik sayacı her yeni 25 m'de akış
+  rengine döner; en derin aşılınca **YENİ REKOR** damgası renk akışında döner.
+- **Sade geçişler** (ayarlarda, tarayıcıda `prefers-reduced-motion` de): efekt yok, bekleme yok,
+  sayaç vurgusu yok. Yeni `[ayar] sade_gecis` anahtarı; eski kayıt ve ayarlar açılır.
+- **Ham klip** yeniden üretildi: 19 sn, sekiz ailenin hepsi görünür.
+- **Testler:** 333 → 358 birim, 191 → 238 oynanış (palet kontrastı, havuzlar, her ailenin örtme/açma,
+  sırayla tekrarsız seçim, sade kip, oyun içi tüm kullanım yerleri). `ci.yml` tabanları 358 ve 238.
+- **Kare süresi** (`tools/fps.gd`, Intel UHD, 60 m): geçişsiz 3,15 → 2,68 ms (medyan, makine gürültülü);
+  geçiş sürerken ort. 3,42 ms, %99 4,84-5,05 ms (~293 FPS). Ayrıntı: `docs/TASARIM.md` §7.
+
 ## v0.8 — arayüz yenilemesi (29 Eylül 2026)
 
 Oyun, tanıtım videosuyla aynı dünyada: düz renk (gölgesiz, konturlu değil) toprak bantları,

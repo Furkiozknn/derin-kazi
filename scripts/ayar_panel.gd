@@ -14,6 +14,7 @@ static func kur(kap: VBoxContainer, kapat: Callable, dil_degisti := Callable()) 
 	_kaydirici(kap, Ceviri.t("Müzik"), "muzik_ses", "muzik_acik")
 	_kaydirici(kap, Ceviri.t("Efekt"), "efekt_ses", "efekt_acik")
 	_anahtar(kap, Ceviri.t("Ekran sarsıntısı"), "sarsinti")
+	_anahtar(kap, Ceviri.t("Sade geçişler"), "sade_gecis", false)   ## hareket azaltma: geçiş efekti yok, anında
 	if not OS.has_feature("web"):
 		_anahtar(kap, Ceviri.t("Tam ekran"), "tam_ekran")
 	_dil(kap, dil_degisti)
@@ -63,11 +64,11 @@ static func _kaydirici(kap: VBoxContainer, metin: String, anahtar: String, acik_
 		Ses.ayarla(acik_anahtar, acik))
 	h.add_child(c)
 
-static func _anahtar(kap: VBoxContainer, metin: String, anahtar: String) -> void:
+static func _anahtar(kap: VBoxContainer, metin: String, anahtar: String, varsayilan := true) -> void:
 	var c := CheckButton.new()
 	c.text = metin
 	c.add_theme_font_size_override("font_size", 11)
-	c.button_pressed = bool(Ses.ayar.get(anahtar, true))
+	c.button_pressed = bool(Ses.ayar.get(anahtar, varsayilan))
 	c.toggled.connect(func(acik: bool) -> void:
 		Ses.cal("menu")
 		Ses.ayarla(anahtar, acik))
@@ -81,7 +82,8 @@ static func _dil(kap: VBoxContainer, degisti: Callable) -> void:
 	d.add_theme_font_size_override("font_size", 11)
 	d.pressed.connect(func() -> void:
 		Ses.cal("menu")
-		Ses.ayarla("dil", "en" if Kayit.dil_etkin(Ses.ayar) == "tr" else "tr")
-		if degisti.is_valid():
-			degisti.call())
+		Gecis.ara(&"glitch", 0, func() -> void:   ## dil değişimi: glitch örtüsünün altında yeni metin
+			Ses.ayarla("dil", "en" if Kayit.dil_etkin(Ses.ayar) == "tr" else "tr")
+			if degisti.is_valid():
+				degisti.call()))
 	h.add_child(d)

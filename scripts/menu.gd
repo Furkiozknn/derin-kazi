@@ -48,6 +48,9 @@ func _ready() -> void:
 	# Dokunmatik cihazda klavye yardımı yanlış bilgi: dokunma alanlarını anlat.
 	_kontroller.text = tr(YARDIM_DOKUNMA if DisplayServer.is_touchscreen_available() else YARDIM_TUS)
 	Ses.muzik_cal("muzik_menu", 0.8)   ## oyundan dönerken bant müziğinden yumuşak geçiş
+	if not Gecis.acilis_yapildi and not Gecis.mesgul_mu():
+		Gecis.acilis(&"iris", 0, 0.5)   ## menü açılışı: iris ortadan açılır (yalnız ilk açılışta)
+	Gecis.acilis_yapildi = true
 	_bilgi_yenile()
 	UI.dugmeleri_bagla(self)
 	UI.sirayla_gir([$Etiket, $M/V/Baslik, $M/V/AltBaslik, $M/V/Basla, _kontroller,
@@ -143,7 +146,7 @@ func _derin_yenile() -> void:
 
 func _basla() -> void:
 	Ses.cal("menu")
-	Gecis.git("res://scenes/oyun.tscn")
+	Gecis.git("res://scenes/oyun.tscn", 0, &"zoom")   ## menü -> oyun: yeryüzüne dalış (zoom)
 
 ## "Yeni dünya" ilerlemeyi siler: ilk basış onay ister (3 sn içinde ikinci basış uygular).
 func _yeni_iste() -> void:

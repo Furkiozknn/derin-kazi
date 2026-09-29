@@ -23,12 +23,12 @@ env:
   # "latest" kullanmak, motor guncellenince testlerin bizden habersiz
   # kirmizi yanmasi demek olurdu.
   GODOT_SURUM: 4.7.2-stable
-  # Test kapisinin tabanlari (toplam 541): bir paketin gecen sinama sayisi
+  # Test kapisinin tabanlari (toplam 613): bir paketin gecen sinama sayisi
   # kendi tabaninin altina duserse CI kirmizi. Test EKLEYINCE ilgili tabani
   # yukselt (README ile birlikte); dusurmek, bir bolumun sessizce
   # kayboldugunu kabul etmek demek.
-  TEST_TABANI_BIRIM: 333
-  TEST_TABANI_OYNANIS: 191
+  TEST_TABANI_BIRIM: 358
+  TEST_TABANI_OYNANIS: 238
   TEST_TABANI_DENGE: 7
   TEST_TABANI_INSAN: 10
   # Fay kapisinin en az kac tohumda 12/12 demesi gerektigi.

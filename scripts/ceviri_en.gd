@@ -41,6 +41,8 @@ const EN := {
 	"Müzik": "Music",
 	"Efekt": "Effects",
 	"Ekran sarsıntısı": "Screen shake",
+	"Sade geçişler": "Simple transitions",
+	"YENİ REKOR": "NEW RECORD",
 	"Tam ekran": "Fullscreen",
 	"Dil": "Language",
 	"Kapat": "Close",

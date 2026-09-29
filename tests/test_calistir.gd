@@ -44,6 +44,7 @@ func _initialize() -> void:
 	_ceviri_testleri()
 	_dil_testleri()
 	_tema_testleri()
+	_gecis_palet_testleri()
 	_girdi_toleransi_testleri()
 	print("== %d sınama, %d hata ==" % [_sayac, _hata])
 	quit(1 if _hata > 0 else 0)
@@ -1462,3 +1463,48 @@ func _ulasilabilir(u: DunyaUretici) -> Dictionary:
 			gorulen[k] = true
 			sira.append(k)
 	return gorulen
+
+## Günlük video imkânları (v0.9): renk akışı paleti (okunurluk >= 4,5:1), geçiş aileleri, derinlik teması.
+func _gecis_palet_testleri() -> void:
+	print("- günlük video imkânları: palet, geçiş aileleri")
+	dogru(Tema.AKIS.size() == 2, "iki derinlik paleti (toprak+kaya, bazalt+çekirdek)")
+	var en_dusuk_yazi := 99.0
+	var en_dusuk_zemin := 99.0
+	for t in Tema.AKIS.size():
+		var a: Dictionary = Tema.AKIS[t]
+		dogru(a["vurgu"].size() >= 4 and String(a["kaynak"]) != "", "tema %d akış paleti (%s, %d renk)" % [t, a["kaynak"], a["vurgu"].size()])
+		for v in a["vurgu"]:
+			en_dusuk_yazi = minf(en_dusuk_yazi, Tema.kontrast(v, Tema.yazi_rengi(v, t)))
+			en_dusuk_zemin = minf(en_dusuk_zemin, Tema.kontrast(v, Tema.MUREKKEP))
+		dogru(Tema.kontrast(a["acik"], a["koyu"]) >= 10.0, "tema %d açık/koyu yazı çifti" % t)
+	dogru(en_dusuk_yazi >= Tema.ESIK, "akış renkleri üzerinde yazı en az %.1f:1 (en düşük %.2f)" % [Tema.ESIK, en_dusuk_yazi])
+	dogru(en_dusuk_zemin >= Tema.ESIK, "akış renkleri koyu dünyaya karşı en az %.1f:1 (en düşük %.2f)" % [Tema.ESIK, en_dusuk_zemin])
+	dogru(is_equal_approx(Tema.kontrast(Color.BLACK, Color.WHITE), 21.0), "kontrast hesabı: siyah/beyaz 21:1")
+	dogru(Tema.yazi_rengi(Tema.AMBER, 0).is_equal_approx(Tema.MUREKKEP), "amber üzerinde koyu yazı")
+	dogru(Tema.akis_rengi(0, 0).is_equal_approx(Tema.akis_rengi(0, Tema.AKIS[0]["vurgu"].size())), "akış rengi sarmal döner")
+	# Geçiş aileleri: iki havuz birlikte sekiz ailenin hepsini kapsıyor, hepsi shader'da var.
+	var hepsi := {}
+	for t in Tema.AKIS.size():
+		var havuz: Array = Tema.AKIS[t]["gecis"]
+		dogru(havuz.size() >= 3, "tema %d geçiş havuzu %d aile" % [t, havuz.size()])
+		for g in havuz:
+			dogru(g in Tema.GECIS_TURLERI, "havuzdaki '%s' shader ailesi" % g)
+			hepsi[g] = true
+	dogru(hepsi.size() == Tema.GECIS_TURLERI.size() and Tema.GECIS_TURLERI.size() == 8, "sekiz geçiş ailesinin hepsi bir havuzda (%d)" % hepsi.size())
+	var shader: Shader = load("res://assets/gecis.gdshader")
+	var uniformlar: Array = []
+	if shader != null:
+		for u in shader.get_shader_uniform_list():
+			uniformlar.append(String(u["name"]))
+	dogru("tur" in uniformlar and "p" in uniformlar and "renk" in uniformlar and "renk2" in uniformlar and "adim" in uniformlar,
+		"geçiş shader'ı yükleniyor, uniform'lar var (%s)" % [uniformlar])
+	# Derinlik teması Ayarlar.AMBIYANS bandından.
+	dogru(Tema.derinlik_temasi(0) == 0 and Tema.derinlik_temasi(40) == 0 and Tema.derinlik_temasi(149) == 0
+		and Tema.derinlik_temasi(150) == 1 and Tema.derinlik_temasi(250) == 1, "derinlik teması: 150 m'ye kadar 0, sonra 1")
+	# Sade geçişler ayarı: varsayılan kapalı, eski ayar dosyası bozulmadan açılıyor.
+	dogru(Kayit.AYAR_VARSAYILAN.has("sade_gecis") and not bool(Kayit.AYAR_VARSAYILAN["sade_gecis"]), "sade geçişler varsayılan kapalı")
+	var onceki_ayar := Kayit.ayar_yukle()
+	Kayit.ayar_kaydet({"muzik_ses": 0.4})
+	var eski := Kayit.ayar_yukle()
+	dogru(not bool(eski["sade_gecis"]) and is_equal_approx(float(eski["muzik_ses"]), 0.4), "sade_gecis anahtarı olmayan eski ayar açılıyor")
+	Kayit.ayar_kaydet(onceki_ayar)   ## kullanıcının kayıtlı ayarı bozulmasın
