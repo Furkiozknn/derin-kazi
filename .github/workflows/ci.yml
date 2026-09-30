@@ -141,7 +141,7 @@ jobs:
       # yapiliyor; su an temiz (177 dosya, 46 referans, sifir
       # bulgu) ve bu commit'ten sonra oyle kalmasi garanti.
       - name: godot-refcheck
-        uses: Furkiozknn/godot-refcheck@b083e3d2998ca0d5101289b106c76794c6de866d  # v0.2.0 + the clean-project fix
+        uses: Furkiozknn/godot-refcheck@c24629dbb64af70cf81689c7410010b1d44b9b88  # v0.2.0 + the clean-project fix
         with:
           path: .
           fail-on: error
