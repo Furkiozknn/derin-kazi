@@ -96,8 +96,8 @@ Testler ve dışa aktarma: [Çalıştırma](#çalıştırma).
 |---|---|---|
 | `A` / `D` veya `←` / `→` | Sol çubuk, D-pad | Yürü; zemindeyken yana kaz |
 | `S` veya `↓` | Aşağı | Aşağı kaz |
-| `W` / `Boşluk` | A | Pervane — boş tünelde yüksel |
-| `E` | X | Üs menüsü (sat, geliştir, yakıt, müze) |
+| `W` / `↑` / `Boşluk` | A | Pervane — boş tünelde yüksel |
+| `E` / `Enter` | X | Üs menüsü (sat, geliştir, yakıt, müze) |
 | `T` | RB | Işınlanma (yüzey ↔ istasyon ↔ işaret) |
 | `R` | B | Dönüş işareti koy (yeraltında, tek kullanımlık) |
 | `Q` | LB | Maden radarı |
