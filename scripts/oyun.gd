@@ -328,6 +328,7 @@ func _hud_yenile() -> void:
 	var d := arac.derinlik()
 	_lbl_derinlik.text = "%d m" % d
 	_derinlik_izle(d)
+	_ara_isle(d)
 	var yakit_az := durum.yakit < durum.yakit_kapasitesi() * 0.25
 	_lbl_yakit.text = Ceviri.t("YAKIT %d/%d") % [ceili(durum.yakit), int(durum.yakit_kapasitesi())]
 	_lbl_yuk.text = Ceviri.t("YÜK %d/%d") % [durum.yuk_toplam(), durum.yuk_kapasitesi()]  ## ağırlık
@@ -367,6 +368,19 @@ func _derinlik_izle(d: int) -> void:
 	if not _rekor_verildi and _rekor_esigi >= REKOR_ESIK and d > _rekor_esigi:
 		_rekor_verildi = true
 		_damga_goster()
+
+## Depth splits: the first time this run passes a stratum boundary or the
+## core, the run clock is stored and a short line compares it with the best split
+## ("90 m  5:40  (-0:21)"). The record itself is only written at the end of a
+## finished run (_kazandi), so the comparison stays against the previous best.
+func _ara_isle(d: int) -> void:
+	if durum.kazandi:
+		return
+	var i := durum.ara_isle(d)
+	if i < 0:
+		return
+	var rekor := Kayit.ara_rekor_yukle(durum.derin_mi())
+	_ipucu_goster(Ceviri.t("ARA") + "  " + AraSure.tek_metin(i, durum.ara, rekor), 3.0)
 
 func _derinlik_vurgula() -> void:
 	if Gecis.sade() or _vurgu_kalan > VURGU_SURESI - VURGU_ARALIK:
@@ -778,6 +792,9 @@ func _kazandi() -> void:
 	durum.kacis = false
 	arac.kilitli = true
 	durum.en_derin = maxi(durum.en_derin, Ayarlar.CEKIRDEK_DERINLIK)
+	durum.ara_isle(Ayarlar.CEKIRDEK_DERINLIK)   ## a save loaded after the core still gets its split
+	var ara_rekor := Kayit.ara_rekor_yukle(durum.derin_mi())   ## compared BEFORE this run merges in
+	Kayit.ara_rekor_kaydet(durum.derin_mi(), durum.ara)
 	_kaydet()
 	Ses.cal("sat")
 	Ses.muzik_cal("bitis")
@@ -788,7 +805,7 @@ func _kazandi() -> void:
 	if durum.derin_mi():
 		sonraki_mod = Ceviri.t("Derin Mod x%d tamamlandı. Menüde x%d açıldı — eserlerin seninle gelir.") % [
 			durum.derin_seviye, durum.derin_seviye + 1]
-	$HUD/Bitis/M/V/Metin.text = bitis_metni(durum, Kayit.oyuncu_yukle(), son, sonraki_mod)
+	$HUD/Bitis/M/V/Metin.text = bitis_metni(durum, Kayit.oyuncu_yukle(), son, sonraki_mod, ara_rekor)
 	$HUD/Bitis/M/V/Tekrar.text = Ceviri.t("Tekrar — Derin Mod x%d") % (Kayit.derin_seviyesi() + 1)
 	_bitis.visible = true
 	Gecis.acilis(&"iris", 1, 0.45)   ## oyun sonu: kart ortadan açılır (sade kipte anında)
@@ -797,10 +814,16 @@ func _kazandi() -> void:
 ## Bitiş ekranının dökümü (v0.7): bu dünyanın sayaçları + [oyuncu] toplamı. Saf —
 ## test sahne kurmadan metni sınıyor. `toplam` _kaydet'ten SONRA okunmalı ki bu koşu
 ## toplama girmiş olsun. Satırlar 480 px'e sarılır (oyun.tscn autowrap), 640×360'a sığar.
-static func bitis_metni(d: Durum, toplam: Dictionary, son: String, sonraki_mod: String) -> String:
+static func bitis_metni(d: Durum, toplam: Dictionary, son: String, sonraki_mod: String,
+		ara_rekor := PackedFloat32Array()) -> String:
 	var s := d.istatistik()
+	var rekor_sayisi := AraSure.yeni_rekor_sayisi(ara_rekor, d.ara)
+	var ara_satiri := AraSure.satir(d.ara, ara_rekor)
+	if rekor_sayisi > 0:
+		ara_satiri += "  ·  " + Ceviri.t("%d yeni rekor") % rekor_sayisi
 	return Ceviri.t("SÜRE %s  ·  EN DERİN %d m  ·  PARA %d ₺  ·  ESER %d/%d  ·  TOHUM %s") % [
 			_sure_metni(d.sure), d.en_derin, d.para, d.eser_toplanan(), d.eser_sayisi(), TohumKodu.kodla(d.tohum)] \
+		+ "\n" + ara_satiri \
 		+ "\n\n" + Ceviri.t("Bu dünya:  %d karo kazıldı  ·  %d deprem  ·  %d yüzeye çekilme  ·  %d ₺ satış") % [
 			int(s["kazilan_karo"]), int(s["deprem"]), int(s["olum"]), int(s["satis_toplam"])] \
 		+ "\n" + Ceviri.t("Toplam (bütün dünyalar):  %d karo  ·  %d deprem  ·  %d çekilme  ·  %d ₺ satış  ·  %s oyun") % [
