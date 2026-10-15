@@ -55,7 +55,9 @@ static func dosya_oku(yol: String) -> ConfigFile:
 	var hata := cfg.load(yol)
 	if hata == OK and not cfg.get_sections().is_empty():
 		return cfg
-	if hata != OK and hata != ERR_FILE_NOT_FOUND:
+	# Unusable: a parse error, or text that yields no sections at all. Keep a
+	# copy before anything can overwrite it (an empty file has nothing to keep).
+	if FileAccess.file_exists(yol) and not FileAccess.get_file_as_bytes(yol).is_empty():
 		DirAccess.copy_absolute(yol, bozuk_yolu(yol))
 		push_warning("Save file unreadable (error %d), kept as %s" % [hata, bozuk_yolu(yol)])
 	var yedek := ConfigFile.new()
