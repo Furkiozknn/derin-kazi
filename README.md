@@ -243,6 +243,15 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 - **Günlük dünya** — tohum tarihten türer, herkeste aynıdır. **Ayrı kayıt yuvası**
   kullanır (`[gunluk]`), ana ilerlemene dokunmaz. Menüde o günün en derin noktası
   yazar; gün değişince yuva sıfırlanır.
+- **Paylaş** — duraklatma ve bitiş panelindeki **Paylaş (panoya kopyala)** düğmesi
+  dünyanın kısa, sürprizsiz bir özetini panoya kopyalar: başlık (günlük dünyada
+  tarihle, Derin Mod'da seviyeyle), `187 / 250 m  ▰▰▰▰▰▰▰▱▱▱`, süre · eser · deprem
+  · çekilme, **tohum kodu** ve oyun adresi. Kodu alan kişi menüdeki "Tohum kodu"
+  ekranından aynı dünyayı açar — günlük dünya ertesi gün de paylaşılabilir. 280
+  karakteri geçmez (testli); metin TR/EN. Wordle tarzı paylaşım kartlarından
+  esinlendi; rakip analizindeki üç Steam oyununun (SteamWorld Dig, Dome Keeper, A Game
+  About Digging A Hole) sayfasında tohum paylaşımı geçmiyor. Oyun çevrimdışı olduğu
+  için çevrimiçi skor tablosunun yerini bu tutuyor.
 - **Derin Mod** — çekirdeği bir kez çıkardıktan sonra menüde açılır. Yeni tohum,
   sıfırlanan geliştirmeler, **korunan eser bonusları** ve her turda artan zorluk:
   kaya %15 daha sert, yakıt %12 daha hızlı biter, maden %25 daha değerli.
@@ -509,6 +518,7 @@ scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı 
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar (dil dahil)
+scripts/paylas.gd         paylaşım metni: derinlik çubuğu, özet, tohum kodu (saf sınıf)
 scripts/tema.gd           video paleti, mono etiket / kutu yardımcıları (assets/tema.tres'in kaynağı tools/tema_uret.gd)
 scripts/ceviri.gd         TR/EN: tr("Türkçe metin") anahtar, tablo scripts/ceviri_en.gd
 scripts/gecis.gd          autoload: sekiz geçiş ailesi (assets/gecis.gdshader), sahne geçişi, vuruşlar, sade kip

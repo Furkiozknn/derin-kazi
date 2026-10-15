@@ -915,6 +915,15 @@ func _yeni_arayuz_testleri() -> void:
 		and sahne.get_node("HUD/Duraklat/M/V/Baslik").atr("Duraklatıldı") == "Paused",
 		"duraklatma ekranı başlığı ve tam tuş listesi İngilizce")
 	dogru(pause.size.x <= Ayarlar.EKRAN_G and pause.size.y <= Ayarlar.EKRAN_Y, "duraklat paneli 640×360'a sığıyor (%.0f×%.0f)" % [pause.size.x, pause.size.y])
+	var paylas: Button = sahne.get_node("HUD/Duraklat/M/V/Paylas")
+	dogru(paylas.text == "Paylaş (panoya kopyala)" and paylas.atr(paylas.text) == "Share (copy to clipboard)",
+		"pause panel has the share button (English: %s)" % paylas.atr(paylas.text))
+	paylas.pressed.emit()
+	await _kare(1)
+	dogru(String(sahne.son_paylasim).begins_with("Deep Dig") and String(sahne.son_paylasim).contains("Seed code: ")
+		and String(sahne.son_paylasim).contains("furkiozknn.github.io/derin-kazi"),
+		"share copies the world summary with its seed code (%s)" % String(sahne.son_paylasim).replace("\n", " | "))
+	dogru(paylas.text.begins_with("Copied"), "the share button confirms in place (%s)" % paylas.text)
 	sahne.call("_unhandled_input", _tus("duraklat"))
 	await _kare(2)
 	dogru(not pause.visible and not arac.kilitli, "ikinci Esc devam ettiriyor")
@@ -946,6 +955,10 @@ func _yeni_arayuz_testleri() -> void:
 	dogru(tekrar.pressed.get_connections().size() > 0 and sahne.get_node("HUD/Bitis/M/V/Menu").pressed.get_connections().size() > 0,
 		"Tekrar ve Menü düğmeleri bağlı")
 	dogru(bitis.size.x <= Ayarlar.EKRAN_G and bitis.size.y <= Ayarlar.EKRAN_Y, "oyun sonu paneli 640×360'a sığıyor (%.0f×%.0f)" % [bitis.size.x, bitis.size.y])
+	sahne.get_node("HUD/Bitis/M/V/Paylas").pressed.emit()
+	await _kare(1)
+	dogru(String(sahne.son_paylasim).contains("250 / 250 m") and String(sahne.son_paylasim).contains("core reached"),
+		"end panel share says the core was reached")
 	sahne.queue_free()
 	await process_frame
 
