@@ -33,6 +33,7 @@ func _initialize() -> void:
 	_sis_testleri()
 	_varyant_testleri()
 	_tohum_kodu_testleri()
+	_paylas_testleri()
 	_derin_mod_testleri()
 	_ambiyans_testleri()
 	_simge_testleri()
@@ -937,6 +938,44 @@ func _tohum_kodu_testleri() -> void:
 	dogru(Kayit.gunluk_tohum("2026-09-16") != Kayit.gunluk_tohum("2026-09-17"),
 		"günlük tohum her gün değişiyor")
 	dogru(Kayit.bugun().length() == 10, "bugün etiketi YYYY-AA-GG (%s)" % Kayit.bugun())
+
+# --- share text -----------------------------------------------------------
+
+func _paylas_testleri() -> void:
+	print("- share text")
+	dogru(Paylas.cubuk(0) == "▱▱▱▱▱▱▱▱▱▱" and Paylas.cubuk(250) == "▰▰▰▰▰▰▰▰▰▰"
+		and Paylas.cubuk(125) == "▰▰▰▰▰▱▱▱▱▱" and Paylas.cubuk(24) == Paylas.cubuk(0)
+		and Paylas.cubuk(999) == Paylas.cubuk(250) and Paylas.cubuk(-5) == Paylas.cubuk(0),
+		"depth bar: 10 cells of 25 m, clamped at both ends")
+	var d := Durum.new(4242)
+	d.en_derin = 187
+	d.sure = 754.0
+	d.deprem = 3
+	d.olum = 1
+	var g := Paylas.metin(d, true, "2026-10-15")
+	var satir := g.split("\n")
+	dogru(satir.size() == 5 and satir[0] == "Derin Kazı · Günlük dünya 2026-10-15",
+		"daily share: five lines, titled with the date (%s)" % satir[0])
+	dogru(satir[1] == "187 / 250 m  ▰▰▰▰▰▰▰▱▱▱", "daily share: depth and bar (%s)" % satir[1])
+	dogru(satir[2].contains("12:34") and satir[2].contains("3 deprem") and satir[2].contains("1 çekilme"),
+		"daily share: time, quakes and tows (%s)" % satir[2])
+	dogru(satir[3].ends_with(TohumKodu.kodla(4242)) and TohumKodu.coz(satir[3].right(TohumKodu.UZUNLUK)) == 4242,
+		"the seed code in the text opens the same world")
+	dogru(satir[4] == Paylas.ADRES, "the last line is the play link")
+	dogru(g.length() <= Paylas.EN_UZUN, "fits a short post (%d chars)" % g.length())
+	d.derin_seviye = 2
+	d.kazandi = true
+	d.en_derin = 260
+	var dm := Paylas.metin(d, false, "2026-10-15")
+	dogru(dm.begins_with("Derin Kazı · DERİN MOD x2") and dm.contains("250 / 250 m") and dm.contains("çekirdek çıkarıldı"),
+		"Derin Mod share: level in the title, depth capped at the core, core reached")
+	dogru(Paylas.metin(Durum.new(1), false, "x").begins_with("Derin Kazı\n"), "main world share: plain title")
+	Ceviri.kur()
+	TranslationServer.set_locale("en")
+	var en := Paylas.metin(d, true, "2026-10-15")
+	TranslationServer.set_locale("tr")
+	dogru(en.begins_with("Deep Dig · Daily world 2026-10-15") and en.contains("Seed code: ") and en.contains("core reached")
+		and en.contains("quakes"), "share text in English")
 
 # --- Derin Mod ------------------------------------------------------------
 

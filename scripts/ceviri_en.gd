@@ -132,6 +132,12 @@ const EN := {
 	"ÇEKİRDEK ÇIKARILDI!": "CORE EXTRACTED!",
 	"Tekrar": "Again",
 	"Tekrar — Derin Mod x%d": "Again — Deep Mode x%d",
+	# --- share text ---
+	"Paylaş (panoya kopyala)": "Share (copy to clipboard)",
+	"Panoya kopyalandı ✔": "Copied to clipboard ✔",
+	"çekirdek çıkarıldı": "core reached",
+	"Süre %s  ·  eser %d/%d  ·  %d deprem  ·  %d çekilme": "Time %s  ·  artifacts %d/%d  ·  %d quakes  ·  %d tows",
+	"Tohum kodu: %s": "Seed code: %s",
 	"Menüye dön": "Back to menu",
 	"Menüye dön (kaydeder)": "Back to menu (saves)",
 	"SÜRE %s  ·  EN DERİN %d m  ·  PARA %d ₺  ·  ESER %d/%d  ·  TOHUM %s": "TIME %s  ·  DEEPEST %d m  ·  MONEY %d ₺  ·  ARTIFACTS %d/%d  ·  SEED %s",

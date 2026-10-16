@@ -129,6 +129,8 @@ func _ready() -> void:
 	$HUD/Duraklat/M/V/Menu.pressed.connect(_menuye)
 	$HUD/Bitis/M/V/Menu.pressed.connect(_menuye)
 	$HUD/Bitis/M/V/Tekrar.pressed.connect(_tekrar)
+	$HUD/Duraklat/M/V/Paylas.pressed.connect(_paylas.bind($HUD/Duraklat/M/V/Paylas))
+	$HUD/Bitis/M/V/Paylas.pressed.connect(_paylas.bind($HUD/Bitis/M/V/Paylas))
 	$HUD/Uyari/M/V/Tamam.pressed.connect(_uyari_kapat)
 
 	_dokunmatik = DisplayServer.is_touchscreen_available()
@@ -831,6 +833,19 @@ static func bitis_metni(d: Durum, toplam: Dictionary, son: String, sonraki_mod: 
 			int(toplam.get("satis_toplam", 0)), _sure_metni(float(toplam.get("sure", 0.0)))] \
 		+ "\n\n" + son + "\n" + sonraki_mod
 
+## Share (pause and end panels): copies a short summary of this world with its seed
+## code to the clipboard (scripts/paylas.gd). On the web build the browser's
+## clipboard API needs a user gesture; a button press is one. The button confirms
+## in place, since a toast would sit under the open panel.
+var son_paylasim := ""   ## last copied text; tests read it (headless has no clipboard)
+const PAYLAS_DUGME := "Paylaş (panoya kopyala)"   ## same key as the scene buttons (auto-translated)
+
+func _paylas(dugme: Button) -> void:
+	son_paylasim = Paylas.metin(durum, Kayit.aktif == Kayit.GUNLUK, Kayit.bugun())
+	DisplayServer.clipboard_set(son_paylasim)
+	dugme.text = Ceviri.t("Panoya kopyalandı ✔")
+	Ses.cal("menu")
+
 static func _sure_metni(s: float) -> String:
 	return "%d:%02d" % [int(s) / 60, int(s) % 60]
 
@@ -1268,6 +1283,7 @@ func _uyari_kapat() -> void:
 ## Duraklatma: Devam / Ayarlar / Menü + tam tuş listesi (menüde tek satır vardı).
 func _duraklat_ac() -> void:
 	_lbl_tuslar.text = tr(Ipucu.TUSLAR_DOKUNMA if _dokunmatik else Ipucu.TUSLAR)
+	$HUD/Duraklat/M/V/Paylas.text = PAYLAS_DUGME   ## a previous "copied" confirmation resets
 	_duraklat.visible = true
 	arac.kilitli = true
 	Ses.cal("menu")
