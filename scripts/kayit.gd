@@ -33,9 +33,49 @@ const AYAR_VARSAYILAN := {
 }
 
 static func _cfg() -> ConfigFile:
+	return dosya_oku(YOL)
+
+## Automatic copy written after every successful save (same scheme as
+## tek-tus-kosu): kayit.cfg -> kayit.yedek.cfg.
+static func yedek_yolu(yol: String) -> String:
+	return yol.get_basename() + ".yedek.cfg"
+
+## Where an unreadable save is kept for manual recovery: kayit.bozuk.cfg.
+static func bozuk_yolu(yol: String) -> String:
+	return yol.get_basename() + ".bozuk.cfg"
+
+## Loads the save at `yol`. Every write merges into what was read, so a failed
+## read used to turn into a file holding only the section being written: one
+## corrupt save wiped progress, daily, Derin Mod and stats. Now an unreadable
+## (parse error) or empty (write cut short) file falls back to the automatic
+## backup, and an unreadable file is copied to bozuk_yolu() before anything
+## can overwrite it.
+static func dosya_oku(yol: String) -> ConfigFile:
 	var cfg := ConfigFile.new()
-	cfg.load(YOL)
-	return cfg
+	var hata := cfg.load(yol)
+	if hata == OK and not cfg.get_sections().is_empty():
+		return cfg
+	# Unusable: a parse error, or text that yields no sections at all. Keep a
+	# copy before anything can overwrite it (an empty file has nothing to keep).
+	if FileAccess.file_exists(yol) and not FileAccess.get_file_as_bytes(yol).is_empty():
+		DirAccess.copy_absolute(yol, bozuk_yolu(yol))
+		push_warning("Save file unreadable (error %d), kept as %s" % [hata, bozuk_yolu(yol)])
+	var yedek := ConfigFile.new()
+	if yedek.load(yedek_yolu(yol)) == OK and not yedek.get_sections().is_empty():
+		push_warning("Save loaded from backup %s" % yedek_yolu(yol))
+		return yedek
+	return cfg if hata == OK else ConfigFile.new()
+
+## Saves `cfg` to `yol`, then refreshes the backup. The backup is written only
+## after the main file saved cleanly, so a save cut short (crash, closed tab)
+## leaves the previous good copy for dosya_oku().
+static func dosya_yaz(cfg: ConfigFile, yol: String) -> Error:
+	var hata := cfg.save(yol)
+	if hata == OK:
+		hata = cfg.save(yedek_yolu(yol))
+	if hata != OK:
+		push_warning("Save failed (error %d): %s" % [hata, yol])
+	return hata
 
 static func _oku(bolum: String, varsayilan: Dictionary) -> Dictionary:
 	var cfg := _cfg()
@@ -49,7 +89,7 @@ static func _yaz(bolum: String, d: Dictionary) -> void:
 	var cfg := _cfg()
 	for anahtar in d:
 		cfg.set_value(bolum, anahtar, d[anahtar])
-	cfg.save(YOL)
+	dosya_yaz(cfg, YOL)
 
 static func yukle(bolum := "") -> Dictionary:
 	var cfg := _cfg()
@@ -69,7 +109,7 @@ static func sil(bolum := "") -> void:
 	var b := bolum if bolum != "" else aktif
 	if cfg.has_section(b):
 		cfg.erase_section(b)
-	cfg.save(YOL)
+	dosya_yaz(cfg, YOL)
 
 static func var_mi() -> bool:
 	return not yukle().is_empty()
