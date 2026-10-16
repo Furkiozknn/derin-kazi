@@ -483,6 +483,38 @@ func _kayit_testleri() -> void:
 	dogru(v6.para == v5.para and v6.sefer == v5.sefer and v6.eserler == v5.eserler,
 		"v0.5 kaydı v0.6 biçiminde yeniden yazılınca aynı kalıyor")
 	dv5.free()
+	_bozuk_kayit_testleri()
+
+
+## A corrupt or truncated save must not wipe progress: dosya_oku() falls back
+## to the automatic backup and keeps the unreadable file as *.bozuk.cfg.
+## Uses its own file under user://, never the player's kayit.cfg.
+func _bozuk_kayit_testleri() -> void:
+	print("- corrupt save guard")
+	var yol := "user://test_kayit.cfg"
+	var yollar: Array[String] = [yol, Kayit.yedek_yolu(yol), Kayit.bozuk_yolu(yol)]
+	for y in yollar:
+		DirAccess.remove_absolute(y)
+	var cfg := ConfigFile.new()
+	cfg.set_value(Kayit.ANA, "para", 1234)
+	cfg.set_value(Kayit.OYUNCU, "kazilan", 99)
+	dogru(Kayit.dosya_yaz(cfg, yol) == OK and FileAccess.file_exists(Kayit.yedek_yolu(yol)),
+		"save writes the main file and its backup")
+	var f := FileAccess.open(yol, FileAccess.WRITE)
+	f.store_string("bozuk [[[ dosya")
+	f.close()
+	var geri := Kayit.dosya_oku(yol)
+	dogru(int(geri.get_value(Kayit.ANA, "para", 0)) == 1234
+		and int(geri.get_value(Kayit.OYUNCU, "kazilan", 0)) == 99,
+		"corrupt save is read from the backup")
+	dogru(FileAccess.get_file_as_string(Kayit.bozuk_yolu(yol)) == "bozuk [[[ dosya",
+		"corrupt save is kept as .bozuk.cfg")
+	f = FileAccess.open(yol, FileAccess.WRITE)
+	f.close()
+	geri = Kayit.dosya_oku(yol)
+	dogru(int(geri.get_value(Kayit.ANA, "para", 0)) == 1234, "empty (cut short) save is read from the backup")
+	for y in yollar:
+		DirAccess.remove_absolute(y)
 
 
 # --- garantili fay hattı --------------------------------------------------
