@@ -143,6 +143,11 @@ const EN := {
 	"SÜRE %s  ·  EN DERİN %d m  ·  PARA %d ₺  ·  ESER %d/%d  ·  TOHUM %s": "TIME %s  ·  DEEPEST %d m  ·  MONEY %d ₺  ·  ARTIFACTS %d/%d  ·  SEED %s",
 	"Bu dünya:  %d karo kazıldı  ·  %d deprem  ·  %d yüzeye çekilme  ·  %d ₺ satış": "This world:  %d tiles dug  ·  %d quakes  ·  %d tows  ·  %d ₺ sold",
 	"Toplam (bütün dünyalar):  %d karo  ·  %d deprem  ·  %d çekilme  ·  %d ₺ satış  ·  %s oyun": "Total (all worlds):  %d tiles  ·  %d quakes  ·  %d tows  ·  %d ₺ sold  ·  %s played",
+	# --- depth splits ---
+	"ARA SÜRELER": "SPLITS",
+	"ARA": "SPLIT",
+	"ilk": "first",
+	"%d yeni rekor": "%d new best",
 	"  Kabuk nöbeti ikramiyesi +%d ₺.": "  Crust-watch bonus +%d ₺.",
 	"  Derinde kaldın: -%d can.": "  You stayed deep: -%d HP.",
 	"DEPREM! %d karo tünel kapandı, %d yeni damar/gaz çıktı.%s": "QUAKE! %d tunnel tiles closed, %d new veins/gas pockets appeared.%s",

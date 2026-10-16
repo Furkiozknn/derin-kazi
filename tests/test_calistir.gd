@@ -42,6 +42,7 @@ func _initialize() -> void:
 	_ses_uretici_testleri()
 	_istatistik_testleri()
 	_isaret_testleri()
+	_ara_sure_testleri()
 	_ceviri_testleri()
 	_dil_testleri()
 	_tema_testleri()
@@ -483,6 +484,38 @@ func _kayit_testleri() -> void:
 	dogru(v6.para == v5.para and v6.sefer == v5.sefer and v6.eserler == v5.eserler,
 		"v0.5 kaydı v0.6 biçiminde yeniden yazılınca aynı kalıyor")
 	dv5.free()
+	_bozuk_kayit_testleri()
+
+
+## A corrupt or truncated save must not wipe progress: dosya_oku() falls back
+## to the automatic backup and keeps the unreadable file as *.bozuk.cfg.
+## Uses its own file under user://, never the player's kayit.cfg.
+func _bozuk_kayit_testleri() -> void:
+	print("- corrupt save guard")
+	var yol := "user://test_kayit.cfg"
+	var yollar: Array[String] = [yol, Kayit.yedek_yolu(yol), Kayit.bozuk_yolu(yol)]
+	for y in yollar:
+		DirAccess.remove_absolute(y)
+	var cfg := ConfigFile.new()
+	cfg.set_value(Kayit.ANA, "para", 1234)
+	cfg.set_value(Kayit.OYUNCU, "kazilan", 99)
+	dogru(Kayit.dosya_yaz(cfg, yol) == OK and FileAccess.file_exists(Kayit.yedek_yolu(yol)),
+		"save writes the main file and its backup")
+	var f := FileAccess.open(yol, FileAccess.WRITE)
+	f.store_string("bozuk [[[ dosya")
+	f.close()
+	var geri := Kayit.dosya_oku(yol)
+	dogru(int(geri.get_value(Kayit.ANA, "para", 0)) == 1234
+		and int(geri.get_value(Kayit.OYUNCU, "kazilan", 0)) == 99,
+		"corrupt save is read from the backup")
+	dogru(FileAccess.get_file_as_string(Kayit.bozuk_yolu(yol)) == "bozuk [[[ dosya",
+		"corrupt save is kept as .bozuk.cfg")
+	f = FileAccess.open(yol, FileAccess.WRITE)
+	f.close()
+	geri = Kayit.dosya_oku(yol)
+	dogru(int(geri.get_value(Kayit.ANA, "para", 0)) == 1234, "empty (cut short) save is read from the backup")
+	for y in yollar:
+		DirAccess.remove_absolute(y)
 
 
 # --- garantili fay hattı --------------------------------------------------
@@ -1330,6 +1363,73 @@ func _isaret_testleri() -> void:
 	dogru(InputMap.has_action("isaret"), "isaret eylemi girdi haritasında")
 	dogru(FileAccess.get_file_as_string("res://tests/bot.gd").find("isaret") < 0,
 		"bot işareti bilmiyor (ölçüm değişmedi)")
+
+# --- depth splits -------------------------------------------------
+
+func _ara_sure_testleri() -> void:
+	print("- depth splits and split records")
+	var e := AraSure.esikler()
+	dogru(e == PackedInt32Array([40, 90, 150, 210, 250]), "split depths are the stratum boundaries and the core (%s)" % str(e))
+	var d := Durum.new(9)
+	dogru(d.ara.size() == 5 and d.ara.count(AraSure.YOK) == 5, "a new run starts with every split empty")
+	d.sure = 30.0
+	dogru(d.ara_isle(39) == -1 and d.ara[0] < 0.0, "39 m records nothing")
+	d.sure = 61.0
+	dogru(d.ara_isle(40) == 0 and is_equal_approx(d.ara[0], 61.0), "40 m records the run clock in the member array")
+	d.sure = 70.0
+	dogru(d.ara_isle(45) == -1 and is_equal_approx(d.ara[0], 61.0), "a split is written once (climbing back down does not move it)")
+	d.sure = 200.0
+	dogru(d.ara_isle(160) == 2 and is_equal_approx(d.ara[1], 200.0) and is_equal_approx(d.ara[2], 200.0)
+		and d.ara[3] < 0.0, "falling through 90 and 150 records both with the same time")
+	var y := Durum.new(0)
+	y.sozlukten(d.sozluge())
+	dogru(y.ara == d.ara, "splits survive save and load")
+	var eski := d.sozluge()
+	eski.erase("ara_sure")
+	var o := Durum.new(0)
+	o.sozlukten(eski)
+	dogru(o.ara == AraSure.bos(), "an old save without splits opens with every split empty")
+	dogru(AraSure.gecerli([1.0, 2.0]) == AraSure.bos() and AraSure.gecerli("bozuk") == AraSure.bos()
+		and AraSure.gecerli(PackedFloat32Array([1, -5, NAN, INF, 9]))[1] == AraSure.YOK
+		and AraSure.gecerli(PackedFloat32Array([1, -5, NAN, INF, 9]))[2] == AraSure.YOK
+		and AraSure.gecerli(PackedFloat32Array([1, -5, NAN, INF, 9]))[3] == AraSure.YOK,
+		"malformed split data (wrong size, wrong type, negative, NaN, inf) is cleaned")
+
+	var rekor := PackedFloat32Array([50.0, 210.0, -1.0, -1.0, -1.0])
+	var b := AraSure.birlestir(rekor, d.ara)
+	dogru(is_equal_approx(b[0], 50.0) and is_equal_approx(b[1], 200.0) and is_equal_approx(b[2], 200.0) and b[3] < 0.0,
+		"merging keeps the faster split per depth and never fills from an empty one")
+	dogru(AraSure.yeni_rekor_sayisi(rekor, d.ara) == 2, "two splits beat or set the record")
+	dogru(AraSure.fark_metni(61.0, 50.0) == "+0:11" and AraSure.fark_metni(200.0, 210.0) == "-0:10"
+		and AraSure.fark_metni(75.0, 75.4) == "0:00" and AraSure.fark_metni(61.0, -1.0) == "",
+		"difference text: behind, ahead, tied, no record")
+	dogru(AraSure.sure_metni(605.0) == "10:05", "split time is m:ss")
+	dogru(AraSure.tek_metin(0, d.ara, rekor) == "40 m  1:01  (+0:11)", "HUD split line (%s)" % AraSure.tek_metin(0, d.ara, rekor))
+	dogru(AraSure.tek_metin(2, d.ara, rekor) == "150 m  3:20  (ilk)", "first ever split says so")
+	var satir := AraSure.satir(d.ara, rekor)
+	dogru(satir.begins_with("ARA SÜRELER") and satir.contains("90 m 3:20 (-0:10)") and satir.contains("210 m —")
+		and satir.contains("250 m —"), "end-panel split line (%s)" % satir)
+
+	Kayit.sil(Kayit.REKOR)
+	dogru(Kayit.ara_rekor_yukle(false) == AraSure.bos(), "no record yet: empty")
+	Kayit.ara_rekor_kaydet(false, d.ara)
+	var d2 := Durum.new(1)
+	d2.ara = PackedFloat32Array([55.0, 260.0, 190.0, 400.0, 600.0])
+	var r2 := Kayit.ara_rekor_kaydet(false, d2.ara)
+	dogru(is_equal_approx(r2[0], 55.0) and is_equal_approx(r2[1], 200.0) and is_equal_approx(r2[2], 190.0)
+		and is_equal_approx(r2[4], 600.0), "record keeps the best of every finished run")
+	dogru(Kayit.ara_rekor_yukle(true) == AraSure.bos(), "Derin Mod has its own record")
+	Kayit.ara_rekor_kaydet(true, d2.ara)
+	dogru(is_equal_approx(Kayit.ara_rekor_yukle(false)[0], 55.0) and is_equal_approx(Kayit.ara_rekor_yukle(true)[0], 55.0)
+		and is_equal_approx(Kayit.ara_rekor_yukle(true)[1], 260.0), "first-game and Derin Mod records stay apart")
+	var Oyun: GDScript = load("res://scripts/oyun.gd")
+	var metin: String = Oyun.bitis_metni(d2, {}, "son", "mod", rekor)
+	dogru(metin.contains("ARA SÜRELER") and metin.contains("yeni rekor"), "end panel shows the splits and the new-record count")
+	dogru(not String(Oyun.bitis_metni(d2, {}, "son", "mod", d2.ara)).contains("yeni rekor"),
+		"no new-record note when nothing improved")
+	dogru(FileAccess.get_file_as_string("res://tests/bot.gd").find("ara_isle") < 0,
+		"the bot does not record splits (balance measurements unchanged)")
+	Kayit.sil(Kayit.REKOR)
 
 # --- v0.8: arayüz yenilemesi ----------------------------------------------
 

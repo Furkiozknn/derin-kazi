@@ -901,6 +901,10 @@ func _yeni_arayuz_testleri() -> void:
 	await _kare(3)
 	var dolu: ColorRect = sahne.get_node("HUD/Ilerleme/Dolu")
 	dogru(absf(dolu.size.x - 48.0) < 4.0, "katman çubuğu 125 m'de yarıda (%.0f/96 px)" % dolu.size.x)
+	dogru(durum.ara[0] >= 0.0 and durum.ara[1] >= 0.0 and durum.ara[2] < 0.0,
+		"125 m in the scene: 40 and 90 m splits recorded, 150 m not yet (%s)" % str(durum.ara))
+	dogru(String(sahne.get_node("HUD/Ipucu").text).begins_with("SPLIT  90 m"),
+		"crossing a split shows the split line in the hint strip (%s)" % String(sahne.get_node("HUD/Ipucu").text))
 	arac.usse_don()
 	await _kare(60)
 
@@ -952,6 +956,10 @@ func _yeni_arayuz_testleri() -> void:
 	dogru(tekrar.text.begins_with("Again"), "Tekrar düğmesi bir üst Derin Mod turunu sunuyor (%s)" % tekrar.text)
 	dogru(String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("DEEPEST 250 m"),
 		"oyun sonu paneli süre / en derin / para satırı (%s)" % String(sahne.get_node("HUD/Bitis/M/V/Metin").text).left(60))
+	dogru(String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("SPLITS  40 m")
+		and String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("250 m"),
+		"end panel lists the depth splits in English")
+	dogru(Kayit.ara_rekor_yukle(false)[4] >= 0.0, "finishing the run stored the split record")
 	dogru(tekrar.pressed.get_connections().size() > 0 and sahne.get_node("HUD/Bitis/M/V/Menu").pressed.get_connections().size() > 0,
 		"Tekrar ve Menü düğmeleri bağlı")
 	dogru(bitis.size.x <= Ayarlar.EKRAN_G and bitis.size.y <= Ayarlar.EKRAN_Y, "oyun sonu paneli 640×360'a sığıyor (%.0f×%.0f)" % [bitis.size.x, bitis.size.y])
