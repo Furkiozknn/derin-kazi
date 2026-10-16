@@ -21,6 +21,7 @@ const ANA := "oyun"
 const GUNLUK := "gunluk"
 const DERIN := "derin"
 const OYUNCU := "oyuncu"
+const REKOR := "rekor"   ## best depth splits, see ara_rekor_kaydet
 
 static var aktif := ANA
 
@@ -180,6 +181,25 @@ static func oyuncu_biriktir(fark: Dictionary) -> Dictionary:
 		t[k] = t.get(k, 0) + fark[k]
 	kaydet(t, OYUNCU)
 	return t
+
+# --- depth split records ------------------------------------------
+## [rekor] keeps the best time to each split depth (AraSure), one list for the
+## first-game difficulty (main world and daily world) and one for Derin Mod,
+## whose harder rock and faster fuel burn would make a shared record meaningless.
+## Records are only written when a run reaches the core and escapes, so an
+## abandoned run never sets a split it did not finish.
+
+static func ara_rekor_anahtari(derin: bool) -> String:
+	return "ara_derin" if derin else "ara"
+
+static func ara_rekor_yukle(derin: bool) -> PackedFloat32Array:
+	return AraSure.gecerli(yukle(REKOR).get(ara_rekor_anahtari(derin), null))
+
+## Merges a finished run's splits into the record; returns the new record.
+static func ara_rekor_kaydet(derin: bool, ara: PackedFloat32Array) -> PackedFloat32Array:
+	var r := AraSure.birlestir(ara_rekor_yukle(derin), ara)
+	kaydet({ara_rekor_anahtari(derin): r}, REKOR)
+	return r
 
 # --- ayarlar --------------------------------------------------------------
 
