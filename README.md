@@ -7,7 +7,7 @@
 <h3 align="center"><a href="https://furkiozknn.github.io/derin-kazi/">Tarayıcıda oyna → furkiozknn.github.io/derin-kazi</a></h3>
 <p align="center"><a href="https://furkiozknn.itch.io/derin-kazi">itch.io sayfası / on itch.io → furkiozknn.itch.io/derin-kazi</a></p>
 
-*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 358 unit + 238 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
+*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 395 unit + 246 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
 [![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
 
@@ -26,7 +26,7 @@ ekranları ve **Türkçe / İngilizce** arayüz (varsayılan: tarayıcı dili). 
 mekanik ve denge aynı; iki oynanış düzeltmesi: dinamit için kojot + tampon, deliğe
 düşerken kenara asılmayı önleyen kazı hizalama. Menü açılışı, sahne geçişleri, ışınlanma,
 derinlik sayacı, yeni rekor, deprem ve oyun sonu günlük videolardaki geçiş ve renk akışıyla;
-ayarlarda **Sade geçişler** (hareket azaltma). Her push'ta **358 birim + 238
+ayarlarda **Sade geçişler** (hareket azaltma). Her push'ta **395 birim + 246
 oynanış + 17 ölçüm** testinin ve fay hattı kapısının koştuğu CI. Denetim
 [`docs/DENETIM.md`](docs/DENETIM.md), tasarım ve ölçümler
 [`docs/TASARIM.md`](docs/TASARIM.md).
