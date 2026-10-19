@@ -6,7 +6,7 @@
 <p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
 <h3 align="center"><a href="https://furkiozknn.github.io/derin-kazi/">Tarayıcıda oyna → furkiozknn.github.io/derin-kazi</a></h3>
 
-*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 333 unit + 191 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
+*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 358 unit + 238 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
 [![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
 
@@ -478,8 +478,8 @@ motor `SCRIPT ERROR` yazar, kalan sınamalar sayılmaz ve paket yine
 çıkış 0). CI bu yüzden her paketin günlüğünü `tests/kapi.sh`'a veriyor:
 `== N sınama, 0 hata ==` satırı olmalı, N paketin tabanının altına düşmemeli,
 günlükte `SCRIPT ERROR` / `Parse Error` olmamalı. Tabanlar `ci.yml` → `env`
-içinde: `TEST_TABANI_BIRIM` 333, `TEST_TABANI_OYNANIS` 191,
-`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 541). Fay kapısı da
+içinde: `TEST_TABANI_BIRIM` 358, `TEST_TABANI_OYNANIS` 238,
+`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 613). Fay kapısı da
 aynı betikten geçiyor (`--fay`: `bot 12/12, sisli insan botu 12/12 ... TAMAM`,
 `FAY_TOHUM_TABANI` 12). Kapının kendisi `tests/kapi_sinama.sh` ile örnek
 günlüklerde sınanıyor (Godot'suz). **Test ekleyince ilgili tabanı da
@@ -487,7 +487,7 @@ yükselt**; düşürmek, bir bölümün sessizce kaybolduğunu kabul etmektir.
 
 ```bash
 godot --headless --path . --script res://tests/test_calistir.gd 2>&1 | tee birim.log
-bash tests/kapi.sh birim.log 333                                  # CI'daki kapının aynısı
+bash tests/kapi.sh birim.log 358                                  # CI'daki kapının aynısı
 bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 ```
 
