@@ -5,6 +5,7 @@
 <p align="center"><img src="docs/reel/reel.gif" alt="derin-kazi - 15 saniyelik tanıtım videosu" width="720"></p>
 <p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
 <h3 align="center"><a href="https://furkiozknn.github.io/derin-kazi/">Tarayıcıda oyna → furkiozknn.github.io/derin-kazi</a></h3>
+<p align="center"><a href="https://furkiozknn.itch.io/derin-kazi">itch.io sayfası / on itch.io → furkiozknn.itch.io/derin-kazi</a></p>
 
 *Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 358 unit + 238 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
@@ -36,7 +37,7 @@ kodundan kurulan günlük dünya ve Derin Mod, tek kullanımlık ışınlama iş
 bitiş ekranında istatistik dökümü ve tek dokunuşla tekrar, Türkçe / İngilizce arayüz.
 
 Windows + Web çıktısı alınıyor; web sürümü [tarayıcıda yayında](https://furkiozknn.github.io/derin-kazi/),
-itch.io yayın paketi `yayin/` altında hazır (**yüklenmedi**).
+itch.io'da da yayında: [furkiozknn.itch.io/derin-kazi](https://furkiozknn.itch.io/derin-kazi) (paket `yayin/` altında).
 
 Sürüm sürüm ne değiştiği: **[SURUM-GECMISI.md](SURUM-GECMISI.md)** · güncel sürümün
 notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasında.
