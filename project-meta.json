@@ -48,9 +48,9 @@
     "videos": []
   },
   "tests": {
-    "count": 613,
-    "source": "CI log: 358 unit (`== 358 sınama, 0 hata ==`) + 238 gameplay (`== 238 sınama, 0 hata ==`) + 7 balance (`== 7 sınama, 0 hata ==`) + 10 human-like (`== 10 sınama, 0 hata ==`)",
-    "measured": "2026-09-29"
+    "count": 658,
+    "source": "CI log: 395 unit (`== 395 sınama, 0 hata ==`) + 246 gameplay (`== 246 sınama, 0 hata ==`) + 7 balance (`== 7 sınama, 0 hata ==`) + 10 human-like (`== 10 sınama, 0 hata ==`)",
+    "measured": "2026-10-19"
   },
   "ci": {
     "workflows": [
