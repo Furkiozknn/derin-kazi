@@ -243,6 +243,15 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 - **Günlük dünya** — tohum tarihten türer, herkeste aynıdır. **Ayrı kayıt yuvası**
   kullanır (`[gunluk]`), ana ilerlemene dokunmaz. Menüde o günün en derin noktası
   yazar; gün değişince yuva sıfırlanır.
+- **Paylaş** — duraklatma ve bitiş panelindeki **Paylaş (panoya kopyala)** düğmesi
+  dünyanın kısa, sürprizsiz bir özetini panoya kopyalar: başlık (günlük dünyada
+  tarihle, Derin Mod'da seviyeyle), `187 / 250 m  ▰▰▰▰▰▰▰▱▱▱`, süre · eser · deprem
+  · çekilme, **tohum kodu** ve oyun adresi. Kodu alan kişi menüdeki "Tohum kodu"
+  ekranından aynı dünyayı açar — günlük dünya ertesi gün de paylaşılabilir. 280
+  karakteri geçmez (testli); metin TR/EN. Wordle tarzı paylaşım kartlarından
+  esinlendi; rakip analizindeki üç Steam oyununun (SteamWorld Dig, Dome Keeper, A Game
+  About Digging A Hole) sayfasında tohum paylaşımı geçmiyor. Oyun çevrimdışı olduğu
+  için çevrimiçi skor tablosunun yerini bu tutuyor.
 - **Derin Mod** — çekirdeği bir kez çıkardıktan sonra menüde açılır. Yeni tohum,
   sıfırlanan geliştirmeler, **korunan eser bonusları** ve her turda artan zorluk:
   kaya %15 daha sert, yakıt %12 daha hızlı biter, maden %25 daha değerli.
@@ -254,6 +263,29 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   üstüne yazıyordu — öyle bir kayıt olduğu gibi açılır ve "Başla" ile sürer.
   İnsan benzeri bot Derin Mod x1'i 7 tohumda ölçtü: tur 122 sn (+16), çekirdek
   24 dk, 7/7 varış, 18 deprem.
+
+### Katman ara süreleri
+
+Koşu saati her katman sınırını (40 / 90 / 150 / 210 m) ve çekirdeği (250 m) **ilk
+geçtiğin anda** kaydedilir; alt ipucu şeridinde kısa bir satır en iyi ara sürenle
+karşılaştırır: `ARA  90 m  5:40  (-0:21)` (önde), `(+0:12)` (geride), `(ilk)`
+(o derinliğe ilk iniş). Bitiş panelinde bütün ara süreler ve kaç tanesinin rekor
+olduğu yazar.
+
+- **Rekor yalnız biten koşudan yazılır** (çekirdeğe dokunup yüzeye kaçınca): yarım
+  bırakılan bir koşu kendi bitirmediği bir rekoru koyamaz. Karşılaştırma hep bir
+  önceki en iyiye göre.
+- **İki ayrı rekor listesi:** ilk oyun zorluğu (ana dünya ve günlük dünya) ve
+  Derin Mod — sert kaya ve hızlı yakıtla aynı listeyi paylaşmak anlamsız olurdu.
+  Kayıtta `[rekor]` bölümü (`ara`, `ara_derin`).
+- **Eski kayıt** ara süresiz açılır; geçilmemiş derinlikler panelde `—`.
+- **Bot ara süre tutmuyor**: denge, insan ve fay ölçümleri değişmedi.
+
+Gerekçe rakip analizinden: Neon White ve speedrun sayaçlarının "bir tur daha"
+sebebi bölüm başına kendi rekorunla yarışmak. Derin Kazı'da her koşu farklı bir
+tohum olduğu için tek bir toplam süre karşılaştırılamıyordu; katman sınırları
+her dünyada aynı, ara süre bu yüzden tohumlar arasında anlamlı. Hesap
+`scripts/ara_sure.gd` içinde saf (`AraSure`), testleri `tests/test_calistir.gd`.
 
 ## Verilen kararlar
 
@@ -507,8 +539,10 @@ scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
 scripts/deprem.gd         deprem hesabı ve oyuncunun kararı (saf sınıf)
 scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı (saf sınıf)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
+scripts/ara_sure.gd       katman ara süreleri ve rekorla farkı (saf sınıf)
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar (dil dahil)
+scripts/paylas.gd         paylaşım metni: derinlik çubuğu, özet, tohum kodu (saf sınıf)
 scripts/tema.gd           video paleti, mono etiket / kutu yardımcıları (assets/tema.tres'in kaynağı tools/tema_uret.gd)
 scripts/ceviri.gd         TR/EN: tr("Türkçe metin") anahtar, tablo scripts/ceviri_en.gd
 scripts/gecis.gd          autoload: sekiz geçiş ailesi (assets/gecis.gdshader), sahne geçişi, vuruşlar, sade kip

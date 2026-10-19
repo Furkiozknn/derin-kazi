@@ -31,7 +31,7 @@
     "resource-management",
     "turkce"
   ],
-  "summary": "Side-view digging and upgrade loop in Godot 4: mine ore, watch the fuel, sell, upgrade the rig, reach the core at 250 m. Turkish and English UI.",
+  "summary": "Side-view dig-sell-upgrade game in Godot 4: mine ore, watch the fuel, upgrade the rig and reach the core at 250 m. Seeded daily worlds, Turkish and English UI, playable in the browser.",
   "key_features": [
     "Dig-sell-upgrade loop across five underground layers down to the core at 250 m",
     "Fuel is the timer: every descent is a bet on getting back up before it runs out",
