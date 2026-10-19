@@ -50,6 +50,14 @@ var olum := 0               ## yüzeye çekilme sayısı — oyunda ölüm yok, 
 var satis_toplam := 0       ## üste satılan toplam ₺
 var _birikmis := {}         ## [oyuncu] bölümüne en son aktarılan değerler
 
+## Depth splits: run time when each stratum boundary and the core were first
+## reached (AraSure). Old saves have none: they open with every split empty.
+var ara := AraSure.bos()
+
+## Records the splits passed at `derinlik` (metres). Index of the deepest new split, or -1.
+func ara_isle(derinlik: int) -> int:
+	return AraSure.isle(ara, derinlik, sure)
+
 ## Işınlama işareti (v0.7): istasyon dışında TEK KULLANIMLIK dönüş noktası. Yeraltında
 ## koyulur (R / İŞARET düğmesi), ışınlanma panelinden üs ya da istasyondan gidilir,
 ## gidince silinir. Bot bilmez — ölçüm değişmez. Eski kayıtta yok → işaretsiz açılır.
@@ -439,6 +447,7 @@ func sozluge() -> Dictionary:
 		"sandiklar": sand, "cekirdek_bulundu": cekirdek_bulundu, "kazandi": kazandi,
 		"kazilan_karo": kazilan_karo, "olum": olum, "satis_toplam": satis_toplam,
 		"isaret": PackedInt32Array([isaret.x, isaret.y]),
+		"ara_sure": ara,
 	}
 
 func sozlukten(d: Dictionary) -> void:
@@ -486,5 +495,6 @@ func sozlukten(d: Dictionary) -> void:
 	_birikmis = istatistik()   ## yüklenen sayaçlar [oyuncu] toplamına zaten girmiş sayılır
 	var isr := PackedInt32Array(d.get("isaret", PackedInt32Array()))
 	isaret = Vector2i(isr[0], isr[1]) if isr.size() == 2 else ISARET_YOK
+	ara = AraSure.gecerli(d.get("ara_sure", null))
 	yakit = yakit_kapasitesi()
 	can = can_kapasitesi()

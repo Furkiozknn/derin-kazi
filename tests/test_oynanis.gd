@@ -901,6 +901,10 @@ func _yeni_arayuz_testleri() -> void:
 	await _kare(3)
 	var dolu: ColorRect = sahne.get_node("HUD/Ilerleme/Dolu")
 	dogru(absf(dolu.size.x - 48.0) < 4.0, "katman çubuğu 125 m'de yarıda (%.0f/96 px)" % dolu.size.x)
+	dogru(durum.ara[0] >= 0.0 and durum.ara[1] >= 0.0 and durum.ara[2] < 0.0,
+		"125 m in the scene: 40 and 90 m splits recorded, 150 m not yet (%s)" % str(durum.ara))
+	dogru(String(sahne.get_node("HUD/Ipucu").text).begins_with("SPLIT  90 m"),
+		"crossing a split shows the split line in the hint strip (%s)" % String(sahne.get_node("HUD/Ipucu").text))
 	arac.usse_don()
 	await _kare(60)
 
@@ -915,6 +919,15 @@ func _yeni_arayuz_testleri() -> void:
 		and sahne.get_node("HUD/Duraklat/M/V/Baslik").atr("Duraklatıldı") == "Paused",
 		"duraklatma ekranı başlığı ve tam tuş listesi İngilizce")
 	dogru(pause.size.x <= Ayarlar.EKRAN_G and pause.size.y <= Ayarlar.EKRAN_Y, "duraklat paneli 640×360'a sığıyor (%.0f×%.0f)" % [pause.size.x, pause.size.y])
+	var paylas: Button = sahne.get_node("HUD/Duraklat/M/V/Paylas")
+	dogru(paylas.text == "Paylaş (panoya kopyala)" and paylas.atr(paylas.text) == "Share (copy to clipboard)",
+		"pause panel has the share button (English: %s)" % paylas.atr(paylas.text))
+	paylas.pressed.emit()
+	await _kare(1)
+	dogru(String(sahne.son_paylasim).begins_with("Deep Dig") and String(sahne.son_paylasim).contains("Seed code: ")
+		and String(sahne.son_paylasim).contains("furkiozknn.github.io/derin-kazi"),
+		"share copies the world summary with its seed code (%s)" % String(sahne.son_paylasim).replace("\n", " | "))
+	dogru(paylas.text.begins_with("Copied"), "the share button confirms in place (%s)" % paylas.text)
 	sahne.call("_unhandled_input", _tus("duraklat"))
 	await _kare(2)
 	dogru(not pause.visible and not arac.kilitli, "ikinci Esc devam ettiriyor")
@@ -943,9 +956,17 @@ func _yeni_arayuz_testleri() -> void:
 	dogru(tekrar.text.begins_with("Again"), "Tekrar düğmesi bir üst Derin Mod turunu sunuyor (%s)" % tekrar.text)
 	dogru(String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("DEEPEST 250 m"),
 		"oyun sonu paneli süre / en derin / para satırı (%s)" % String(sahne.get_node("HUD/Bitis/M/V/Metin").text).left(60))
+	dogru(String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("SPLITS  40 m")
+		and String(sahne.get_node("HUD/Bitis/M/V/Metin").text).contains("250 m"),
+		"end panel lists the depth splits in English")
+	dogru(Kayit.ara_rekor_yukle(false)[4] >= 0.0, "finishing the run stored the split record")
 	dogru(tekrar.pressed.get_connections().size() > 0 and sahne.get_node("HUD/Bitis/M/V/Menu").pressed.get_connections().size() > 0,
 		"Tekrar ve Menü düğmeleri bağlı")
 	dogru(bitis.size.x <= Ayarlar.EKRAN_G and bitis.size.y <= Ayarlar.EKRAN_Y, "oyun sonu paneli 640×360'a sığıyor (%.0f×%.0f)" % [bitis.size.x, bitis.size.y])
+	sahne.get_node("HUD/Bitis/M/V/Paylas").pressed.emit()
+	await _kare(1)
+	dogru(String(sahne.son_paylasim).contains("250 / 250 m") and String(sahne.son_paylasim).contains("core reached"),
+		"end panel share says the core was reached")
 	sahne.queue_free()
 	await process_frame
 

@@ -23,6 +23,10 @@ env:
   # "latest" kullanmak, motor guncellenince testlerin bizden habersiz
   # kirmizi yanmasi demek olurdu.
   GODOT_SURUM: 4.7.2-stable
+  # The downloaded zip is checked against this digest before it runs. Value
+  # from the Godot_v4.7.2-stable_linux.x86_64.zip line of SHA512-SUMS.txt in
+  # the godotengine/godot 4.7.2-stable release. Update it with GODOT_SURUM.
+  GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
   # Test kapisinin tabanlari (toplam 613): bir paketin gecen sinama sayisi
   # kendi tabaninin altina duserse CI kirmizi. Test EKLEYINCE ilgili tabani
   # yukselt (README ile birlikte); dusurmek, bir bolumun sessizce
@@ -61,6 +65,7 @@ jobs:
           ad="Godot_v${GODOT_SURUM}_linux.x86_64"
           curl -fsSL -o godot.zip \
             "https://github.com/godotengine/godot/releases/download/${GODOT_SURUM}/${ad}.zip"
+          echo "${GODOT_SHA512}  godot.zip" | sha512sum -c -
           unzip -q godot.zip
           chmod +x "$ad"
           sudo mv "$ad" /usr/local/bin/godot
@@ -141,7 +146,7 @@ jobs:
       # yapiliyor; su an temiz (177 dosya, 46 referans, sifir
       # bulgu) ve bu commit'ten sonra oyle kalmasi garanti.
       - name: godot-refcheck
-        uses: Furkiozknn/godot-refcheck@c24629dbb64af70cf81689c7410010b1d44b9b88  # v0.2.0 + the clean-project fix
+        uses: Furkiozknn/godot-refcheck@d999cd882bb3d023d73ac3882d23e6ba9ab24603  # v0.2.0 + the clean-project fix
         with:
           path: .
           fail-on: error

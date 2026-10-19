@@ -503,6 +503,10 @@ text = "Devam et"
 layout_mode = 2
 text = "Ayarlar"
 
+[node name="Paylas" type="Button" parent="HUD/Duraklat/M/V"]
+layout_mode = 2
+text = "Paylaş (panoya kopyala)"
+
 [node name="Menu" type="Button" parent="HUD/Duraklat/M/V"]
 layout_mode = 2
 text = "Menüye dön (kaydeder)"
@@ -551,6 +555,10 @@ layout_mode = 2
 theme_type_variation = &"Birincil"
 theme_override_font_sizes/font_size = 16
 text = "Tekrar"
+
+[node name="Paylas" type="Button" parent="HUD/Bitis/M/V"]
+layout_mode = 2
+text = "Paylaş (panoya kopyala)"
 
 [node name="Menu" type="Button" parent="HUD/Bitis/M/V"]
 layout_mode = 2

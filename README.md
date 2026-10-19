@@ -5,8 +5,9 @@
 <p align="center"><img src="docs/reel/reel.gif" alt="derin-kazi - 15 saniyelik tanıtım videosu" width="720"></p>
 <p align="center"><sub><a href="docs/reel/reel.mp4">Sesli MP4 sürümü</a></sub></p>
 <h3 align="center"><a href="https://furkiozknn.github.io/derin-kazi/">Tarayıcıda oyna → furkiozknn.github.io/derin-kazi</a></h3>
+<p align="center"><a href="https://furkiozknn.itch.io/derin-kazi">itch.io sayfası / on itch.io → furkiozknn.itch.io/derin-kazi</a></p>
 
-*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 333 unit + 191 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
+*Side-view digging and upgrade loop (Godot 4, Turkish and English UI): take the drill rig down, haul ore back before the fuel runs out, sell, upgrade, reach the core at 250 m. Fog of war, earthquakes you can read coming, a one-shot teleport marker. 358 unit + 238 playthrough + 17 balance checks, and a bot that has to reach the core on 12 of 12 seeds.*
 
 [![CI](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml/badge.svg)](https://github.com/Furkiozknn/derin-kazi/actions/workflows/ci.yml)
 
@@ -36,7 +37,7 @@ kodundan kurulan günlük dünya ve Derin Mod, tek kullanımlık ışınlama iş
 bitiş ekranında istatistik dökümü ve tek dokunuşla tekrar, Türkçe / İngilizce arayüz.
 
 Windows + Web çıktısı alınıyor; web sürümü [tarayıcıda yayında](https://furkiozknn.github.io/derin-kazi/),
-itch.io yayın paketi `yayin/` altında hazır (**yüklenmedi**).
+itch.io'da da yayında: [furkiozknn.itch.io/derin-kazi](https://furkiozknn.itch.io/derin-kazi) (paket `yayin/` altında).
 
 Sürüm sürüm ne değiştiği: **[SURUM-GECMISI.md](SURUM-GECMISI.md)** · güncel sürümün
 notları [Releases](https://github.com/Furkiozknn/derin-kazi/releases) sayfasında.
@@ -243,6 +244,15 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
 - **Günlük dünya** — tohum tarihten türer, herkeste aynıdır. **Ayrı kayıt yuvası**
   kullanır (`[gunluk]`), ana ilerlemene dokunmaz. Menüde o günün en derin noktası
   yazar; gün değişince yuva sıfırlanır.
+- **Paylaş** — duraklatma ve bitiş panelindeki **Paylaş (panoya kopyala)** düğmesi
+  dünyanın kısa, sürprizsiz bir özetini panoya kopyalar: başlık (günlük dünyada
+  tarihle, Derin Mod'da seviyeyle), `187 / 250 m  ▰▰▰▰▰▰▰▱▱▱`, süre · eser · deprem
+  · çekilme, **tohum kodu** ve oyun adresi. Kodu alan kişi menüdeki "Tohum kodu"
+  ekranından aynı dünyayı açar — günlük dünya ertesi gün de paylaşılabilir. 280
+  karakteri geçmez (testli); metin TR/EN. Wordle tarzı paylaşım kartlarından
+  esinlendi; rakip analizindeki üç Steam oyununun (SteamWorld Dig, Dome Keeper, A Game
+  About Digging A Hole) sayfasında tohum paylaşımı geçmiyor. Oyun çevrimdışı olduğu
+  için çevrimiçi skor tablosunun yerini bu tutuyor.
 - **Derin Mod** — çekirdeği bir kez çıkardıktan sonra menüde açılır. Yeni tohum,
   sıfırlanan geliştirmeler, **korunan eser bonusları** ve her turda artan zorluk:
   kaya %15 daha sert, yakıt %12 daha hızlı biter, maden %25 daha değerli.
@@ -254,6 +264,29 @@ bırakmaz; en kötü ihtimalle kendini yeniden dışarı kazarsın.
   üstüne yazıyordu — öyle bir kayıt olduğu gibi açılır ve "Başla" ile sürer.
   İnsan benzeri bot Derin Mod x1'i 7 tohumda ölçtü: tur 122 sn (+16), çekirdek
   24 dk, 7/7 varış, 18 deprem.
+
+### Katman ara süreleri
+
+Koşu saati her katman sınırını (40 / 90 / 150 / 210 m) ve çekirdeği (250 m) **ilk
+geçtiğin anda** kaydedilir; alt ipucu şeridinde kısa bir satır en iyi ara sürenle
+karşılaştırır: `ARA  90 m  5:40  (-0:21)` (önde), `(+0:12)` (geride), `(ilk)`
+(o derinliğe ilk iniş). Bitiş panelinde bütün ara süreler ve kaç tanesinin rekor
+olduğu yazar.
+
+- **Rekor yalnız biten koşudan yazılır** (çekirdeğe dokunup yüzeye kaçınca): yarım
+  bırakılan bir koşu kendi bitirmediği bir rekoru koyamaz. Karşılaştırma hep bir
+  önceki en iyiye göre.
+- **İki ayrı rekor listesi:** ilk oyun zorluğu (ana dünya ve günlük dünya) ve
+  Derin Mod — sert kaya ve hızlı yakıtla aynı listeyi paylaşmak anlamsız olurdu.
+  Kayıtta `[rekor]` bölümü (`ara`, `ara_derin`).
+- **Eski kayıt** ara süresiz açılır; geçilmemiş derinlikler panelde `—`.
+- **Bot ara süre tutmuyor**: denge, insan ve fay ölçümleri değişmedi.
+
+Gerekçe rakip analizinden: Neon White ve speedrun sayaçlarının "bir tur daha"
+sebebi bölüm başına kendi rekorunla yarışmak. Derin Kazı'da her koşu farklı bir
+tohum olduğu için tek bir toplam süre karşılaştırılamıyordu; katman sınırları
+her dünyada aynı, ara süre bu yüzden tohumlar arasında anlamlı. Hesap
+`scripts/ara_sure.gd` içinde saf (`AraSure`), testleri `tests/test_calistir.gd`.
 
 ## Verilen kararlar
 
@@ -446,8 +479,8 @@ motor `SCRIPT ERROR` yazar, kalan sınamalar sayılmaz ve paket yine
 çıkış 0). CI bu yüzden her paketin günlüğünü `tests/kapi.sh`'a veriyor:
 `== N sınama, 0 hata ==` satırı olmalı, N paketin tabanının altına düşmemeli,
 günlükte `SCRIPT ERROR` / `Parse Error` olmamalı. Tabanlar `ci.yml` → `env`
-içinde: `TEST_TABANI_BIRIM` 333, `TEST_TABANI_OYNANIS` 191,
-`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 541). Fay kapısı da
+içinde: `TEST_TABANI_BIRIM` 358, `TEST_TABANI_OYNANIS` 238,
+`TEST_TABANI_DENGE` 7, `TEST_TABANI_INSAN` 10 (toplam 613). Fay kapısı da
 aynı betikten geçiyor (`--fay`: `bot 12/12, sisli insan botu 12/12 ... TAMAM`,
 `FAY_TOHUM_TABANI` 12). Kapının kendisi `tests/kapi_sinama.sh` ile örnek
 günlüklerde sınanıyor (Godot'suz). **Test ekleyince ilgili tabanı da
@@ -455,7 +488,7 @@ yükselt**; düşürmek, bir bölümün sessizce kaybolduğunu kabul etmektir.
 
 ```bash
 godot --headless --path . --script res://tests/test_calistir.gd 2>&1 | tee birim.log
-bash tests/kapi.sh birim.log 333                                  # CI'daki kapının aynısı
+bash tests/kapi.sh birim.log 358                                  # CI'daki kapının aynısı
 bash tests/kapi_sinama.sh                                         # kapının sınaması, Godot gerektirmez
 ```
 
@@ -507,8 +540,10 @@ scripts/oyun.gd           HUD, üs, müze, ışınlanma, tehlikeler, oyun hissi
 scripts/deprem.gd         deprem hesabı ve oyuncunun kararı (saf sınıf)
 scripts/ipucu.gd          oyun içi ipucu metni; dokunmatik/masaüstü ayrımı (saf sınıf)
 scripts/tohum_kodu.gd     7 harflik paylaşılabilir tohum kodu
+scripts/ara_sure.gd       katman ara süreleri ve rekorla farkı (saf sınıf)
 scripts/simgeler.gd       web'de eksik simgeler için yedek yazı tipi
 scripts/kayit.gd          kayıt yuvaları ([oyun] / [gunluk] / [derin]) ve ayarlar (dil dahil)
+scripts/paylas.gd         paylaşım metni: derinlik çubuğu, özet, tohum kodu (saf sınıf)
 scripts/tema.gd           video paleti, mono etiket / kutu yardımcıları (assets/tema.tres'in kaynağı tools/tema_uret.gd)
 scripts/ceviri.gd         TR/EN: tr("Türkçe metin") anahtar, tablo scripts/ceviri_en.gd
 scripts/gecis.gd          autoload: sekiz geçiş ailesi (assets/gecis.gdshader), sahne geçişi, vuruşlar, sade kip
