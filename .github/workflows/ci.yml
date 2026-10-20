@@ -27,12 +27,12 @@ env:
   # from the Godot_v4.7.2-stable_linux.x86_64.zip line of SHA512-SUMS.txt in
   # the godotengine/godot 4.7.2-stable release. Update it with GODOT_SURUM.
   GODOT_SHA512: 9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65
-  # Test kapisinin tabanlari (toplam 613): bir paketin gecen sinama sayisi
+  # Test kapisinin tabanlari (toplam 658): bir paketin gecen sinama sayisi
   # kendi tabaninin altina duserse CI kirmizi. Test EKLEYINCE ilgili tabani
   # yukselt (README ile birlikte); dusurmek, bir bolumun sessizce
   # kayboldugunu kabul etmek demek.
-  TEST_TABANI_BIRIM: 358
-  TEST_TABANI_OYNANIS: 238
+  TEST_TABANI_BIRIM: 395
+  TEST_TABANI_OYNANIS: 246
   TEST_TABANI_DENGE: 7
   TEST_TABANI_INSAN: 10
   # Fay kapisinin en az kac tohumda 12/12 demesi gerektigi.
